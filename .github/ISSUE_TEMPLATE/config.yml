@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/svdwalt007/Friendly-AIAEP/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Documentation
+    url: https://docs.friendly-aiaep.com
+    about: Check our documentation for guides and API references
+  - name: Security Vulnerability
+    url: https://github.com/svdwalt007/Friendly-AIAEP/security/advisories/new
+    about: Report a security vulnerability privately

@@ -2,18 +2,33 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
+
+# Cancel in-progress runs for the same workflow and branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20.x'
-  PNPM_VERSION: '10.x'
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10'
 
 jobs:
+  # ========================================
+  # Code Quality Checks
+  # ========================================
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,12 +53,16 @@ jobs:
         uses: nrwl/nx-set-shas@v4
 
       - name: Run ESLint on affected projects
-        run: pnpm exec nx affected --target=lint --parallel=3
+        run: pnpm nx affected -t lint --parallel=3
 
-  type-check:
+  # ========================================
+  # Type Checking
+  # ========================================
+  typecheck:
     name: Type Check
     runs-on: ubuntu-latest
-    needs: lint
+    timeout-minutes: 10
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -67,13 +86,60 @@ jobs:
       - name: Derive appropriate SHAs for base and head for `nx affected` commands
         uses: nrwl/nx-set-shas@v4
 
-      - name: Run type check on affected projects
-        run: pnpm exec nx affected --target=build --parallel=3
+      - name: Run TypeScript type checking on affected projects
+        run: pnpm nx affected -t build --parallel=3
 
+  # ========================================
+  # Build
+  # ========================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive appropriate SHAs for base and head for `nx affected` commands
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Build affected projects
+        run: pnpm nx affected -t build --parallel=3
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            !dist/**/*.map
+          retention-days: 7
+
+  # ========================================
+  # Testing
+  # ========================================
   test:
     name: Test
     runs-on: ubuntu-latest
-    needs: type-check
+    timeout-minutes: 20
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -98,4 +164,118 @@ jobs:
         uses: nrwl/nx-set-shas@v4
 
       - name: Run tests on affected projects
-        run: pnpm exec nx affected --target=test --parallel=3 --coverage
+        run: pnpm nx affected -t test --parallel=3 --coverage --codeCoverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/**/coverage-final.json
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  # ========================================
+  # E2E Testing
+  # ========================================
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Derive appropriate SHAs for base and head for `nx affected` commands
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Run E2E tests on affected projects
+        run: pnpm nx affected -t e2e --parallel=1
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  # ========================================
+  # Security Scanning
+  # ========================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Run pnpm audit
+        run: pnpm audit --audit-level=moderate || true
+        continue-on-error: true
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ========================================
+  # Status Check (Required for merge)
+  # ========================================
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, build, test]
+    if: always()
+
+    steps:
+      - name: Check all jobs status
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" ]] || \
+             [[ "${{ needs.typecheck.result }}" != "success" ]] || \
+             [[ "${{ needs.build.result }}" != "success" ]] || \
+             [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "One or more required jobs failed"
+            exit 1
+          fi
+          echo "All required jobs passed"

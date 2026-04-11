@@ -1,211 +1,418 @@
-"# Friendly AI AEP Tool
+# Friendly-AIAEP
 
-An Agent Execution Platform for building, deploying, and managing AI agents with integrated IoT capabilities.
+**AI-Powered IoT Application Builder Platform**
+
+[![CI](https://github.com/svdwalt007/Friendly-AIAEP/actions/workflows/ci.yml/badge.svg)](https://github.com/svdwalt007/Friendly-AIAEP/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/typescript-%3E%3D5.4.0-blue.svg)](https://www.typescriptlang.org/)
+
+---
 
 ## Overview
 
-The Friendly AI AEP Tool is a comprehensive platform that combines AI agent orchestration with IoT data management and visualization. Built as an Nx monorepo, it provides a modular architecture for creating sophisticated AI-powered applications.
+Friendly-AIAEP is an **AI-Powered Application Execution Platform** that enables developers to rapidly build, deploy, and manage IoT applications using conversational AI. Built on LangGraph and Claude AI, the platform transforms natural language requirements into production-ready Angular applications with real-time data visualization, device management, and monitoring capabilities.
 
-## Architecture
+**Key Features:**
 
-This is an Nx monorepo with the following structure:
+✅ **AI-Driven Development** - Build apps through conversation with Claude AI agents
+✅ **IoT Integration** - Connect to 10,000+ devices via OpenAPI/Swagger ingestion
+✅ **Real-Time Dashboards** - Auto-generated Angular apps with live telemetry
+✅ **Multi-Tenant SaaS** - Tenant isolation, RBAC, and tier-based billing
+✅ **One-Click Deployment** - Docker + Kubernetes with Helm charts
+✅ **Complete Monitoring** - Grafana dashboards for apps and platform metrics
 
-### Applications (`apps/`)
+**From Concept to Production in ~15 Minutes**
 
-- **aep-api-gateway** - Fastify-based API gateway (Node.js)
-- **aep-builder** - Angular 17+ builder interface with standalone components
-- **aep-preview-host** - Express-based preview server (Node.js)
+Traditional development: 2-3 weeks → **With Friendly-AIAEP: ~15 minutes**
 
-### Libraries (`libs/`)
+---
 
-#### Core Services (`libs/core/`)
-- `agent-runtime` - AI agent execution runtime
-- `llm-providers` - LLM provider integrations (Anthropic, etc.)
-- `builder-orchestrator` - Builder workflow orchestration
-- `project-registry` - Project and workspace management
-- `policy-service` - Policy and governance enforcement
-- `license-service` - License management
-- `billing-service` - Billing and subscription management
-- `audit-service` - Audit logging and compliance
-
-#### IoT Integration (`libs/iot/`)
-- `swagger-ingestion` - OpenAPI/Swagger ingestion for IoT APIs
-- `auth-adapter` - Authentication adapter for IoT endpoints
-- `sdk-generator` - SDK generation for IoT integrations
-- `iot-tool-functions` - Tool functions for IoT operations
-- `mock-api-server` - Mock API server for testing
-
-#### Builder Features (`libs/builder/`)
-- `page-composer` - Visual page composition
-- `widget-registry` - Widget/component registry
-- `codegen` - Code generation engine
-- `preview-runtime` - Live preview runtime
-- `publish-service` - Project publishing service
-- `git-service` - Git integration for version control
-- `environment-service` - Environment configuration management
-- `template-marketplace` - Template marketplace integration
-
-#### UI Components (`libs/ui/`)
-- `iot-ui` - Publishable Angular library for IoT UI components
-
-#### Grafana Integration (`libs/grafana/`)
-- `provisioning` - Grafana provisioning automation
-- `dashboard-templates` - Dashboard template library
-- `theme` - Custom Grafana themes
-
-#### Data Management (`libs/data/`)
-- `prisma-schema` - Prisma database schemas
-- `influx-schemas` - InfluxDB time-series schemas
-- `telegraf-ingest-config` - Telegraf configuration for IoT data ingestion
-
-#### Deployment (`libs/deploy/`)
-- `docker-generator` - Docker configuration generation
-- `helm-generator` - Helm chart generation
-
-## Tech Stack
-
-- **Framework**: Nx 22+ monorepo
-- **Package Manager**: pnpm 10.x
-- **Language**: TypeScript 5.4+ (strict mode)
-- **Backend**: Node.js with Fastify/Express
-- **Frontend**: Angular 17+ with standalone components
-- **Testing**: Vitest
-- **Linting**: ESLint with @typescript-eslint
-- **Database**: PostgreSQL (Prisma ORM)
-- **Time-Series DB**: InfluxDB
-- **Cache**: Redis
-- **Object Storage**: MinIO (S3-compatible)
-- **Visualization**: Grafana
-- **IoT Data Ingestion**: Telegraf
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 20.x or later
-- pnpm 10.x or later
-- Docker and Docker Compose (for local development infrastructure)
+- **Node.js** 20.x or higher
+- **pnpm** 10.x or higher
+- **Docker** and Docker Compose
+- **PostgreSQL** 16.x (via Docker)
 
 ### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/svdwalt007/Friendly-AIAEP.git
+cd Friendly-AIAEP
+
 # Install dependencies
 pnpm install
 
-# Copy environment variables
+# Set up environment
 cp .env.example .env
 # Edit .env with your configuration
 
-# Start development infrastructure (PostgreSQL, InfluxDB, Grafana, etc.)
+# Start development infrastructure
 docker compose -f docker/docker-compose.dev.yml up -d
+
+# Run database migrations
+pnpm prisma migrate dev
 ```
 
-### Development
+### Running the Platform
 
 ```bash
-# Start API Gateway
-pnpm exec nx serve aep-api-gateway
+# Start API Gateway (port 3001)
+pnpm nx serve aep-api-gateway
 
-# Start Builder UI
-pnpm exec nx serve aep-builder
+# Start Builder UI (port 4200)
+pnpm nx serve aep-builder
 
-# Start Preview Host
-pnpm exec nx serve aep-preview-host
-
-# Run tests for affected projects
-pnpm exec nx affected --target=test
-
-# Lint affected projects
-pnpm exec nx affected --target=lint
-
-# Build all projects
-pnpm run build
-
-# Visualize project dependencies
-pnpm run graph
+# Start Preview Host (port 3002)
+pnpm nx serve aep-preview-host
 ```
 
-### Running Specific Projects
+Access the builder at: **http://localhost:4200**
 
-```bash
-# Run a specific application
-pnpm exec nx serve <app-name>
+---
 
-# Build a specific library
-pnpm exec nx build <lib-name>
+## Architecture
 
-# Test a specific library
-pnpm exec nx test <lib-name>
+### High-Level Overview
+
 ```
+┌─────────────────────────────────────────────────────┐
+│           Client Layer (Browser/Mobile)             │
+│  ┌──────────────────┐    ┌──────────────────────┐  │
+│  │  aep-builder     │    │  Generated IoT Apps  │  │
+│  │  (Angular 17+)   │    │  (Published Apps)    │  │
+│  └──────────────────┘    └──────────────────────┘  │
+└─────────────────┬────────────────┬──────────────────┘
+                  │                │
+                  ▼                ▼
+        ┌─────────────────────────────────┐
+        │   aep-api-gateway (Fastify)     │
+        │   • JWT Auth, Rate Limiting     │
+        │   • WebSocket Agent Streaming   │
+        │   • OpenAPI /docs               │
+        └───────────┬─────────────────────┘
+                    │
+    ┌───────────────┼───────────────┐
+    ▼               ▼               ▼
+┌─────────┐   ┌──────────┐   ┌──────────┐
+│ Core    │   │ Builder  │   │   IoT    │
+│ Services│   │ Services │   │ Services │
+│         │   │          │   │          │
+│• Agents │   │• Page    │   │• Swagger │
+│• LLM    │   │  Composer│   │  Ingest  │
+│• Billing│   │• Codegen │   │• IoT     │
+│• Audit  │   │• Preview │   │  Tools   │
+└─────────┘   └──────────┘   └──────────┘
+                    │
+    ┌───────────────┼───────────────┐
+    ▼               ▼               ▼
+┌─────────┐   ┌──────────┐   ┌──────────┐
+│PostgreSQL   │ InfluxDB │   │  Redis   │
+│ (App Data)  │(Time-Series)│ (Cache)   │
+└─────────┘   └──────────┘   └──────────┘
+```
+
+### Technology Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Framework** | Nx 22+ Monorepo |
+| **Language** | TypeScript 5.4+ (strict) |
+| **Backend** | Node.js 20+ (Fastify, Express) |
+| **Frontend** | Angular 17+ (standalone) |
+| **AI/LLM** | LangGraph + Claude Opus 4.6 |
+| **Database** | PostgreSQL 16 (Prisma ORM) |
+| **Time-Series** | InfluxDB 2.7 |
+| **Cache** | Redis 7 |
+| **Storage** | MinIO (S3-compatible) |
+| **Monitoring** | Grafana 11.3 + Telegraf |
+| **Testing** | Vitest 4.1+ |
+| **Package Manager** | pnpm 10.x |
+
+---
 
 ## Project Structure
 
 ```
-friendly-aiaep/
-├── apps/                    # Applications
-│   ├── aep-api-gateway/    # Fastify API Gateway
-│   ├── aep-builder/        # Angular Builder UI
-│   └── aep-preview-host/   # Express Preview Server
-├── libs/                    # Shared libraries
-│   ├── core/               # Core services
-│   ├── iot/                # IoT integration
-│   ├── builder/            # Builder features
-│   ├── ui/                 # UI components
-│   ├── grafana/            # Grafana integration
-│   ├── data/               # Data schemas
-│   └── deploy/             # Deployment utilities
-├── docker/                  # Docker configurations
-│   └── docker-compose.dev.yml
-├── docs/                    # Documentation (Docusaurus)
-├── .github/                 # GitHub Actions CI/CD
+Friendly-AIAEP/
+├── apps/                          # Applications
+│   ├── aep-api-gateway/          # Fastify API Gateway
+│   ├── aep-builder/              # Angular Builder UI
+│   └── aep-preview-host/         # Express Preview Server
+├── libs/                          # Libraries
+│   ├── core/                     # Core Services
+│   │   ├── agent-runtime/        # LangGraph AI Agents
+│   │   ├── llm-providers/        # Anthropic + Ollama
+│   │   ├── billing-service/      # Stripe Billing
+│   │   └── audit-service/        # Compliance Logging
+│   ├── iot/                      # IoT Integration
+│   │   ├── swagger-ingestion/    # OpenAPI Parser
+│   │   ├── iot-tool-functions/   # LangGraph IoT Tools
+│   │   └── sdk-generator/        # API Client Gen
+│   ├── builder/                  # Builder Features
+│   │   ├── page-composer/        # Visual Page Builder
+│   │   ├── widget-registry/      # Component Library
+│   │   ├── codegen/              # Code Generation
+│   │   └── preview-runtime/      # Live Preview
+│   ├── data/                     # Data Layer
+│   │   ├── prisma-schema/        # PostgreSQL Schemas
+│   │   └── influx-schemas/       # Time-Series Schemas
+│   ├── grafana/                  # Monitoring
+│   │   ├── provisioning/         # Auto-provisioning
+│   │   └── dashboard-templates/  # Pre-built Dashboards
+│   └── deploy/                   # Deployment
+│       ├── docker-generator/     # Dockerfile Gen
+│       └── helm-generator/       # K8s Helm Charts
+├── .github/                       # CI/CD
 │   └── workflows/
-│       └── ci.yml
-├── nx.json                  # Nx configuration
-├── tsconfig.base.json       # TypeScript base config
-├── package.json             # Root package.json
-└── .env.example             # Environment variables template
+│       ├── ci.yml                # Build, Test, Lint
+│       └── deploy.yml            # Deploy to K8s
+├── docs/                          # Documentation
+├── ARCHITECTURE_WORKFLOW.md       # System Architecture
+├── USER_JOURNEY_WORKFLOW.md       # User Journey
+├── UI_MOCKUPS.md                  # UI Designs
+├── CONTRIBUTING.md                # Contribution Guide
+├── SECURITY.md                    # Security Policy
+└── CODE_OF_CONDUCT.md             # Code of Conduct
 ```
 
-## Path Aliases
+---
 
-All libraries are accessible via scoped imports:
+## Development
 
-```typescript
-import { MODULE_NAME } from '@friendly-tech/core/agent-runtime';
-import { MODULE_NAME } from '@friendly-tech/iot/swagger-ingestion';
-import { MODULE_NAME } from '@friendly-tech/builder/page-composer';
-import { MODULE_NAME } from '@friendly-tech/ui/iot-ui';
-import { MODULE_NAME } from '@friendly-tech/grafana/provisioning';
-import { MODULE_NAME } from '@friendly-tech/data/prisma-schema';
-import { MODULE_NAME } from '@friendly-tech/deploy/docker-generator';
-```
-
-## CI/CD
-
-GitHub Actions workflow runs on push and pull requests:
-
-1. **Lint** - ESLint on affected projects
-2. **Type Check** - TypeScript compilation on affected projects
-3. **Test** - Vitest with coverage on affected projects
-
-## Documentation
-
-Documentation is located in the `docs/` directory and uses Docusaurus.
+### Nx Commands
 
 ```bash
-cd docs
-pnpm install
-pnpm start
+# Build all projects
+pnpm nx run-many -t build
+
+# Build affected projects only
+pnpm nx affected -t build
+
+# Run tests
+pnpm nx affected -t test --coverage
+
+# Lint code
+pnpm nx affected -t lint
+
+# Visualize project graph
+pnpm nx graph
+
+# Clear Nx cache
+pnpm nx reset
 ```
 
-See [docs/README.md](docs/README.md) for more information.
+### Path Aliases
+
+Libraries use scoped imports:
+
+```typescript
+import { createAgentGraph } from '@friendly-tech/core/agent-runtime';
+import { LLMProviderFactory } from '@friendly-tech/core/llm-providers';
+import { ingestSwaggerSpec } from '@friendly-tech/iot/swagger-ingestion';
+import { GetDeviceListTool } from '@friendly-tech/iot/iot-tool-functions';
+import { generateCode } from '@friendly-tech/builder/codegen';
+import { PrismaService } from '@friendly-tech/data/prisma-schema';
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pnpm nx run-many -t test
+
+# Run specific library tests
+pnpm nx test llm-providers
+
+# Run with coverage
+pnpm nx test llm-providers --coverage
+
+# Watch mode
+pnpm nx test llm-providers --watch
+```
+
+---
+
+## Key Features
+
+### 1. AI Agent Orchestration (LangGraph)
+
+Three specialized agents work together:
+
+- **Supervisor Agent** - Routes user requests to specialists
+- **Planning Agent** - Generates structured build plans with dependencies
+- **IoT Domain Agent** - Provides IoT expertise and device queries
+
+**Example Interaction:**
+
+```
+User: "Build a dashboard for 10,000 smart meters showing real-time power consumption"
+
+AI Response:
+✓ Found 10,234 smart meters
+✓ Available metrics: power, voltage, current
+✓ Generated build plan with 6 tasks
+✓ Ready to execute
+```
+
+### 2. IoT Integration
+
+**Swagger/OpenAPI Ingestion:**
+- Automatically parse IoT platform APIs
+- Support for Basic, Bearer, OAuth2 authentication
+- Multi-source spec merging
+- Breaking change detection
+
+**LangGraph IoT Tools:**
+- `GetDeviceListTool` - Query 10,000+ devices
+- `GetDeviceDetailsTool` - Device metadata + LwM2M objects
+- `GetDeviceTelemetryTool` - Time-series telemetry data
+- `RegisterWebhookTool` - Event webhook registration
+- `GetKPIMetricsTool` - Fleet-wide analytics
+
+### 3. Visual Builder + Code Generation
+
+- Drag-and-drop page composer
+- Widget library (charts, tables, alerts, maps)
+- AI-powered code generation (TypeScript + Angular)
+- Live preview with hot-reload
+- Docker-based preview runtime
+
+### 4. Multi-Tenant SaaS
+
+**Tenant Isolation:**
+- Row-level security in PostgreSQL
+- Automatic tenant scoping via Prisma
+- JWT-based authentication with tenant claims
+
+**Billing Tiers:**
+- **Starter** ($499/mo): 100 req/min, 1M tokens
+- **Professional** ($2,499/mo): 500 req/min, 10M tokens
+- **Enterprise** ($7,999/mo): 2000 req/min, unlimited tokens
+
+### 5. Production Deployment
+
+**Automated Generation:**
+- Dockerfile (multi-stage builds)
+- Helm charts (K8s manifests, ConfigMaps, Secrets)
+- GitHub Actions CI/CD
+- Blue-Green deployment strategy
+
+---
+
+## API Documentation
+
+The API Gateway exposes OpenAPI 3.0 documentation at:
+
+**http://localhost:3001/docs**
+
+### Key Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/auth/login` | POST | User authentication |
+| `/api/v1/auth/token/refresh` | POST | Refresh JWT token |
+| `/api/v1/projects` | GET, POST | Project management |
+| `/api/v1/projects/:id/agent` | POST | AI agent interaction |
+| `/api/v1/agent/stream` | WebSocket | Real-time agent streaming |
+| `/api/v1/projects/:id/preview` | POST | Trigger live preview |
+| `/api/v1/projects/:id/publish` | POST | Publish to production |
+| `/api/v1/billing/usage` | GET | Usage and billing stats |
+
+---
+
+## Monitoring
+
+### Grafana Dashboards
+
+Access Grafana at: **http://localhost:3000**
+
+**Pre-configured Dashboards:**
+- Platform Performance (API Gateway metrics)
+- LLM Usage & Costs (token tracking, cost analysis)
+- IoT Device Health (10,000+ device monitoring)
+- Application Metrics (generated app performance)
+- System Resources (CPU, memory, disk, network)
+
+### Telegraf Ingestion
+
+Telegraf automatically collects:
+- Device telemetry from IoT APIs
+- System metrics (CPU, memory, disk)
+- Application metrics (response times, error rates)
+
+Data is stored in InfluxDB and visualized in Grafana.
+
+---
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Quick Contribution Steps
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes
+4. Run tests: `pnpm nx affected -t test`
+5. Commit using Conventional Commits
+6. Push and create a Pull Request
+
+### Conventional Commits
+
+```
+feat(agent-runtime): add Claude Opus 4.6 support
+fix(swagger-ingestion): handle missing version field
+docs(readme): update installation instructions
+```
+
+---
+
+## Security
+
+For security vulnerabilities, please see [SECURITY.md](SECURITY.md).
+
+**Report vulnerabilities to:** security@friendly-tech.com
+
+---
 
 ## License
 
-UNLICENSED - Private/Proprietary
+UNLICENSED - Proprietary Software
 
-## Reference
+© 2026 Friendly Technologies. All rights reserved.
+
+---
+
+## Documentation
+
+- **[Architecture Workflow](ARCHITECTURE_WORKFLOW.md)** - Complete system architecture and data flow
+- **[User Journey Workflow](USER_JOURNEY_WORKFLOW.md)** - End-to-end user experience (8 phases)
+- **[UI Mockups](UI_MOCKUPS.md)** - Builder interface and generated app designs
+- **[Build & Test Report](BUILD_AND_TEST_REPORT.md)** - Comprehensive build status
+- **[Test Coverage Summary](TEST_COVERAGE_SUMMARY.md)** - Coverage statistics
+
+---
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/svdwalt007/Friendly-AIAEP/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/svdwalt007/Friendly-AIAEP/discussions)
+- **Email**: support@friendly-tech.com
+- **Documentation**: https://docs.friendly-aiaep.com
+
+---
+
+## References
 
 - System Specification: `docs/Friendly_AI_AEP_System_Specification_v2.2.docx`
 - Module Reference: `docs/Friendly_AI_AEP_Module_Reference_v2.2.docx`
-- Phase 1 Playbook: `docs/Friendly_AI_AEP_Phase1_Prompt_Playbook.docx`" 
+- Phase 1 Playbook: `docs/Friendly_AI_AEP_Phase1_Prompt_Playbook.docx`
+
+---
+
+**Built with ❤️ using Nx, TypeScript, Angular, LangGraph, and Claude AI**
