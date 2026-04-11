@@ -1,0 +1,19 @@
+{
+  "name": "dashboard-templates",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/grafana/dashboard-templates/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/grafana/dashboard-templates",
+        "main": "libs/grafana/dashboard-templates/src/index.ts",
+        "tsConfig": "libs/grafana/dashboard-templates/tsconfig.lib.json",
+        "assets": ["libs/grafana/dashboard-templates/*.md"]
+      }
+    }
+  }
+}

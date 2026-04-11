@@ -1,0 +1,19 @@
+{
+  "name": "helm-generator",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/deploy/helm-generator/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/deploy/helm-generator",
+        "main": "libs/deploy/helm-generator/src/index.ts",
+        "tsConfig": "libs/deploy/helm-generator/tsconfig.lib.json",
+        "assets": ["libs/deploy/helm-generator/*.md"]
+      }
+    }
+  }
+}

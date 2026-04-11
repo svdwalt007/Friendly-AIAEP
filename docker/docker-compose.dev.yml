@@ -1,0 +1,146 @@
+version: '3.8'
+
+# Friendly AI AEP Development Environment
+# This docker-compose file sets up the development infrastructure for the Friendly AI AEP Tool.
+
+services:
+  # PostgreSQL database for application data
+  postgres:
+    image: postgres:16-alpine
+    container_name: friendly-aep-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: friendly
+      POSTGRES_PASSWORD: friendly_dev_password
+      POSTGRES_DB: friendly_aep
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U friendly']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # InfluxDB for time-series IoT data
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: friendly-aep-influxdb
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: friendly_influx_dev
+      DOCKER_INFLUXDB_INIT_ORG: friendly
+      DOCKER_INFLUXDB_INIT_BUCKET: iot_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: friendly-dev-token-12345
+    ports:
+      - '8086:8086'
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    healthcheck:
+      test: ['CMD', 'influx', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Telegraf for IoT data ingestion
+  telegraf:
+    image: telegraf:1.31-alpine
+    container_name: friendly-aep-telegraf
+    restart: unless-stopped
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    environment:
+      INFLUX_TOKEN: friendly-dev-token-12345
+      INFLUX_ORG: friendly
+      INFLUX_BUCKET: iot_data
+    ports:
+      - '8125:8125/udp'
+      - '8092:8092/udp'
+      - '8094:8094'
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+
+  # Grafana for IoT visualization
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: friendly-aep-grafana
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: friendly_grafana_dev
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: postgres:5432
+      GF_DATABASE_NAME: friendly_aep
+      GF_DATABASE_USER: friendly
+      GF_DATABASE_PASSWORD: friendly_dev_password
+      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_INSTALL_PLUGINS: ''
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: friendly-aep-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO for object storage (S3-compatible)
+  minio:
+    image: minio/minio:latest
+    container_name: friendly-aep-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: friendly
+      MINIO_ROOT_PASSWORD: friendly_minio_dev
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  influxdb_data:
+    driver: local
+  influxdb_config:
+    driver: local
+  grafana_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  default:
+    name: friendly-aep-network

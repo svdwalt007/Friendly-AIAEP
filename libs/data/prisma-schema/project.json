@@ -1,0 +1,31 @@
+{
+  "name": "prisma-schema",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/data/prisma-schema/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/data/prisma-schema",
+        "main": "libs/data/prisma-schema/src/index.ts",
+        "tsConfig": "libs/data/prisma-schema/tsconfig.lib.json",
+        "assets": ["libs/data/prisma-schema/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{workspaceRoot}/coverage/libs/data/prisma-schema"
+      ],
+      "options": {
+        "reportsDirectory": "../../../coverage/libs/data/prisma-schema"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

@@ -1,0 +1,176 @@
+/**
+ * Friendly AEP Builder - Angular Material Theme
+ *
+ * Custom theme using CSS custom properties.
+ * Material components will use Friendly brand colors via CSS variables.
+ */
+
+@use './variables.scss' as vars;
+
+/* ========================================
+ * MATERIAL COMPONENT CUSTOMIZATIONS
+ * ======================================== */
+
+// Override Material typography with Calibri
+* {
+  font-family: var(--ft-font-family) !important;
+}
+
+// Customize Material components to match Friendly design
+.mat-mdc-card {
+  border-radius: var(--ft-card-radius) !important;
+  box-shadow: var(--ft-card-shadow) !important;
+}
+
+.mat-mdc-button,
+.mat-mdc-raised-button,
+.mat-mdc-outlined-button,
+.mat-mdc-unelevated-button {
+  border-radius: var(--ft-button-radius) !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase;
+}
+
+.mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    border-radius: var(--ft-input-radius) !important;
+  }
+}
+
+// Table customizations
+.mat-mdc-table {
+  font-family: var(--ft-font-family) !important;
+
+  .mat-mdc-header-row {
+    background-color: var(--ft-table-header-bg);
+  }
+
+  .mat-mdc-header-cell {
+    color: var(--ft-table-header-text);
+    font-weight: 600;
+    font-size: 0.875rem;
+    letter-spacing: 0.05em;
+  }
+
+  .mat-mdc-row:hover {
+    background-color: var(--ft-table-row-hover);
+  }
+}
+
+// Toolbar customizations
+.mat-toolbar {
+  &.mat-primary {
+    background-color: var(--ft-primary) !important;
+    color: var(--ft-text-light) !important;
+  }
+}
+
+// Dialog customizations
+.mat-mdc-dialog-container {
+  border-radius: var(--ft-radius-lg) !important;
+  box-shadow: var(--ft-shadow-2xl) !important;
+}
+
+// Snackbar customizations
+.mat-mdc-snack-bar-container {
+  border-radius: var(--ft-radius-md) !important;
+
+  &.success-snackbar {
+    background-color: var(--ft-success);
+  }
+
+  &.error-snackbar {
+    background-color: var(--ft-error);
+  }
+
+  &.warning-snackbar {
+    background-color: var(--ft-warning);
+  }
+
+  &.info-snackbar {
+    background-color: var(--ft-info);
+  }
+}
+
+// Chip customizations
+.mat-mdc-chip {
+  border-radius: var(--ft-radius-full) !important;
+
+  &.mat-mdc-standard-chip {
+    background-color: var(--ft-surface-secondary);
+  }
+}
+
+// Tabs customizations
+.mat-mdc-tab-group {
+  .mat-mdc-tab-header {
+    border-bottom: 2px solid var(--ft-border-color);
+  }
+
+  .mat-mdc-tab {
+    font-weight: 500;
+    letter-spacing: 0.03em;
+  }
+}
+
+// Menu customizations
+.mat-mdc-menu-panel {
+  border-radius: var(--ft-radius-md) !important;
+  box-shadow: var(--ft-shadow-lg) !important;
+}
+
+// Tooltip customizations
+.mdc-tooltip {
+  background-color: var(--ft-primary) !important;
+  color: var(--ft-text-light) !important;
+  font-size: 0.75rem !important;
+}
+
+/* ========================================
+ * DENSITY CUSTOMIZATIONS
+ * ======================================== */
+
+// Data-dense tables (Friendly portal style)
+.ft-dense-table {
+  .mat-mdc-table {
+    .mat-mdc-cell,
+    .mat-mdc-header-cell {
+      padding: 8px 16px;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+// Compact form fields
+.ft-dense-form {
+  .mat-mdc-form-field {
+    font-size: 0.875rem;
+  }
+}
+
+/* ========================================
+ * ACCESSIBILITY ENHANCEMENTS
+ * ======================================== */
+
+// Focus visible styles
+*:focus-visible {
+  outline: 2px solid var(--ft-accent);
+  outline-offset: 2px;
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .mat-mdc-button,
+  .mat-mdc-raised-button {
+    border: 2px solid currentColor;
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

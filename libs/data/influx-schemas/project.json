@@ -1,0 +1,19 @@
+{
+  "name": "influx-schemas",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/data/influx-schemas/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/data/influx-schemas",
+        "main": "libs/data/influx-schemas/src/index.ts",
+        "tsConfig": "libs/data/influx-schemas/tsconfig.lib.json",
+        "assets": ["libs/data/influx-schemas/*.md"]
+      }
+    }
+  }
+}

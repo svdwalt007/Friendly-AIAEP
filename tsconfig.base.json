@@ -1,0 +1,116 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@friendly-tech/core/agent-runtime": [
+        "libs/core/agent-runtime/src/index.ts"
+      ],
+      "@friendly-tech/core/llm-providers": [
+        "libs/core/llm-providers/src/index.ts"
+      ],
+      "@friendly-tech/core/builder-orchestrator": [
+        "libs/core/builder-orchestrator/src/index.ts"
+      ],
+      "@friendly-tech/core/project-registry": [
+        "libs/core/project-registry/src/index.ts"
+      ],
+      "@friendly-tech/core/policy-service": [
+        "libs/core/policy-service/src/index.ts"
+      ],
+      "@friendly-tech/core/license-service": [
+        "libs/core/license-service/src/index.ts"
+      ],
+      "@friendly-tech/core/billing-service": [
+        "libs/core/billing-service/src/index.ts"
+      ],
+      "@friendly-tech/core/audit-service": [
+        "libs/core/audit-service/src/index.ts"
+      ],
+      "@friendly-tech/iot/swagger-ingestion": [
+        "libs/iot/swagger-ingestion/src/index.ts"
+      ],
+      "@friendly-tech/iot/auth-adapter": ["libs/iot/auth-adapter/src/index.ts"],
+      "@friendly-tech/iot/sdk-generator": [
+        "libs/iot/sdk-generator/src/index.ts"
+      ],
+      "@friendly-tech/iot/iot-tool-functions": [
+        "libs/iot/iot-tool-functions/src/index.ts"
+      ],
+      "@friendly-tech/iot/mock-api-server": [
+        "libs/iot/mock-api-server/src/index.ts"
+      ],
+      "@friendly-tech/builder/page-composer": [
+        "libs/builder/page-composer/src/index.ts"
+      ],
+      "@friendly-tech/builder/widget-registry": [
+        "libs/builder/widget-registry/src/index.ts"
+      ],
+      "@friendly-tech/builder/codegen": ["libs/builder/codegen/src/index.ts"],
+      "@friendly-tech/builder/preview-runtime": [
+        "libs/builder/preview-runtime/src/index.ts"
+      ],
+      "@friendly-tech/builder/publish-service": [
+        "libs/builder/publish-service/src/index.ts"
+      ],
+      "@friendly-tech/builder/git-service": [
+        "libs/builder/git-service/src/index.ts"
+      ],
+      "@friendly-tech/builder/environment-service": [
+        "libs/builder/environment-service/src/index.ts"
+      ],
+      "@friendly-tech/builder/template-marketplace": [
+        "libs/builder/template-marketplace/src/index.ts"
+      ],
+      "@friendly-tech/ui/iot-ui": ["libs/ui/iot-ui/src/index.ts"],
+      "@friendly-tech/grafana/provisioning": [
+        "libs/grafana/provisioning/src/index.ts"
+      ],
+      "@friendly-tech/grafana/dashboard-templates": [
+        "libs/grafana/dashboard-templates/src/index.ts"
+      ],
+      "@friendly-tech/grafana/theme": ["libs/grafana/theme/src/index.ts"],
+      "@friendly-tech/data/prisma-schema": [
+        "libs/data/prisma-schema/src/index.ts"
+      ],
+      "@friendly-tech/data/influx-schemas": [
+        "libs/data/influx-schemas/src/index.ts"
+      ],
+      "@friendly-tech/data/telegraf-ingest-config": [
+        "libs/data/telegraf-ingest-config/src/index.ts"
+      ],
+      "@friendly-tech/deploy/docker-generator": [
+        "libs/deploy/docker-generator/src/index.ts"
+      ],
+      "@friendly-tech/deploy/helm-generator": [
+        "libs/deploy/helm-generator/src/index.ts"
+      ]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

@@ -1,0 +1,12 @@
+# Templates Directory
+
+This directory will contain Handlebars templates for Docker Compose generation.
+Templates will be created by another agent.
+
+Expected templates:
+- docker-compose.hbs - Main Docker Compose template
+- docker-compose.saas.hbs - SaaS-specific template
+- docker-compose.dedicated.hbs - Dedicated-specific template
+- service-*.hbs - Individual service templates
+- env.hbs - Environment template
+- readme.hbs - Deployment documentation template

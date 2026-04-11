@@ -1,0 +1,248 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Northbound API",
+    "version": "1.0.0",
+    "description": "Northbound API for device management and monitoring"
+  },
+  "host": "api.example.com",
+  "basePath": "/northbound/v1",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/devices": {
+      "get": {
+        "operationId": "listDevices",
+        "summary": "List all devices",
+        "description": "Retrieve a list of all registered devices",
+        "tags": ["Devices"],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of devices to return",
+            "required": false,
+            "type": "integer",
+            "default": 100
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Offset for pagination",
+            "required": false,
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by device status",
+            "required": false,
+            "type": "string",
+            "enum": ["active", "inactive", "maintenance"]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of devices",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "devices": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Device"
+                  }
+                },
+                "total": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createDevice",
+        "summary": "Create a new device",
+        "description": "Register a new device in the system",
+        "tags": ["Devices"],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Device information",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Device"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Device created",
+            "schema": {
+              "$ref": "#/definitions/Device"
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/devices/{id}": {
+      "get": {
+        "operationId": "getDevice",
+        "summary": "Get device by ID",
+        "description": "Retrieve detailed information about a specific device",
+        "tags": ["Devices"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Device ID",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device details",
+            "schema": {
+              "$ref": "#/definitions/Device"
+            }
+          },
+          "404": {
+            "description": "Device not found"
+          }
+        }
+      }
+    },
+    "/alerts": {
+      "get": {
+        "operationId": "listAlerts",
+        "summary": "List all alerts",
+        "description": "Retrieve a list of all system alerts",
+        "tags": ["Alerts"],
+        "parameters": [
+          {
+            "name": "severity",
+            "in": "query",
+            "description": "Filter by alert severity",
+            "required": false,
+            "type": "string",
+            "enum": ["critical", "warning", "info"]
+          },
+          {
+            "name": "deviceId",
+            "in": "query",
+            "description": "Filter by device ID",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of alerts",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "alerts": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Alert"
+                  }
+                },
+                "total": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Device": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique device identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Device name"
+        },
+        "type": {
+          "type": "string",
+          "description": "Device type",
+          "enum": ["sensor", "actuator", "gateway"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Current device status",
+          "enum": ["active", "inactive", "maintenance"]
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "Alert": {
+      "type": "object",
+      "required": ["id", "severity", "message"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique alert identifier"
+        },
+        "severity": {
+          "type": "string",
+          "description": "Alert severity level",
+          "enum": ["critical", "warning", "info"]
+        },
+        "message": {
+          "type": "string",
+          "description": "Alert message"
+        },
+        "deviceId": {
+          "type": "string",
+          "description": "Associated device ID"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "acknowledged": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}

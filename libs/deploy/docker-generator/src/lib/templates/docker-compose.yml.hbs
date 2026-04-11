@@ -1,0 +1,358 @@
+# Friendly AI AEP Tool - Docker Compose Configuration
+# Project: {{project.projectName}}
+# Version: {{project.version}}
+# Deployment Mode: {{environment.deploymentMode}}
+# Tier: {{project.tier}}
+# Generated: {{metadata.generatedAt}}
+
+version: '3.9'
+
+services:
+  # ========================================
+  # Frontend Service (Angular)
+  # ========================================
+  frontend:
+    image: friendly-tech/aep-frontend:{{project.version}}
+    container_name: aep-frontend
+{{#if isDedicated}}
+    ports:
+      - "3000:80"
+{{/if}}
+    environment:
+      NODE_ENV: production
+{{#if isSaas}}
+      API_GATEWAY_URL: https://api.${BASE_DOMAIN}
+{{else}}
+      API_GATEWAY_URL: http://nginx-proxy:80/api
+{{/if}}
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE}
+      PROJECT_ID: ${PROJECT_ID}
+    volumes:
+      - ./config/frontend:/app/config:ro
+    depends_on:
+      - nginx-proxy
+      - iot-api-proxy
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ========================================
+  # Grafana Service (Monitoring Dashboards)
+  # ========================================
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: aep-grafana
+{{#if isDedicated}}
+    ports:
+      - "3001:3000"
+{{/if}}
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+{{#if isSaas}}
+      GF_SERVER_ROOT_URL: https://grafana-{{project.projectId}}.${BASE_DOMAIN}
+{{else}}
+      GF_SERVER_ROOT_URL: http://localhost:3001
+{{/if}}
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: postgres:5432
+      GF_DATABASE_NAME: ${POSTGRES_DB}
+      GF_DATABASE_USER: ${POSTGRES_USER}
+      GF_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/theme:/usr/share/grafana/public/build/theme:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - postgres
+      - influxdb
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ========================================
+  # InfluxDB Service (Time-Series Database)
+  # ========================================
+  influxdb:
+    image: influxdb:2.7
+    container_name: aep-influxdb
+{{#if isDedicated}}
+    ports:
+      - "8086:8086"
+{{/if}}
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_ADMIN_USER}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_ADMIN_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN}
+      DOCKER_INFLUXDB_INIT_RETENTION: 30d
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ========================================
+  # PostgreSQL Service (Relational Database)
+  # ========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: aep-postgres
+{{#if isDedicated}}
+    ports:
+      - "5432:5432"
+{{/if}}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # Redis Service (Cache & Rate Limiting)
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: aep-redis
+{{#if isDedicated}}
+    ports:
+      - "6379:6379"
+{{/if}}
+{{#if environment.redis.password}}
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+{{/if}}
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # IoT API Proxy Service
+  # ========================================
+  iot-api-proxy:
+    image: friendly-tech/iot-api-proxy:{{project.version}}
+    container_name: aep-iot-api-proxy
+    environment:
+      NODE_ENV: production
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE}
+      LICENSE_AGENT_URL: http://license-agent:8080
+      REDIS_URL: redis://redis:6379
+
+      # Northbound REST API Configuration
+      NORTHBOUND_API_URL: ${NORTHBOUND_API_URL}
+      NORTHBOUND_AUTH_METHOD: ${NORTHBOUND_AUTH_METHOD}
+      NORTHBOUND_USERNAME: ${NORTHBOUND_USERNAME}
+      NORTHBOUND_PASSWORD: ${NORTHBOUND_PASSWORD}
+      NORTHBOUND_API_KEY: ${NORTHBOUND_API_KEY}
+
+      # Events/Webhook REST API Configuration
+      EVENTS_API_URL: ${EVENTS_API_URL}
+      EVENTS_AUTH_METHOD: ${EVENTS_AUTH_METHOD}
+      EVENTS_USERNAME: ${EVENTS_USERNAME}
+      EVENTS_PASSWORD: ${EVENTS_PASSWORD}
+      EVENTS_API_KEY: ${EVENTS_API_KEY}
+
+      # QoE/Monitoring REST API Configuration
+      QOE_API_URL: ${QOE_API_URL}
+      QOE_AUTH_METHOD: ${QOE_AUTH_METHOD}
+      QOE_USERNAME: ${QOE_USERNAME}
+      QOE_PASSWORD: ${QOE_PASSWORD}
+      QOE_API_KEY: ${QOE_API_KEY}
+
+      # Rate Limiting (Tier-based)
+{{#if isEnterprise}}
+      RATE_LIMIT_CALLS_PER_MONTH: "20000000"
+{{else}}{{#if isProfessional}}
+      RATE_LIMIT_CALLS_PER_MONTH: "2000000"
+{{else}}
+      RATE_LIMIT_CALLS_PER_MONTH: "100000"
+{{/if}}{{/if}}
+    depends_on:
+      - redis
+      - license-agent
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ========================================
+  # License Agent Service
+  # ========================================
+  license-agent:
+    image: friendly-tech/license-agent:{{project.version}}
+    container_name: aep-license-agent
+    environment:
+      LICENSE_KEY: ${LICENSE_KEY}
+      TENANT_ID: ${TENANT_ID}
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE}
+      HEARTBEAT_INTERVAL: ${HEARTBEAT_INTERVAL:-1h}
+      GRACE_PERIOD_ENABLED: ${GRACE_PERIOD_ENABLED:-false}
+      GRACE_PERIOD_DURATION: ${GRACE_PERIOD_DURATION:-0}
+{{#if hasAirgap}}
+    volumes:
+      - ./license:/app/license:ro
+{{/if}}
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+{{#if hasThirdPartyIngestion}}
+  # ========================================
+  # Telegraf Service (Professional+ Only)
+  # ========================================
+  telegraf:
+    image: telegraf:1.28-alpine
+    container_name: aep-telegraf
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+      INFLUXDB_ORG: ${INFLUXDB_ORG}
+      INFLUXDB_BUCKET_EXTERNAL: ${INFLUXDB_BUCKET_EXTERNAL}
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - telegraf-buffer:/var/lib/telegraf
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD", "telegraf", "--test"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+{{/if}}
+{{#if isEnterprise}}
+  # ========================================
+  # Ollama Service (Enterprise Only)
+  # ========================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: aep-ollama
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+{{/if}}
+  # ========================================
+  # Nginx Reverse Proxy
+  # ========================================
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: aep-nginx-proxy
+{{#if isDedicated}}
+    ports:
+      - "80:80"
+      - "443:443"
+{{else}}
+    ports:
+      - "80:80"
+{{/if}}
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+{{#if isDedicated}}
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+{{/if}}
+    depends_on:
+      - frontend
+      - grafana
+      - iot-api-proxy
+    restart: unless-stopped
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# ========================================
+# Networks
+# ========================================
+networks:
+  aep-network:
+    driver: bridge
+{{#if isDedicated}}
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+{{/if}}
+
+# ========================================
+# Volumes
+# ========================================
+volumes:
+  postgres-data:
+  influxdb-data:
+  influxdb-config:
+  redis-data:
+  grafana-data:
+{{#if hasThirdPartyIngestion}}
+  telegraf-buffer:
+{{/if}}
+{{#if isEnterprise}}
+  ollama-models:
+{{/if}}

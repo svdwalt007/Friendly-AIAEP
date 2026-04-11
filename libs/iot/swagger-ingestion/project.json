@@ -1,0 +1,26 @@
+{
+  "name": "swagger-ingestion",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/iot/swagger-ingestion/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/iot/swagger-ingestion",
+        "main": "libs/iot/swagger-ingestion/src/index.ts",
+        "tsConfig": "libs/iot/swagger-ingestion/tsconfig.lib.json",
+        "assets": ["libs/iot/swagger-ingestion/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "reportsDirectory": "../../../coverage/libs/iot/swagger-ingestion"
+      }
+    }
+  }
+}

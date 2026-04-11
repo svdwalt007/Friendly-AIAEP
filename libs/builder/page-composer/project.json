@@ -1,0 +1,19 @@
+{
+  "name": "page-composer",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/builder/page-composer/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/builder/page-composer",
+        "main": "libs/builder/page-composer/src/index.ts",
+        "tsConfig": "libs/builder/page-composer/tsconfig.lib.json",
+        "assets": ["libs/builder/page-composer/*.md"]
+      }
+    }
+  }
+}

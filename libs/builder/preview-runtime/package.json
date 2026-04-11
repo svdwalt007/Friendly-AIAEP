@@ -1,0 +1,19 @@
+{
+  "name": "preview-runtime",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "tslib": "^2.3.0",
+    "dockerode": "^4.0.10",
+    "chokidar": "^5.0.0",
+    "node-cron": "^3.0.3",
+    "@prisma/client": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^4.0.1",
+    "@types/node-cron": "^3.0.11"
+  }
+}

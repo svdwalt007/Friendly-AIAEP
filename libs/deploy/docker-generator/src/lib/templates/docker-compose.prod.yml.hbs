@@ -1,0 +1,410 @@
+# Friendly AI AEP Tool - Production Overrides
+# Project: {{project.projectName}}
+# Version: {{project.version}}
+# Tier: {{project.tier}}
+# This file contains production-specific overrides for docker-compose.yml
+
+version: '3.9'
+
+services:
+  # ========================================
+  # Frontend - Production Settings
+  # ========================================
+  frontend:
+    restart: always
+    deploy:
+      resources:
+        limits:
+{{#if isEnterprise}}
+          memory: 2G
+          cpus: '2.0'
+{{else}}{{#if isProfessional}}
+          memory: 1G
+          cpus: '1.0'
+{{else}}
+          memory: 512M
+          cpus: '0.5'
+{{/if}}{{/if}}
+        reservations:
+{{#if isEnterprise}}
+          memory: 1G
+          cpus: '1.0'
+{{else}}{{#if isProfessional}}
+          memory: 512M
+          cpus: '0.5'
+{{else}}
+          memory: 256M
+          cpus: '0.25'
+{{/if}}{{/if}}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # ========================================
+  # Grafana - Production Settings
+  # ========================================
+  grafana:
+    restart: always
+    deploy:
+      resources:
+        limits:
+{{#if isEnterprise}}
+          memory: 2G
+          cpus: '1.0'
+{{else}}{{#if isProfessional}}
+          memory: 1G
+          cpus: '0.5'
+{{else}}
+          memory: 512M
+          cpus: '0.5'
+{{/if}}{{/if}}
+        reservations:
+{{#if isEnterprise}}
+          memory: 1G
+          cpus: '0.5'
+{{else}}{{#if isProfessional}}
+          memory: 512M
+          cpus: '0.25'
+{{else}}
+          memory: 256M
+          cpus: '0.25'
+{{/if}}{{/if}}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # ========================================
+  # InfluxDB - Production Settings
+  # ========================================
+  influxdb:
+    restart: always
+    deploy:
+      resources:
+        limits:
+{{#if isEnterprise}}
+          memory: 4G
+          cpus: '2.0'
+{{else}}{{#if isProfessional}}
+          memory: 2G
+          cpus: '1.0'
+{{else}}
+          memory: 1G
+          cpus: '0.5'
+{{/if}}{{/if}}
+        reservations:
+{{#if isEnterprise}}
+          memory: 2G
+          cpus: '1.0'
+{{else}}{{#if isProfessional}}
+          memory: 1G
+          cpus: '0.5'
+{{else}}
+          memory: 512M
+          cpus: '0.25'
+{{/if}}{{/if}}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # ========================================
+  # PostgreSQL - Production Settings
+  # ========================================
+  postgres:
+    restart: always
+    deploy:
+      resources:
+        limits:
+{{#if isEnterprise}}
+          memory: 4G
+          cpus: '2.0'
+{{else}}{{#if isProfessional}}
+          memory: 2G
+          cpus: '1.0'
+{{else}}
+          memory: 1G
+          cpus: '0.5'
+{{/if}}{{/if}}
+        reservations:
+{{#if isEnterprise}}
+          memory: 2G
+          cpus: '1.0'
+{{else}}{{#if isProfessional}}
+          memory: 1G
+          cpus: '0.5'
+{{else}}
+          memory: 512M
+          cpus: '0.25'
+{{/if}}{{/if}}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - default_statistics_target=100
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - work_mem=2621kB
+      - -c
+      - min_wal_size=1GB
+      - -c
+      - max_wal_size=4GB
+
+  # ========================================
+  # Redis - Production Settings
+  # ========================================
+  redis:
+    restart: always
+    deploy:
+      resources:
+        limits:
+{{#if isEnterprise}}
+          memory: 2G
+          cpus: '1.0'
+{{else}}{{#if isProfessional}}
+          memory: 1G
+          cpus: '0.5'
+{{else}}
+          memory: 512M
+          cpus: '0.5'
+{{/if}}{{/if}}
+        reservations:
+{{#if isEnterprise}}
+          memory: 1G
+          cpus: '0.5'
+{{else}}{{#if isProfessional}}
+          memory: 512M
+          cpus: '0.25'
+{{else}}
+          memory: 256M
+          cpus: '0.25'
+{{/if}}{{/if}}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  # ========================================
+  # IoT API Proxy - Production Settings
+  # ========================================
+  iot-api-proxy:
+    restart: always
+    deploy:
+      resources:
+        limits:
+{{#if isEnterprise}}
+          memory: 2G
+          cpus: '2.0'
+{{else}}{{#if isProfessional}}
+          memory: 1G
+          cpus: '1.0'
+{{else}}
+          memory: 512M
+          cpus: '0.5'
+{{/if}}{{/if}}
+        reservations:
+{{#if isEnterprise}}
+          memory: 1G
+          cpus: '1.0'
+{{else}}{{#if isProfessional}}
+          memory: 512M
+          cpus: '0.5'
+{{else}}
+          memory: 256M
+          cpus: '0.25'
+{{/if}}{{/if}}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ========================================
+  # License Agent - Production Settings
+  # ========================================
+  license-agent:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+{{#if hasThirdPartyIngestion}}
+  # ========================================
+  # Telegraf - Production Settings
+  # ========================================
+  telegraf:
+    restart: always
+    deploy:
+      resources:
+        limits:
+{{#if isEnterprise}}
+          memory: 1G
+          cpus: '1.0'
+{{else}}
+          memory: 512M
+          cpus: '0.5'
+{{/if}}
+        reservations:
+{{#if isEnterprise}}
+          memory: 512M
+          cpus: '0.5'
+{{else}}
+          memory: 256M
+          cpus: '0.25'
+{{/if}}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "telegraf", "--test"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+{{/if}}
+{{#if isEnterprise}}
+  # ========================================
+  # Ollama - Production Settings
+  # ========================================
+  ollama:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4.0'
+        reservations:
+          memory: 4G
+          cpus: '2.0'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+{{/if}}
+  # ========================================
+  # Nginx Proxy - Production Settings
+  # ========================================
+  nginx-proxy:
+    restart: always
+    deploy:
+      resources:
+        limits:
+{{#if isEnterprise}}
+          memory: 1G
+          cpus: '1.0'
+{{else}}{{#if isProfessional}}
+          memory: 512M
+          cpus: '0.5'
+{{else}}
+          memory: 256M
+          cpus: '0.5'
+{{/if}}{{/if}}
+        reservations:
+{{#if isEnterprise}}
+          memory: 512M
+          cpus: '0.5'
+{{else}}{{#if isProfessional}}
+          memory: 256M
+          cpus: '0.25'
+{{else}}
+          memory: 128M
+          cpus: '0.25'
+{{/if}}{{/if}}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

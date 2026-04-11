@@ -1,0 +1,316 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Events API",
+    "version": "2.0.0",
+    "description": "Events API for real-time event streaming and device telemetry"
+  },
+  "servers": [
+    {
+      "url": "https://events.api.example.com/v2",
+      "description": "Production server"
+    },
+    {
+      "url": "https://events.staging.api.example.com/v2",
+      "description": "Staging server"
+    }
+  ],
+  "paths": {
+    "/events": {
+      "get": {
+        "operationId": "listEvents",
+        "summary": "List all events",
+        "description": "Retrieve a paginated list of events",
+        "tags": ["Events"],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of events to return",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "eventType",
+            "in": "query",
+            "description": "Filter by event type",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["telemetry", "alarm", "status_change", "config_change"]
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "query",
+            "description": "Filter by device ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/{id}": {
+      "get": {
+        "operationId": "getEvent",
+        "summary": "Get event by ID",
+        "description": "Retrieve detailed information about a specific event",
+        "tags": ["Events"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Event ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Event not found"
+          }
+        }
+      }
+    },
+    "/events/subscribe": {
+      "post": {
+        "operationId": "subscribeToEvents",
+        "summary": "Subscribe to event stream",
+        "description": "Create a subscription for real-time event notifications",
+        "tags": ["Events"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["callbackUrl", "eventTypes"],
+                "properties": {
+                  "callbackUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL to receive event notifications"
+                  },
+                  "eventTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": ["telemetry", "alarm", "status_change", "config_change"]
+                    },
+                    "minItems": 1
+                  },
+                  "deviceFilter": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional list of device IDs to filter events"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Subscription created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "subscriptionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["active", "pending"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/devices": {
+      "get": {
+        "operationId": "listDevicesFromEvents",
+        "summary": "List devices with event history",
+        "description": "Retrieve devices that have generated events",
+        "tags": ["Devices"],
+        "parameters": [
+          {
+            "name": "hasEvents",
+            "in": "query",
+            "description": "Filter devices that have events",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of devices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Device"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "required": ["id", "eventType", "timestamp", "deviceId"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique event identifier"
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Type of event",
+            "enum": ["telemetry", "alarm", "status_change", "config_change"]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Event occurrence timestamp"
+          },
+          "deviceId": {
+            "type": "string",
+            "description": "ID of the device that generated the event"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Event-specific payload data",
+            "additionalProperties": true
+          },
+          "severity": {
+            "type": "string",
+            "description": "Event severity (for alarms)",
+            "enum": ["critical", "warning", "info"]
+          },
+          "processed": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "Device": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique device identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Device name"
+          },
+          "type": {
+            "type": "string",
+            "description": "Device type",
+            "enum": ["sensor", "actuator", "gateway", "controller"]
+          },
+          "status": {
+            "type": "string",
+            "description": "Current device status",
+            "enum": ["online", "offline", "error"]
+          },
+          "lastEventTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of last event from this device"
+          },
+          "eventCount": {
+            "type": "integer",
+            "description": "Total number of events generated by this device"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}
