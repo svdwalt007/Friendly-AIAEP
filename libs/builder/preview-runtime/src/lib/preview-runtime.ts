@@ -1,4 +1,3 @@
-// @ts-nocheck - TODO: Fix type errors and method signature mismatches
 /**
  * Preview Runtime Service
  * Module Reference v2.2 Section 7.5
@@ -187,7 +186,7 @@ export class PreviewRuntimeService {
       throw new Error('PreviewRuntimeService not initialized. Call initialize() first.');
     }
 
-    const { projectId, tenantId, mode, durationMinutes, enableHotReload } = request;
+    const { projectId, tenantId, mode, enableHotReload } = request;
 
     try {
       // Generate session ID
@@ -245,20 +244,17 @@ export class PreviewRuntimeService {
       const previewUrl = this.generatePreviewUrl(projectId, containerInfo.port);
 
       // Create session in database
-      const session = await this.sessionManager.createSession({
-        tenantId,
+      const session = await this.sessionManager.createSession(
         projectId,
-        config: {
-          mode,
-          containerIds: [
-            containerInfo.containerId,
-            ...(containerInfo.sidecarId ? [containerInfo.sidecarId] : []),
-          ],
-          port: containerInfo.port,
-          lastActivityAt: new Date().toISOString(),
-        },
-        durationMinutes,
-      });
+        tenantId,
+        'preview-user-id', // TODO: Get from request context
+        mode,
+        [
+          containerInfo.containerId,
+          ...(containerInfo.sidecarId ? [containerInfo.sidecarId] : []),
+        ],
+        containerInfo.port
+      );
 
       // Setup hot-reload if enabled
       if (this.config.enableHotReload && (enableHotReload ?? true)) {
@@ -410,7 +406,6 @@ export class PreviewRuntimeService {
     }
 
     const sessions = await this.sessionManager.listActiveSessions(tenantId);
-    const tier = await this.sessionManager.getTenantTier(tenantId);
     const sessionsToday = await this.sessionManager.countSessionsToday(tenantId);
     const limits = await this.sessionManager.getSessionLimits(tenantId);
 
@@ -504,7 +499,7 @@ export class PreviewRuntimeService {
     this.cleanupService.stop();
 
     // Close all file watchers
-    for (const [sessionId, watcher] of this.fileWatchers.entries()) {
+    for (const [_sessionId, watcher] of this.fileWatchers.entries()) {
       await watcher.close();
     }
     this.fileWatchers.clear();

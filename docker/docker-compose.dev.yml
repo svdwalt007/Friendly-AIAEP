@@ -1,42 +1,56 @@
-version: '3.8'
-
+# ============================================================================
 # Friendly AI AEP Development Environment
-# This docker-compose file sets up the development infrastructure for the Friendly AI AEP Tool.
+# ============================================================================
+# This docker-compose file sets up the development infrastructure
+# Optimized for local development with debugging and hot-reload support
+# ============================================================================
 
 services:
   # PostgreSQL database for application data
   postgres:
     image: postgres:16-alpine
-    container_name: friendly-aep-postgres
+    container_name: friendly-aep-dev-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: friendly
-      POSTGRES_PASSWORD: friendly_dev_password
-      POSTGRES_DB: friendly_aep
+      POSTGRES_USER: ${POSTGRES_USER:-friendly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-friendly_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-friendly_aep_dev}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8'
     ports:
-      - '5432:5432'
+      - '46100:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U friendly']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-friendly}']
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   # InfluxDB for time-series IoT data
   influxdb:
     image: influxdb:2.7-alpine
-    container_name: friendly-aep-influxdb
+    container_name: friendly-aep-dev-influxdb
     restart: unless-stopped
     environment:
       DOCKER_INFLUXDB_INIT_MODE: setup
-      DOCKER_INFLUXDB_INIT_USERNAME: admin
-      DOCKER_INFLUXDB_INIT_PASSWORD: friendly_influx_dev
-      DOCKER_INFLUXDB_INIT_ORG: friendly
-      DOCKER_INFLUXDB_INIT_BUCKET: iot_data
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: friendly-dev-token-12345
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_ADMIN_USER:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_ADMIN_PASSWORD:-friendly_influx_dev}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-friendly}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-iot_data}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:-friendly-dev-token-12345}
     ports:
-      - '8086:8086'
+      - '46101:8086'
     volumes:
       - influxdb_data:/var/lib/influxdb2
       - influxdb_config:/etc/influxdb2
@@ -45,30 +59,51 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   # Telegraf for IoT data ingestion
   telegraf:
     image: telegraf:1.31-alpine
-    container_name: friendly-aep-telegraf
+    container_name: friendly-aep-dev-telegraf
     restart: unless-stopped
     depends_on:
       influxdb:
         condition: service_healthy
     environment:
-      INFLUX_TOKEN: friendly-dev-token-12345
-      INFLUX_ORG: friendly
-      INFLUX_BUCKET: iot_data
+      INFLUX_URL: http://friendly-aep-dev-influxdb:8086
+      INFLUX_TOKEN: ${INFLUXDB_TOKEN:-friendly-dev-token-12345}
+      INFLUX_ORG: ${INFLUXDB_ORG:-friendly}
+      INFLUX_BUCKET: ${INFLUXDB_BUCKET:-iot_data}
     ports:
-      - '8125:8125/udp'
-      - '8092:8092/udp'
-      - '8094:8094'
+      - '46472:8125/udp'
+      - '46471:8092/udp'
+      - '46470:8094'
     volumes:
       - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   # Grafana for IoT visualization
   grafana:
     image: grafana/grafana:11.3.0
-    container_name: friendly-aep-grafana
+    container_name: friendly-aep-dev-grafana
     restart: unless-stopped
     depends_on:
       postgres:
@@ -76,56 +111,296 @@ services:
       influxdb:
         condition: service_healthy
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: friendly_grafana_dev
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-friendly_grafana_dev}
       GF_DATABASE_TYPE: postgres
       GF_DATABASE_HOST: postgres:5432
-      GF_DATABASE_NAME: friendly_aep
-      GF_DATABASE_USER: friendly
-      GF_DATABASE_PASSWORD: friendly_dev_password
-      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_DATABASE_NAME: ${POSTGRES_DB:-friendly_aep_dev}
+      GF_DATABASE_USER: ${POSTGRES_USER:-friendly}
+      GF_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-friendly_dev_password}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
       GF_INSTALL_PLUGINS: ''
+      GF_LOG_MODE: console
+      GF_LOG_LEVEL: debug
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      # Datasource provisioning environment variables
+      GRAFANA_INFLUXDB_URL: http://friendly-aep-dev-influxdb:8086
+      GRAFANA_INFLUXDB_ORG: ${INFLUXDB_ORG:-friendly}
+      GRAFANA_INFLUXDB_BUCKET: ${INFLUXDB_BUCKET:-iot_data}
+      GRAFANA_INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-friendly-dev-token-12345}
+      GRAFANA_POSTGRES_URL: friendly-aep-dev-postgres:5432
+      GRAFANA_POSTGRES_USER: ${POSTGRES_USER:-friendly}
+      GRAFANA_POSTGRES_DB: ${POSTGRES_DB:-friendly_aep_dev}
+      GRAFANA_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-friendly_dev_password}
     ports:
-      - '3000:3000'
+      - '45001:3000'
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   # Redis for caching and session management
   redis:
     image: redis:7-alpine
-    container_name: friendly-aep-redis
+    container_name: friendly-aep-dev-redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '46102:6379'
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   # MinIO for object storage (S3-compatible)
   minio:
     image: minio/minio:latest
-    container_name: friendly-aep-minio
+    container_name: friendly-aep-dev-minio
     restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: friendly
-      MINIO_ROOT_PASSWORD: friendly_minio_dev
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-friendly}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-friendly_minio_dev}
+      MINIO_BROWSER: 'on'
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '46200:9000'
+      - '45003:9001'
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
     healthcheck:
-      test: ['CMD', 'mc', 'ready', 'local']
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # ============================================================================
+  # Observability Stack
+  # ============================================================================
+
+  # Jaeger - Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: friendly-aep-dev-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+      METRICS_STORAGE_TYPE: prometheus
+      PROMETHEUS_SERVER_URL: http://prometheus:9090
+    ports:
+      - '46400:5775/udp' # Agent zipkin.thrift compact
+      - '46402:6831/udp' # Agent jaeger.thrift compact
+      - '46403:6832/udp' # Agent jaeger.thrift binary
+      - '46401:5778' # Agent configs
+      - '45002:16686' # UI
+      - '46405:14268' # Collector HTTP
+      - '46406:14269' # Collector metrics
+      - '46404:14250' # Collector gRPC
+      - '46450:4317' # OTLP gRPC
+      - '46451:4318' # OTLP HTTP
+    volumes:
+      - ./observability/jaeger-config.yml:/etc/jaeger/config.yml:ro
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    container_name: friendly-aep-dev-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - '46300:9090'
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - jaeger
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Loki - Log Aggregation
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: friendly-aep-dev-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    ports:
+      - '46350:3100'
+    volumes:
+      - ./observability/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Promtail - Log Shipping Agent
+  promtail:
+    image: grafana/promtail:3.3.2
+    container_name: friendly-aep-dev-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yml
+    ports:
+      - '9080:9080'
+    volumes:
+      - ./observability/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Node Exporter - System Metrics
+  node-exporter:
+    image: prom/node-exporter:v1.9.0
+    container_name: friendly-aep-dev-node-exporter
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|run/user)($$|/)'
+      # Disable collectors that don't work in WSL2
+      - '--no-collector.netstat'
+      - '--no-collector.softnet'
+    ports:
+      - '46301:9100'
+    volumes:
+      # WSL2-compatible: Only mount necessary paths instead of root
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      # Note: Root filesystem mount (/) is not supported in WSL2
+      # If running on native Linux, you can use: - /:/host:ro,rslave
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Postgres Exporter - Database Metrics
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.0
+    container_name: friendly-aep-dev-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: 'postgresql://${POSTGRES_USER:-friendly}:${POSTGRES_PASSWORD:-friendly_dev_password}@postgres:5432/${POSTGRES_DB:-friendly_aep_dev}?sslmode=disable'
+    ports:
+      - '46303:9187'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Redis Exporter - Cache Metrics
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.68.0
+    container_name: friendly-aep-dev-redis-exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: redis:6379
+    ports:
+      - '46302:9121'
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
 volumes:
   postgres_data:
@@ -140,7 +415,12 @@ volumes:
     driver: local
   minio_data:
     driver: local
+  prometheus_data:
+    driver: local
+  loki_data:
+    driver: local
 
 networks:
   default:
-    name: friendly-aep-network
+    name: friendly-aep-dev-network
+    driver: bridge

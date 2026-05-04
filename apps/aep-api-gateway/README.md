@@ -131,7 +131,7 @@ REDIS_PASSWORD=
 REDIS_DB=0
 
 # CORS
-CORS_ORIGIN_BUILDER=http://localhost:4200
+CORS_ORIGIN_BUILDER=http://localhost:45000
 CORS_ORIGIN_PREVIEW=http://localhost:4201
 CORS_ORIGIN_ADMIN=http://localhost:4202
 
@@ -158,11 +158,11 @@ pnpm nx build aep-api-gateway
 NODE_ENV=production pnpm nx serve aep-api-gateway:production
 ```
 
-Server will start at `http://localhost:3000`
+Server will start at `http://localhost:45001`
 
 ### 4. Access API Documentation
 
-Navigate to `http://localhost:3000/docs` for interactive Swagger UI
+Navigate to `http://localhost:45001/docs` for interactive Swagger UI
 
 ---
 
@@ -225,7 +225,7 @@ Navigate to `http://localhost:3000/docs` for interactive Swagger UI
 ### 1. Login
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/auth/login \
+curl -X POST http://localhost:45001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "uid": "user@friendly.com",
@@ -246,14 +246,14 @@ curl -X POST http://localhost:3000/api/v1/auth/login \
 ### 2. Access Protected Endpoints
 
 ```bash
-curl http://localhost:3000/api/v1/projects \
+curl http://localhost:45001/api/v1/projects \
   -H "Authorization: Bearer eyJhbGc..."
 ```
 
 ### 3. Refresh Token
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/auth/token/refresh \
+curl -X POST http://localhost:45001/api/v1/auth/token/refresh \
   -H "Content-Type: application/json" \
   -d '{
     "refreshToken": "eyJhbGc..."
@@ -267,7 +267,7 @@ curl -X POST http://localhost:3000/api/v1/auth/token/refresh \
 ### Agent Streaming
 
 ```javascript
-const ws = new WebSocket('ws://localhost:3000/api/v1/agent/stream?token=eyJhbGc...');
+const ws = new WebSocket('ws://localhost:45001/api/v1/agent/stream?token=eyJhbGc...');
 
 ws.onopen = () => {
   ws.send(JSON.stringify({
@@ -383,7 +383,7 @@ See `TEST_COVERAGE.md` for detailed test documentation.
 docker build -t friendly-aep-gateway:latest .
 
 # Run container
-docker run -p 3000:3000 \
+docker run -p 3000:45001 \
   -e DEPLOYMENT_MODE=multi-tenant \
   -e REDIS_HOST=redis \
   friendly-aep-gateway:latest
@@ -436,13 +436,13 @@ helm install aep-gateway ./dist/helm/aep-api-gateway
 
 ```bash
 # Basic health
-curl http://localhost:3000/health
+curl http://localhost:45001/health
 
 # Readiness (K8s)
-curl http://localhost:3000/health/ready
+curl http://localhost:45001/health/ready
 
 # Liveness (K8s)
-curl http://localhost:3000/health/live
+curl http://localhost:45001/health/live
 ```
 
 ### Metrics
@@ -489,7 +489,7 @@ Verify: pnpm nx test aep-api-gateway --testNamePattern="JWT"
 **Issue: Rate limit not working**
 ```
 Solution: Ensure Redis is running and RATE_LIMIT_REDIS_ENABLED=true
-Check: curl http://localhost:3000/health (should show Redis status)
+Check: curl http://localhost:45001/health (should show Redis status)
 ```
 
 **Issue: CORS errors**

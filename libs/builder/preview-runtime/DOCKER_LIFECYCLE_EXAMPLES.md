@@ -57,7 +57,7 @@ async function previewWithMockApi() {
     enableMockApi: true,
     env: {
       NODE_ENV: 'preview',
-      API_URL: 'http://mock-api:3000',
+      API_URL: 'http://mock-api:45001',
     },
   });
 

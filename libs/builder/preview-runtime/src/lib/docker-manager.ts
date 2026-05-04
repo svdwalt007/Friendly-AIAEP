@@ -1,4 +1,3 @@
-// @ts-nocheck - TODO: Fix type errors
 import Docker = require('dockerode');
 import { EventEmitter } from 'events';
 
@@ -151,9 +150,9 @@ export class DockerLifecycleManager extends EventEmitter {
                 resolve();
               }
             },
-            (event: { status?: string; progress?: string }) => {
+            (_event: { status?: string; progress?: string }) => {
               // Optional: emit progress events
-              // this.emit('pullProgress', event);
+              // this.emit('pullProgress', _event);
             }
           );
         });
@@ -437,6 +436,29 @@ export class DockerLifecycleManager extends EventEmitter {
   }
 
   /**
+   * Restarts a container
+   *
+   * @param containerId - Container ID to restart
+   * @param timeout - Timeout in seconds before forcing restart (default: 10)
+   * @throws Error if restart fails
+   */
+  public async restartContainer(
+    containerId: string,
+    timeout = 10
+  ): Promise<void> {
+    try {
+      const container = this.docker.getContainer(containerId);
+      await container.restart({ t: timeout });
+      this.emit('containerStarted', containerId);
+    } catch (error) {
+      this.emit('error', error as Error);
+      throw new Error(
+        `Failed to restart container ${containerId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  /**
    * Removes a container and cleans up resources
    *
    * @param containerId - Container ID to remove
@@ -505,7 +527,6 @@ export class DockerLifecycleManager extends EventEmitter {
   ): Promise<boolean> {
     const maxRetries = options.maxRetries || 30;
     const retryInterval = options.retryInterval || 1000;
-    const expectedStatus = options.expectedStatus || 200;
 
     this.emit('healthCheckStarted', containerId);
 

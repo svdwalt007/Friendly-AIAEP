@@ -1,0 +1,14 @@
+apiVersion: v2
+name: friendly-aep
+description: Friendly AI AEP - AI-Powered IoT Application Builder Platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - iot
+  - ai
+  - aep
+  - builder
+maintainers:
+  - name: Friendly Technology
+    email: support@friendly-tech.com

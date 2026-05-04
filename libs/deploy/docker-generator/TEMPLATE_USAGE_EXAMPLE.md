@@ -62,7 +62,7 @@ const stack = generator.generate(
         username: 'aep_user',
       },
       influxdb: {
-        url: 'http://influxdb:8086',
+        url: 'http://influxdb:46101',
         org: 'friendly',
         bucket: 'iot_data',
       },
@@ -295,8 +295,8 @@ docker-compose ps
 docker-compose logs -f
 
 # 5. Access services
-# Frontend: http://localhost:3000
-# Grafana: http://localhost:3001
+# Frontend: http://localhost:45001
+# Grafana: http://localhost:46000
 # API: http://localhost:80/api
 ```
 

@@ -74,7 +74,7 @@ Create a `.env` file in the project root:
 
 ```bash
 # Database connection string
-DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:46100/mydb?schema=public"
 
 # Environment
 NODE_ENV="development"

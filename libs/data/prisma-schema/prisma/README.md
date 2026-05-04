@@ -24,7 +24,7 @@ The `schema.prisma` file defines the complete database schema for the platform i
 1. Ensure you have a PostgreSQL database running
 2. Set the `DATABASE_URL` environment variable in your `.env` file:
    ```
-   DATABASE_URL="postgresql://user:password@localhost:5432/friendlyai_aep?schema=public"
+   DATABASE_URL="postgresql://user:password@localhost:46100/friendlyai_aep?schema=public"
    ```
 
 ### Running the Seed Script

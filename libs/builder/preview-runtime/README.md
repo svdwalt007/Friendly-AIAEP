@@ -297,9 +297,9 @@ const session = await service.launchPreview({
 - Network: Docker bridge with internal DNS
 
 **Mock API Endpoints:**
-- Northbound: `http://mock-api:3000/northbound/*`
-- Events: `http://mock-api:3000/events/*`
-- QoE: `http://mock-api:3000/qoe/*`
+- Northbound: `http://mock-api:45001/northbound/*`
+- Events: `http://mock-api:45001/events/*`
+- QoE: `http://mock-api:45001/qoe/*`
 
 ### Live Mode
 

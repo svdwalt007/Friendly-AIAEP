@@ -348,7 +348,7 @@ export function AgentStreamViewer({ sessionId, token }: AgentStreamProps) {
 
   useEffect(() => {
     const websocket = new WebSocket(
-      `ws://localhost:3000/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
+      `ws://localhost:45001/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
     );
 
     websocket.onopen = () => {
@@ -539,7 +539,7 @@ let ws: WebSocket | null = null;
 
 onMounted(() => {
   ws = new WebSocket(
-    `ws://localhost:3000/api/v1/agent/stream?sessionId=${props.sessionId}&token=${props.token}`
+    `ws://localhost:45001/api/v1/agent/stream?sessionId=${props.sessionId}&token=${props.token}`
   );
 
   ws.onopen = () => {
@@ -627,7 +627,7 @@ describe('Agent Stream WebSocket Integration', () => {
 
   it('should stream agent execution', (done) => {
     const ws = new WebSocket(
-      `ws://localhost:3000/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
+      `ws://localhost:45001/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
     );
 
     const chunks: StreamChunk[] = [];

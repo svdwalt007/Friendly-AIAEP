@@ -349,7 +349,7 @@ The module provides proper error responses:
 ### Test Login
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/auth/login \
+curl -X POST http://localhost:45001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"uid": "user@tenant123", "pw": "password123"}'
 ```
@@ -357,14 +357,14 @@ curl -X POST http://localhost:3000/api/v1/auth/login \
 ### Test Protected Route
 
 ```bash
-curl http://localhost:3000/api/v1/projects \
+curl http://localhost:45001/api/v1/projects \
   -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
 ### Test Token Refresh
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/auth/token/refresh \
+curl -X POST http://localhost:45001/api/v1/auth/token/refresh \
   -H "Content-Type: application/json" \
   -d '{"refreshToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."}'
 ```
@@ -372,7 +372,7 @@ curl -X POST http://localhost:3000/api/v1/auth/token/refresh \
 ### Test Health Check (No Auth Required)
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:45001/health
 ```
 
 ## Troubleshooting

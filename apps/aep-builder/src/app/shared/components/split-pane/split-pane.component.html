@@ -1,0 +1,46 @@
+<div
+  class="split-pane-container"
+  [class.horizontal]="isHorizontal()"
+  [class.vertical]="!isHorizontal()"
+  [class]="getDraggingClass()"
+>
+  <div
+    #leftPane
+    class="pane left-pane"
+    [ngStyle]="leftPaneStyle()"
+    role="region"
+    [attr.aria-label]="isHorizontal() ? 'Left panel' : 'Top panel'"
+  >
+    <ng-content select="[left-pane]"></ng-content>
+  </div>
+
+  <div
+    #divider
+    class="divider"
+    [class.resizable]="resizable"
+    role="separator"
+    [attr.aria-orientation]="isHorizontal() ? 'vertical' : 'horizontal'"
+    [attr.aria-valuenow]="splitPosition()"
+    [attr.aria-valuemin]="minSize"
+    [attr.aria-valuemax]="maxSize"
+    [attr.aria-label]="'Resize ' + (isHorizontal() ? 'vertical' : 'horizontal') + ' split pane'"
+    [tabindex]="resizable ? 0 : -1"
+    (mousedown)="onDividerMouseDown($event)"
+    (touchstart)="onDividerTouchStart($event)"
+    (keydown)="onDividerKeyDown($event)"
+  >
+    <div class="divider-handle" [attr.aria-hidden]="true">
+      <div class="divider-line"></div>
+    </div>
+  </div>
+
+  <div
+    #rightPane
+    class="pane right-pane"
+    [ngStyle]="rightPaneStyle()"
+    role="region"
+    [attr.aria-label]="isHorizontal() ? 'Right panel' : 'Bottom panel'"
+  >
+    <ng-content select="[right-pane]"></ng-content>
+  </div>
+</div>

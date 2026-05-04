@@ -1,0 +1,206 @@
+@if (loading()) {
+  <div class="loading-state">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
+} @else if (project(); as proj) {
+  <app-split-pane
+    [direction]="'horizontal'"
+    [initialSplit]="splitPosition()"
+    [minSize]="30"
+    [maxSize]="70"
+    [resizable]="true"
+    (splitChange)="onSplitChange($event)"
+  >
+    <!-- Left Pane: AI Chat -->
+    <div left-pane class="chat-panel">
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <a routerLink="/projects" class="back-link" aria-label="Back to projects">
+            <mat-icon>arrow_back</mat-icon>
+          </a>
+          <div>
+            <h3>{{ proj.name }}</h3>
+            <small class="ft-text-muted">AI Builder</small>
+          </div>
+        </div>
+        @if (agentStream.streaming()) {
+          <mat-progress-bar mode="indeterminate" class="streaming-indicator"></mat-progress-bar>
+        }
+      </div>
+
+      <!-- Messages -->
+      <div class="chat-messages" #chatMessages role="log" aria-live="polite" aria-label="Chat messages">
+        @if (agentStream.messages().length === 0) {
+          <div class="chat-welcome">
+            <mat-icon class="welcome-icon" aria-hidden="true">smart_toy</mat-icon>
+            <h4>AI Builder Ready</h4>
+            <p>Describe the IoT application you want to build. For example:</p>
+            <div class="prompt-suggestions">
+              <button
+                mat-stroked-button
+                (click)="promptInput = 'Build a dashboard for 10,000 smart meters showing real-time power consumption'; sendPrompt()"
+                aria-label="Build a smart meter dashboard"
+              >
+                Build a smart meter dashboard
+              </button>
+              <button
+                mat-stroked-button
+                (click)="promptInput = 'Create a fleet management app with GPS tracking and alerts'; sendPrompt()"
+                aria-label="Create fleet management with GPS"
+              >
+                Fleet management with GPS
+              </button>
+              <button
+                mat-stroked-button
+                (click)="promptInput = 'Design a temperature monitoring system with threshold alerts'; sendPrompt()"
+                aria-label="Design temperature monitoring system"
+              >
+                Temperature monitoring system
+              </button>
+            </div>
+          </div>
+        }
+
+        @for (msg of agentStream.messages(); track $index) {
+          <div class="chat-message" [class]="'msg-' + msg.type" role="article">
+            <div class="msg-avatar" [attr.aria-hidden]="true">
+              <mat-icon>{{ getMessageIcon(msg.type) }}</mat-icon>
+            </div>
+            <div class="msg-content">
+              <div class="msg-header">
+                <span class="msg-label">
+                  @switch (msg.type) {
+                    @case ('user') { You }
+                    @case ('agent_thinking') { Thinking... }
+                    @case ('agent_response') { AI Agent }
+                    @case ('agent_tool_call') { Tool Call }
+                    @case ('build_progress') { Build }
+                    @case ('error') { Error }
+                    @case ('complete') { Complete }
+                  }
+                </span>
+                <small class="msg-time">
+                  <time [attr.datetime]="msg.timestamp">{{ msg.timestamp | date: 'shortTime' }}</time>
+                </small>
+              </div>
+              <p class="msg-text">{{ msg.content }}</p>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Input -->
+      <div class="chat-input">
+        <mat-form-field appearance="outline" class="input-field">
+          <input
+            matInput
+            [(ngModel)]="promptInput"
+            placeholder="Describe what you want to build..."
+            (keyup.enter)="sendPrompt()"
+            [disabled]="agentStream.streaming()"
+            aria-label="Message input"
+          />
+        </mat-form-field>
+        <button
+          mat-fab
+          color="accent"
+          (click)="sendPrompt()"
+          [disabled]="!promptInput.trim() || agentStream.streaming()"
+          matTooltip="Send prompt"
+          aria-label="Send message"
+        >
+          <mat-icon>send</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Pane: Canvas/Preview with Tabs -->
+    <div right-pane class="canvas-panel">
+      <div class="canvas-header">
+        <mat-tab-group
+          [selectedIndex]="activeView()"
+          (selectedIndexChange)="activeView.set($event)"
+          class="canvas-tabs"
+          aria-label="Canvas view tabs"
+        >
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>web</mat-icon>
+              <span>Preview</span>
+            </ng-template>
+          </mat-tab>
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>extension</mat-icon>
+              <span>Components</span>
+            </ng-template>
+          </mat-tab>
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>code</mat-icon>
+              <span>Code Changes</span>
+            </ng-template>
+          </mat-tab>
+        </mat-tab-group>
+
+        <div class="canvas-actions">
+          <button
+            mat-icon-button
+            matTooltip="Refresh preview"
+            aria-label="Refresh preview"
+            (click)="showPreview()"
+          >
+            <mat-icon>refresh</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            matTooltip="Open in new tab"
+            aria-label="Open preview in new tab"
+          >
+            <mat-icon>open_in_new</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="canvas-body">
+        <!-- Preview View -->
+        @if (activeView() === 0) {
+          <div class="canvas-placeholder" role="status">
+            <mat-icon aria-hidden="true">web</mat-icon>
+            <p>Your application preview will appear here</p>
+            <small class="ft-text-muted">Use the AI chat to generate pages and components</small>
+          </div>
+        }
+
+        <!-- Component Picker View -->
+        @if (activeView() === 1) {
+          <app-component-picker
+            (componentSelected)="onComponentSelected($event)"
+            (componentPreviewed)="onComponentPreviewed($event)"
+          ></app-component-picker>
+        }
+
+        <!-- Code Diff View -->
+        @if (activeView() === 2) {
+          @if (sampleDiffs().length > 0) {
+            <app-code-diff-viewer
+              [diffs]="sampleDiffs()"
+              [viewMode]="'unified'"
+              [showLineNumbers]="true"
+              [collapsible]="true"
+            ></app-code-diff-viewer>
+          } @else {
+            <div class="canvas-placeholder" role="status">
+              <mat-icon aria-hidden="true">code_off</mat-icon>
+              <p>No code changes yet</p>
+              <small class="ft-text-muted">Code changes will appear here as the AI builds your application</small>
+              <button mat-stroked-button (click)="showCodeDiff()" style="margin-top: 16px">
+                Show Sample Diff
+              </button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </app-split-pane>
+}

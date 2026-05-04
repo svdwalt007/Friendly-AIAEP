@@ -17,6 +17,7 @@
         "tsConfig": "apps/aep-api-gateway/tsconfig.app.json",
         "assets": ["apps/aep-api-gateway/src/assets"],
         "generatePackageJson": true,
+        "external": ["@prisma/client", ".prisma/client"],
         "esbuildOptions": {
           "sourcemap": true,
           "outExtension": {

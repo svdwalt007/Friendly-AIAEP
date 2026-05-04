@@ -29,19 +29,19 @@ cd apps/aep-api-gateway
 pnpm nx serve
 ```
 
-The server will start at `http://localhost:3000`
+The server will start at `http://localhost:45001`
 
 ### API Documentation
 
 Once running, access Swagger UI at:
-- http://localhost:3000/docs
+- http://localhost:45001/docs
 
 ## Authentication
 
 ### Login (Demo Credentials)
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/auth/login \
+curl -X POST http://localhost:45001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "demo",
@@ -71,7 +71,7 @@ Include the token in the Authorization header:
 ```bash
 export TOKEN="your_access_token_here"
 
-curl -X GET http://localhost:3000/api/v1/projects \
+curl -X GET http://localhost:45001/api/v1/projects \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -116,7 +116,7 @@ curl -X GET http://localhost:3000/api/v1/projects \
 ### Create a Project
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/projects \
+curl -X POST http://localhost:45001/api/v1/projects \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -129,14 +129,14 @@ curl -X POST http://localhost:3000/api/v1/projects \
 ### List Pages for Project
 
 ```bash
-curl -X GET http://localhost:3000/api/v1/projects/proj_001/pages \
+curl -X GET http://localhost:45001/api/v1/projects/proj_001/pages \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Trigger Preview
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/projects/proj_001/preview \
+curl -X POST http://localhost:45001/api/v1/projects/proj_001/preview \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -148,7 +148,7 @@ curl -X POST http://localhost:3000/api/v1/projects/proj_001/preview \
 ### Send Prompt to Agent
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/projects/proj_001/agent \
+curl -X POST http://localhost:45001/api/v1/projects/proj_001/agent \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -162,14 +162,14 @@ Response includes `sessionId` for WebSocket connection.
 ### Check Billing Usage
 
 ```bash
-curl -X GET "http://localhost:3000/api/v1/billing/usage?period=current" \
+curl -X GET "http://localhost:45001/api/v1/billing/usage?period=current" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Validate License
 
 ```bash
-curl -X GET http://localhost:3000/api/v1/license/validate \
+curl -X GET http://localhost:45001/api/v1/license/validate \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -181,7 +181,7 @@ const token = 'your_jwt_token';
 const sessionId = 'sess_123456';
 
 const ws = new WebSocket(
-  `ws://localhost:3000/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
+  `ws://localhost:45001/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
 );
 
 ws.onopen = () => {
@@ -215,10 +215,10 @@ JWT_SECRET=your-secret-key-change-in-production
 
 # API
 API_VERSION=1.0.0
-API_BASE_URL=http://localhost:3000
+API_BASE_URL=http://localhost:45001
 
 # Database (PostgreSQL)
-DATABASE_URL=postgresql://user:password@localhost:5432/aep_db
+DATABASE_URL=postgresql://user:password@localhost:46100/aep_db
 
 # Redis
 REDIS_HOST=localhost
@@ -226,7 +226,7 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 
 # InfluxDB
-INFLUX_URL=http://localhost:8086
+INFLUX_URL=http://localhost:46101
 INFLUX_TOKEN=your-influx-token
 INFLUX_ORG=friendly-ai
 INFLUX_BUCKET=telemetry_raw
@@ -266,7 +266,7 @@ pnpm nx lint aep-api-gateway
    ```
 
 2. **Access Swagger UI**
-   - Open http://localhost:3000/docs
+   - Open http://localhost:45001/docs
    - Click "Authorize" button
    - Login via `/api/v1/auth/login`
    - Copy the `accessToken` from response
@@ -329,7 +329,7 @@ CORS is configured via `plugins/cors.ts`. Update allowed origins if needed.
 
 ## Resources
 
-- **API Documentation**: http://localhost:3000/docs
+- **API Documentation**: http://localhost:45001/docs
 - **Implementation Guide**: `API_ROUTES_IMPLEMENTATION.md`
 - **Module Reference**: `docs/Module_Reference_v2.2.md`
 - **System Specification**: `docs/System_Specification_v2.2.md`

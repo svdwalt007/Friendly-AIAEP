@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-builder
+  labels:
+    app: {{ .Release.Name }}
+    component: builder
+spec:
+  replicas: {{ .Values.builder.replicaCount | default .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      component: builder
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        component: builder
+    spec:
+      containers:
+        - name: builder
+          image: "{{ .Values.image.registry }}/aep-builder:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.builder.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.builder.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.builder.port }}
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+              cpu: 100m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-builder
+spec:
+  selector:
+    app: {{ .Release.Name }}
+    component: builder
+  ports:
+    - port: {{ .Values.builder.port }}
+      targetPort: {{ .Values.builder.port }}
+      protocol: TCP

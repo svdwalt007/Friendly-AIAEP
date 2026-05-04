@@ -1,11 +1,8 @@
-// @ts-nocheck - TODO: Fix type errors with prisma-schema imports
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, Tier, PreviewSession } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PreviewMode } from './types';
 
 const prisma = new PrismaClient();
-type PreviewSession = any;
-type Tier = any;
 
 /**
  * Session configuration stored in the PreviewSession.config JSON field
@@ -493,6 +490,49 @@ export class SessionManager {
   }
 
   /**
+   * Lists all expired sessions (sessions past their expiration time)
+   *
+   * @returns Promise resolving to array of expired sessions
+   *
+   * @example
+   * ```typescript
+   * const expired = await sessionManager.listExpiredSessions();
+   * console.log(`Found ${expired.length} expired sessions`);
+   * ```
+   */
+  async listExpiredSessions(): Promise<PreviewSession[]> {
+    const sessions = await prisma.previewSession.findMany({
+      where: {
+        status: 'running',
+        expiresAt: {
+          lt: new Date(),
+        },
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            tenantId: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        expiresAt: 'asc',
+      },
+    });
+
+    return sessions;
+  }
+
+  /**
    * Gets session statistics for a tenant.
    *
    * @param tenantId - The tenant identifier
@@ -556,6 +596,168 @@ export class SessionManager {
    */
   private generateSessionToken(): string {
     return randomBytes(32).toString('hex');
+  }
+
+  /**
+   * Get tenant tier from database
+   *
+   * @param tenantId - The tenant identifier
+   * @returns Promise resolving to the tenant tier
+   */
+  async getTenantTier(tenantId: string): Promise<string> {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { tier: true }
+    });
+    return tenant?.tier || 'FREE';
+  }
+
+  /**
+   * Count sessions created today for a tenant
+   *
+   * @param tenantId - The tenant identifier
+   * @returns Promise resolving to the count of sessions created today
+   */
+  async countSessionsToday(tenantId: string): Promise<number> {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    return prisma.previewSession.count({
+      where: {
+        project: {
+          tenantId
+        },
+        createdAt: { gte: startOfDay }
+      }
+    });
+  }
+
+  /**
+   * Get session limits based on tenant tier
+   *
+   * @param tenantId - The tenant identifier
+   * @returns Promise resolving to session limits
+   */
+  async getSessionLimits(tenantId: string): Promise<{
+    maxConcurrentSessions: number;
+    maxSessionsPerDay: number;
+    maxDurationMinutes: number;
+  }> {
+    const tier = await this.getTenantTier(tenantId);
+    const tierLimits: Record<string, any> = {
+      FREE: { maxConcurrentSessions: 1, maxSessionsPerDay: 10, maxDurationMinutes: 30 },
+      STARTER: { maxConcurrentSessions: 3, maxSessionsPerDay: Infinity, maxDurationMinutes: 120 },
+      PROFESSIONAL: { maxConcurrentSessions: 10, maxSessionsPerDay: Infinity, maxDurationMinutes: 240 },
+      ENTERPRISE: { maxConcurrentSessions: 50, maxSessionsPerDay: Infinity, maxDurationMinutes: 480 }
+    };
+
+    const limits = tierLimits[tier] || tierLimits.FREE;
+    return {
+      maxConcurrentSessions: limits.maxConcurrentSessions,
+      maxSessionsPerDay: limits.maxSessionsPerDay,
+      maxDurationMinutes: limits.maxDurationMinutes
+    };
+  }
+
+  /**
+   * Update session with partial data
+   *
+   * @param sessionId - The session identifier
+   * @param data - Partial session data to update
+   * @returns Promise resolving to the updated session
+   */
+  async updateSession(sessionId: string, data: {
+    status?: string;
+    error?: string;
+    config?: any;
+  }): Promise<PreviewSession> {
+    return prisma.previewSession.update({
+      where: { id: sessionId },
+      data: {
+        config: data.config ? (data.config as unknown as Prisma.InputJsonValue) : undefined,
+        updatedAt: new Date()
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            tenantId: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Update last activity timestamp
+   *
+   * @param sessionId - The session identifier
+   */
+  async updateLastActivity(sessionId: string): Promise<void> {
+    const session = await prisma.previewSession.findUnique({
+      where: { id: sessionId }
+    });
+
+    if (session) {
+      const config = session.config as any;
+      config.lastActivityAt = new Date().toISOString();
+
+      await prisma.previewSession.update({
+        where: { id: sessionId },
+        data: {
+          config: config as unknown as Prisma.InputJsonValue,
+          updatedAt: new Date()
+        }
+      });
+    }
+  }
+
+  /**
+   * Extend session expiration time
+   *
+   * @param sessionId - The session identifier
+   * @param extendMinutes - Number of minutes to extend
+   * @returns Promise resolving to the updated session
+   */
+  async extendSession(sessionId: string, extendMinutes: number): Promise<PreviewSession> {
+    const session = await prisma.previewSession.findUnique({
+      where: { id: sessionId }
+    });
+
+    if (!session) {
+      throw new SessionNotFoundError(sessionId);
+    }
+
+    const newExpiresAt = new Date(session.expiresAt.getTime() + extendMinutes * 60 * 1000);
+
+    return prisma.previewSession.update({
+      where: { id: sessionId },
+      data: { expiresAt: newExpiresAt },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            tenantId: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
   }
 }
 

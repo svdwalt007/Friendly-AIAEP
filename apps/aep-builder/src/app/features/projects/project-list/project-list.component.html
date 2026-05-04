@@ -1,0 +1,61 @@
+<div class="project-list">
+  <div class="page-header">
+    <h2>Projects</h2>
+    <button mat-raised-button color="accent" (click)="openCreateDialog()">
+      <mat-icon>add</mat-icon>
+      New Project
+    </button>
+  </div>
+
+  <!-- Search -->
+  <mat-form-field appearance="outline" class="search-field">
+    <mat-label>Search projects</mat-label>
+    <input matInput [(ngModel)]="searchQuery" placeholder="Search by name..." />
+    <mat-icon matPrefix>search</mat-icon>
+  </mat-form-field>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <mat-spinner diameter="48"></mat-spinner>
+    </div>
+  } @else if (projects().length === 0) {
+    <div class="ft-empty-state">
+      <mat-icon class="empty-icon">folder_open</mat-icon>
+      <p class="empty-title">No projects yet</p>
+      <p class="empty-message">Get started by creating your first AI-powered IoT application</p>
+      <button mat-raised-button color="accent" (click)="openCreateDialog()">
+        <mat-icon>add</mat-icon>
+        Create Your First Project
+      </button>
+    </div>
+  } @else {
+    <div class="projects-grid">
+      @for (project of projects(); track project.id) {
+        <mat-card class="project-card" [routerLink]="['/projects', project.id]">
+          <div class="project-card-header">
+            <mat-icon class="project-icon">folder</mat-icon>
+            <span class="ft-status-badge" [ngClass]="'status-' + project.status">
+              {{ project.status }}
+            </span>
+          </div>
+          <h3 class="project-name">{{ project.name }}</h3>
+          <p class="project-desc">{{ project.description || 'No description' }}</p>
+          <div class="project-meta">
+            <small>Updated {{ project.updatedAt | date: 'shortDate' }}</small>
+          </div>
+          <div class="project-actions">
+            <button
+              mat-stroked-button
+              color="primary"
+              [routerLink]="['/projects', project.id, 'builder']"
+              (click)="$event.stopPropagation()"
+            >
+              <mat-icon>build</mat-icon>
+              Open Builder
+            </button>
+          </div>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

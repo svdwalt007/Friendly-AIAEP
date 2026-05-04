@@ -24,6 +24,17 @@
       },
       "configurations": {
         "production": {
+          "fileReplacements": [
+            {
+              "replace": "apps/aep-builder/src/environments/environment.ts",
+              "with": "apps/aep-builder/src/environments/environment.prod.ts"
+            }
+          ],
+          "optimization": true,
+          "outputHashing": "all",
+          "sourceMap": false,
+          "namedChunks": false,
+          "extractLicenses": true,
           "budgets": [
             {
               "type": "initial",
@@ -35,13 +46,59 @@
               "maximumWarning": "4kb",
               "maximumError": "8kb"
             }
+          ]
+        },
+        "preprod": {
+          "fileReplacements": [
+            {
+              "replace": "apps/aep-builder/src/environments/environment.ts",
+              "with": "apps/aep-builder/src/environments/environment.preprod.ts"
+            }
           ],
-          "outputHashing": "all"
+          "optimization": true,
+          "outputHashing": "all",
+          "sourceMap": true,
+          "namedChunks": false,
+          "extractLicenses": true,
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ]
+        },
+        "test": {
+          "fileReplacements": [
+            {
+              "replace": "apps/aep-builder/src/environments/environment.ts",
+              "with": "apps/aep-builder/src/environments/environment.test.ts"
+            }
+          ],
+          "optimization": false,
+          "outputHashing": "none",
+          "sourceMap": true,
+          "namedChunks": true,
+          "extractLicenses": false,
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "1mb",
+              "maximumError": "2mb"
+            }
+          ]
         },
         "development": {
           "optimization": false,
           "extractLicenses": false,
-          "sourceMap": true
+          "sourceMap": true,
+          "namedChunks": true,
+          "outputHashing": "none"
         }
       },
       "defaultConfiguration": "production"
@@ -49,9 +106,19 @@
     "serve": {
       "continuous": true,
       "executor": "@angular/build:dev-server",
+      "options": {
+        "port": 45000,
+        "host": "localhost"
+      },
       "configurations": {
         "production": {
           "buildTarget": "aep-builder:build:production"
+        },
+        "preprod": {
+          "buildTarget": "aep-builder:build:preprod"
+        },
+        "test": {
+          "buildTarget": "aep-builder:build:test"
         },
         "development": {
           "buildTarget": "aep-builder:build:development"

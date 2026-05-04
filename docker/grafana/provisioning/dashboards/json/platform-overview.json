@@ -1,0 +1,90 @@
+{
+  "id": null,
+  "uid": "friendly-aep-overview",
+  "title": "Friendly AEP - Platform Overview",
+  "tags": ["friendly-aep", "overview"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+      {
+        "id": 1,
+        "title": "System CPU Usage",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "datasource": { "type": "influxdb", "uid": "InfluxDB" },
+        "targets": [
+          {
+            "query": "from(bucket: \"iot_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"cpu\")\n  |> filter(fn: (r) => r._field == \"usage_user\" or r._field == \"usage_system\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "System Memory Usage",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "datasource": { "type": "influxdb", "uid": "InfluxDB" },
+        "targets": [
+          {
+            "query": "from(bucket: \"iot_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mem\")\n  |> filter(fn: (r) => r._field == \"used_percent\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Disk Usage",
+        "type": "gauge",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+        "datasource": { "type": "influxdb", "uid": "InfluxDB" },
+        "targets": [
+          {
+            "query": "from(bucket: \"iot_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"disk\")\n  |> filter(fn: (r) => r._field == \"used_percent\")\n  |> last()",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 70 },
+                { "color": "red", "value": 90 }
+              ]
+            },
+            "min": 0,
+            "max": 100,
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Telegraf Metrics Received",
+        "type": "stat",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+        "datasource": { "type": "influxdb", "uid": "InfluxDB" },
+        "targets": [
+          {
+            "query": "from(bucket: \"iot_data\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"internal_gather\")\n  |> filter(fn: (r) => r._field == \"metrics_gathered\")\n  |> sum()",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Services",
+        "type": "stat",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"]
+          },
+          "textMode": "value"
+        }
+      }
+    ]
+}

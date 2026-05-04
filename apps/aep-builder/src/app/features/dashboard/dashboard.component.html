@@ -1,0 +1,90 @@
+<div class="dashboard">
+  <div class="dashboard-header">
+    <div>
+      <h2>Welcome back, {{ authService.user()?.username ?? 'User' }}</h2>
+      <p class="ft-text-muted">Here's what's happening with your projects</p>
+    </div>
+    <button mat-raised-button color="accent" routerLink="/projects">
+      <mat-icon>add</mat-icon>
+      New Project
+    </button>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics-grid">
+    @for (metric of metrics; track metric.label) {
+      <mat-card class="metric-card">
+        <div class="metric-icon-wrap">
+          <mat-icon>{{ metric.icon }}</mat-icon>
+        </div>
+        <div class="metric-body">
+          <span class="metric-value">{{ metric.value }}</span>
+          <span class="metric-label">{{ metric.label }}</span>
+          @if (metric.change) {
+            <span class="metric-change" [class.positive]="metric.positive">{{ metric.change }}</span>
+          }
+        </div>
+      </mat-card>
+    }
+  </div>
+
+  <!-- Recent projects -->
+  <mat-card class="recent-projects-card">
+    <div class="ft-card-header">
+      <h3>Recent Projects</h3>
+      <a mat-button color="accent" routerLink="/projects">View all</a>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+    } @else if (projects().length === 0) {
+      <div class="ft-empty-state">
+        <mat-icon class="empty-icon">folder_open</mat-icon>
+        <p class="empty-title">No projects yet</p>
+        <p class="empty-message">Create your first AI-powered IoT application</p>
+        <button mat-raised-button color="accent" routerLink="/projects">
+          <mat-icon>add</mat-icon>
+          Create Project
+        </button>
+      </div>
+    } @else {
+      <table class="ft-data-table ft-striped">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (project of projects(); track project.id) {
+            <tr>
+              <td>
+                <a [routerLink]="['/projects', project.id]" class="project-name-link">
+                  {{ project.name }}
+                </a>
+              </td>
+              <td>
+                <span class="ft-status-badge" [ngClass]="'status-' + project.status">
+                  {{ project.status }}
+                </span>
+              </td>
+              <td>{{ project.updatedAt | date: 'medium' }}</td>
+              <td class="ft-table-actions">
+                <button mat-icon-button [routerLink]="['/projects', project.id, 'builder']" matTooltip="Open Builder">
+                  <mat-icon>build</mat-icon>
+                </button>
+                <button mat-icon-button [routerLink]="['/projects', project.id]" matTooltip="Details">
+                  <mat-icon>info</mat-icon>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </mat-card>
+</div>

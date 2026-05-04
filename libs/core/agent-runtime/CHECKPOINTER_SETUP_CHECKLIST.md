@@ -15,7 +15,7 @@ Use this checklist to ensure proper setup of the PostgreSQL checkpointer for the
   ```bash
   docker-compose -f libs/core/agent-runtime/docker-compose.checkpointer.yml up -d
   ```
-- [ ] Database accessible on localhost:5432
+- [ ] Database accessible on localhost:46100
 - [ ] Test connection:
   ```bash
   docker exec -it aep-agent-postgres psql -U postgres -d aep_dev -c "SELECT 1;"

@@ -1,0 +1,160 @@
+# ============================================================================
+# Prometheus Metrics Collection Configuration
+# ============================================================================
+# Prometheus is an open-source monitoring and alerting toolkit
+# Used for collecting and querying time-series metrics
+# ============================================================================
+
+global:
+  # How frequently to scrape targets
+  scrape_interval: 15s
+
+  # How long until a scrape request times out
+  scrape_timeout: 10s
+
+  # How frequently to evaluate rules
+  evaluation_interval: 15s
+
+  # Labels to attach to all time series or alerts
+  external_labels:
+    cluster: 'friendly-aep'
+    environment: 'development'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+# Rule files
+rule_files:
+  # - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # ============================================================================
+  # Prometheus Self-Monitoring
+  # ============================================================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # ============================================================================
+  # API Gateway Metrics
+  # ============================================================================
+  - job_name: 'aep-api-gateway'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['aep-api-gateway:9464']
+        labels:
+          service: 'aep-api-gateway'
+          tier: 'backend'
+          component: 'api-gateway'
+
+  # ============================================================================
+  # Builder Application Metrics
+  # ============================================================================
+  - job_name: 'aep-builder'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['aep-builder:9465']
+        labels:
+          service: 'aep-builder'
+          tier: 'frontend'
+          component: 'builder'
+
+  # ============================================================================
+  # Preview Host Metrics
+  # ============================================================================
+  - job_name: 'aep-preview-host'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['aep-preview-host:9466']
+        labels:
+          service: 'aep-preview-host'
+          tier: 'backend'
+          component: 'preview'
+
+  # ============================================================================
+  # PostgreSQL Metrics (via postgres_exporter)
+  # ============================================================================
+  - job_name: 'postgres'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          tier: 'data'
+          component: 'database'
+
+  # ============================================================================
+  # Redis Metrics (via redis_exporter)
+  # ============================================================================
+  - job_name: 'redis'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          tier: 'data'
+          component: 'cache'
+
+  # ============================================================================
+  # Node Exporter (System Metrics)
+  # ============================================================================
+  - job_name: 'node'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          tier: 'infrastructure'
+          component: 'host'
+
+  # ============================================================================
+  # Jaeger Metrics
+  # ============================================================================
+  - job_name: 'jaeger'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['jaeger:14269']
+        labels:
+          service: 'jaeger'
+          tier: 'observability'
+          component: 'tracing'
+
+  # ============================================================================
+  # InfluxDB Metrics
+  # ============================================================================
+  - job_name: 'influxdb'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['influxdb:8086']
+        labels:
+          service: 'influxdb'
+          tier: 'data'
+          component: 'timeseries'
+    metrics_path: '/metrics'
+
+  # ============================================================================
+  # Grafana Metrics
+  # ============================================================================
+  - job_name: 'grafana'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['grafana:3000']
+        labels:
+          service: 'grafana'
+          tier: 'observability'
+          component: 'visualization'
+    metrics_path: '/metrics'
+
+# Remote write configuration (optional - for long-term storage)
+# remote_write:
+#   - url: "http://remote-prometheus:9090/api/v1/write"
+
+# Remote read configuration (optional - for querying remote data)
+# remote_read:
+#   - url: "http://remote-prometheus:9090/api/v1/read"

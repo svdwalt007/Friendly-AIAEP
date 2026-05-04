@@ -822,7 +822,7 @@ pnpm nx test auth-adapter --testFile=friendly-auth-adapter.spec.ts
 # Required
 ENCRYPTION_KEY=your-32-byte-encryption-key-here
 
-# Redis (if not using default localhost:6379)
+# Redis (if not using default localhost:46102)
 REDIS_HOST=redis.example.com
 REDIS_PORT=6380
 REDIS_PASSWORD=redis-password

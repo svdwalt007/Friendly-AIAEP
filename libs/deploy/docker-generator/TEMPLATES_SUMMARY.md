@@ -50,14 +50,14 @@ Comprehensive environment configuration with 50+ variables:
 Nginx reverse proxy configuration with:
 - **Upstream Definitions**:
   - frontend:80
-  - grafana:3000
+  - grafana:45001
   - iot-api-proxy:8080
   - license-agent:8080
   - ollama:11434 (Enterprise only) - `{{#if isEnterprise}}`
 - **Location Blocks**:
   - `/health` - Health check endpoint
   - `/api/*` -> iot-api-proxy:8080 (with WebSocket support)
-  - `/grafana/*` -> grafana:3000 (with WebSocket support)
+  - `/grafana/*` -> grafana:45001 (with WebSocket support)
   - `/license/*` -> license-agent:8080 (internal only)
   - `/ollama/*` -> ollama:11434 (Enterprise, internal only)
   - `/ws/*` -> WebSocket routes for agent streaming

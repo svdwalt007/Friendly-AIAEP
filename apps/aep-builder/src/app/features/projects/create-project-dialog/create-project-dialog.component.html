@@ -1,0 +1,38 @@
+<h2 mat-dialog-title>Create New Project</h2>
+
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+}
+
+<mat-dialog-content>
+  <form (ngSubmit)="onSubmit()" class="create-form">
+    @if (error(); as errorMsg) {
+      <div class="form-error">{{ errorMsg }}</div>
+    }
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Project Name</mat-label>
+      <input matInput [(ngModel)]="name" name="name" placeholder="e.g. Fleet Management Dashboard" required />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Description</mat-label>
+      <textarea matInput [(ngModel)]="description" name="description" rows="3" placeholder="Describe your project..."></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Deployment Mode</mat-label>
+      <mat-select [(ngModel)]="deploymentMode" name="deploymentMode">
+        <mat-option value="saas">SaaS (Multi-Tenant)</mat-option>
+        <mat-option value="dedicated">Dedicated (Self-Contained)</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()" [disabled]="loading()">Cancel</button>
+  <button mat-raised-button color="accent" (click)="onSubmit()" [disabled]="loading() || !name.trim()">
+    Create Project
+  </button>
+</mat-dialog-actions>

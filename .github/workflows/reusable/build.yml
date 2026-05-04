@@ -1,0 +1,130 @@
+name: Reusable Build Workflow
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '20'
+      environment:
+        description: 'Target environment'
+        required: false
+        type: string
+        default: 'dev'
+      parallel-tasks:
+        description: 'Number of parallel tasks'
+        required: false
+        type: number
+        default: 3
+      cache-key-prefix:
+        description: 'Cache key prefix'
+        required: false
+        type: string
+        default: 'build'
+    outputs:
+      build-version:
+        description: 'Build version/tag'
+        value: ${{ jobs.build.outputs.version }}
+      artifact-name:
+        description: 'Build artifact name'
+        value: ${{ jobs.build.outputs.artifact-name }}
+    secrets:
+      NX_CLOUD_ACCESS_TOKEN:
+        required: false
+
+env:
+  NODE_VERSION: ${{ inputs.node-version }}
+  PNPM_VERSION: '10'
+  ENVIRONMENT: ${{ inputs.environment }}
+
+jobs:
+  build:
+    name: Build Applications
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      artifact-name: ${{ steps.artifact.outputs.name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ inputs.cache-key-prefix }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-${{ inputs.cache-key-prefix }}-
+            ${{ runner.os }}-pnpm-
+
+      - name: Cache Nx
+        uses: actions/cache@v4
+        with:
+          path: |
+            .nx/cache
+            node_modules/.cache/nx
+          key: ${{ runner.os }}-nx-${{ inputs.cache-key-prefix }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('nx.json', 'apps/**/project.json', 'libs/**/project.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nx-${{ inputs.cache-key-prefix }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nx-${{ inputs.cache-key-prefix }}-
+            ${{ runner.os }}-nx-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive appropriate SHAs for base and head for `nx affected` commands
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Generate build version
+        id: version
+        run: |
+          VERSION="${{ github.sha }}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Build version: ${VERSION}"
+
+      - name: Build affected projects
+        run: pnpm nx affected -t build --parallel=${{ inputs.parallel-tasks }} --configuration=${{ env.ENVIRONMENT }}
+        env:
+          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Set artifact name
+        id: artifact
+        run: |
+          ARTIFACT_NAME="build-${{ env.ENVIRONMENT }}-${{ github.sha }}"
+          echo "name=${ARTIFACT_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: |
+            dist/
+            !dist/**/*.map
+          retention-days: 7
+          compression-level: 9
+
+      - name: Generate build summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ env.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node Version**: ${{ env.NODE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Artifact**: ${{ steps.artifact.outputs.name }}" >> $GITHUB_STEP_SUMMARY

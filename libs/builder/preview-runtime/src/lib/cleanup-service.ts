@@ -1,6 +1,6 @@
-// @ts-nocheck - TODO: Fix type errors and dependency issues
 import * as cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
+import { DockerLifecycleManager } from './docker-manager';
+import { SessionManager } from './session-manager';
 
 /**
  * Configuration options for the CleanupService
@@ -25,11 +25,6 @@ export interface CleanupServiceConfig {
   enabled?: boolean;
 
   /**
-   * Custom Prisma client instance
-   */
-  prismaClient?: PrismaClient;
-
-  /**
    * Custom logger function
    */
   logger?: {
@@ -37,12 +32,6 @@ export interface CleanupServiceConfig {
     error: (message: string, error?: Error, meta?: Record<string, unknown>) => void;
     warn: (message: string, meta?: Record<string, unknown>) => void;
   };
-
-  /**
-   * Custom Docker cleanup function
-   * If not provided, a default implementation will be used
-   */
-  dockerCleanup?: (containerId: string) => Promise<void>;
 }
 
 /**
@@ -100,12 +89,15 @@ export interface CleanupResult {
 export class CleanupService {
   private cronTask: cron.ScheduledTask | null = null;
   private isRunning = false;
-  private config: Required<Omit<CleanupServiceConfig, 'prismaClient' | 'dockerCleanup'>> & {
-    prismaClient: PrismaClient;
-    dockerCleanup: (containerId: string) => Promise<void>;
-  };
+  private dockerManager: DockerLifecycleManager;
+  private sessionManager: SessionManager;
+  private config: Required<CleanupServiceConfig>;
 
-  constructor(config: CleanupServiceConfig = {}) {
+  constructor(
+    dockerManager: DockerLifecycleManager,
+    sessionManager: SessionManager,
+    config: CleanupServiceConfig = {}
+  ) {
     const defaultLogger = {
       info: (message: string, meta?: Record<string, unknown>) => {
         console.log(`[CleanupService] ${message}`, meta || '');
@@ -118,52 +110,37 @@ export class CleanupService {
       },
     };
 
+    this.dockerManager = dockerManager;
+    this.sessionManager = sessionManager;
     this.config = {
-      cronSchedule: config.cronSchedule || '*\\/5 * * * *',
+      cronSchedule: config.cronSchedule || '*/5 * * * *',
       sessionTimeoutMinutes: config.sessionTimeoutMinutes || 30,
       enabled: config.enabled !== false,
       logger: config.logger || defaultLogger,
-      prismaClient: config.prismaClient || new PrismaClient(),
-      dockerCleanup: config.dockerCleanup || this.defaultDockerCleanup.bind(this),
     };
   }
 
   /**
-   * Default Docker cleanup implementation using dockerode
-   * Override this by providing dockerCleanup in config
+   * Cleanup Docker containers using the DockerLifecycleManager
    */
-  private async defaultDockerCleanup(containerId: string): Promise<void> {
+  private async cleanupContainer(containerId: string): Promise<void> {
     try {
-      // Import dockerode dynamically to avoid hard dependency
-      const Docker = await import('dockerode').then((m) => m.default);
-      const docker = new Docker();
-
-      const container = docker.getContainer(containerId);
-
       // Try to stop the container
       try {
-        await container.stop({ t: 10 }); // 10 second timeout
+        await this.dockerManager.stopContainer(containerId);
         this.config.logger.info(`Stopped container: ${containerId}`);
       } catch (error) {
         // Container might already be stopped
-        if ((error as Error).message?.includes('already stopped')) {
-          this.config.logger.warn(`Container already stopped: ${containerId}`);
-        } else {
-          throw error;
-        }
+        this.config.logger.warn(`Failed to stop container: ${containerId}`, { error });
       }
 
       // Try to remove the container
       try {
-        await container.remove({ force: true });
+        await this.dockerManager.removeContainer(containerId, true);
         this.config.logger.info(`Removed container: ${containerId}`);
       } catch (error) {
         // Container might already be removed
-        if ((error as Error).message?.includes('No such container')) {
-          this.config.logger.warn(`Container already removed: ${containerId}`);
-        } else {
-          throw error;
-        }
+        this.config.logger.warn(`Failed to remove container: ${containerId}`, { error });
       }
     } catch (error) {
       this.config.logger.error(
@@ -177,9 +154,10 @@ export class CleanupService {
   /**
    * Starts the cleanup cron job
    *
+   * @param intervalMinutes - Optional interval in minutes (overrides config)
    * @throws {Error} If the service is already running
    */
-  start(): void {
+  start(intervalMinutes?: number): void {
     if (this.cronTask) {
       throw new Error('CleanupService is already running');
     }
@@ -189,12 +167,17 @@ export class CleanupService {
       return;
     }
 
+    // Use provided interval or default from config
+    const cronSchedule = intervalMinutes
+      ? `*/${intervalMinutes} * * * *`
+      : this.config.cronSchedule;
+
     this.config.logger.info('Starting CleanupService', {
-      schedule: this.config.cronSchedule,
+      schedule: cronSchedule,
       timeoutMinutes: this.config.sessionTimeoutMinutes,
     });
 
-    this.cronTask = cron.schedule(this.config.cronSchedule, async () => {
+    this.cronTask = cron.schedule(cronSchedule, async () => {
       await this.runCleanup();
     });
 
@@ -234,20 +217,17 @@ export class CleanupService {
     this.config.logger.info('Starting cleanup run');
 
     try {
-      const count = await this.cleanupExpiredSessions();
+      const result = await this.cleanupExpiredSessions();
       const duration = Date.now() - startTime;
 
       this.config.logger.info('Cleanup run completed', {
-        sessionsCleanedUp: count,
+        sessionsCleanedUp: result.sessionsCleanedUp,
+        containersStopped: result.containersStopped,
+        errors: result.errors.length,
         durationMs: duration,
       });
 
-      return {
-        sessionsCleanedUp: count,
-        containersStopped: count, // Assuming 1 container per session
-        errors: [],
-        timestamp: new Date(),
-      };
+      return result;
     } catch (error) {
       const duration = Date.now() - startTime;
       this.config.logger.error('Cleanup run failed', error as Error, {
@@ -272,53 +252,38 @@ export class CleanupService {
    * Cleans up expired preview sessions
    *
    * Process:
-   * 1. Finds sessions where expiresAt < now OR isActive = true but not recently updated
-   * 2. Extracts container ID from session config
+   * 1. Finds sessions where expiresAt < now
+   * 2. Extracts container IDs from session config
    * 3. Stops and removes Docker containers
-   * 4. Updates session status to inactive in database
+   * 4. Updates session status to stopped in database
    * 5. Logs all actions and handles errors gracefully
    *
-   * @returns Number of sessions cleaned up
+   * @returns Cleanup result with counts and errors
    */
-  async cleanupExpiredSessions(): Promise<number> {
-    const cutoffTime = new Date(
-      Date.now() - this.config.sessionTimeoutMinutes * 60 * 1000
-    );
+  async cleanupExpiredSessions(): Promise<CleanupResult> {
+    const now = new Date();
 
     this.config.logger.info('Searching for expired sessions', {
-      cutoffTime: cutoffTime.toISOString(),
+      now: now.toISOString(),
     });
 
-    // Find expired sessions
-    const expiredSessions = await this.config.prismaClient.previewSession.findMany({
-      where: {
-        OR: [
-          // Sessions that have expired
-          {
-            expiresAt: {
-              lt: new Date(),
-            },
-          },
-          // Sessions that are active but haven't been updated in timeout period
-          {
-            isActive: true,
-            updatedAt: {
-              lt: cutoffTime,
-            },
-          },
-        ],
-        isActive: true, // Only cleanup active sessions
-      },
-    });
+    // Find expired sessions using the session manager
+    const expiredSessions = await this.sessionManager.listExpiredSessions();
 
     if (expiredSessions.length === 0) {
       this.config.logger.info('No expired sessions found');
-      return 0;
+      return {
+        sessionsCleanedUp: 0,
+        containersStopped: 0,
+        errors: [],
+        timestamp: new Date(),
+      };
     }
 
     this.config.logger.info(`Found ${expiredSessions.length} expired session(s)`);
 
     let cleanedUpCount = 0;
+    let containersStopped = 0;
     const errors: Array<{ sessionId: string; error: string }> = [];
 
     // Process each expired session
@@ -326,44 +291,48 @@ export class CleanupService {
       try {
         this.config.logger.info(`Processing session: ${session.id}`, {
           projectId: session.projectId,
-          userId: session.userId,
+          tenantId: session.tenantId,
           expiresAt: session.expiresAt.toISOString(),
-          updatedAt: session.updatedAt.toISOString(),
         });
 
-        // Extract container ID from config
-        const containerId = this.extractContainerId(session.config);
+        // Extract container IDs from config
+        const sessionConfig = session.config as unknown as {
+          containerIds?: string[];
+          mode?: string;
+          port?: number;
+        };
 
-        if (containerId) {
-          // Cleanup Docker container
-          try {
-            await this.config.dockerCleanup(containerId);
-            this.config.logger.info(`Cleaned up container for session: ${session.id}`, {
-              containerId,
-            });
-          } catch (dockerError) {
-            // Log error but continue with database update
-            this.config.logger.error(
-              `Failed to cleanup container for session: ${session.id}`,
-              dockerError as Error,
-              { containerId }
-            );
-            errors.push({
-              sessionId: session.id,
-              error: `Docker cleanup failed: ${(dockerError as Error).message}`,
-            });
+        const containerIds = sessionConfig.containerIds || [];
+
+        if (containerIds.length > 0) {
+          // Cleanup Docker containers
+          for (const containerId of containerIds) {
+            try {
+              await this.cleanupContainer(containerId);
+              containersStopped++;
+              this.config.logger.info(`Cleaned up container for session: ${session.id}`, {
+                containerId,
+              });
+            } catch (dockerError) {
+              // Log error but continue with next container
+              this.config.logger.error(
+                `Failed to cleanup container for session: ${session.id}`,
+                dockerError as Error,
+                { containerId }
+              );
+              errors.push({
+                sessionId: session.id,
+                error: `Docker cleanup failed for ${containerId}: ${(dockerError as Error).message}`,
+              });
+            }
           }
         } else {
-          this.config.logger.warn(`No container ID found for session: ${session.id}`);
+          this.config.logger.warn(`No container IDs found for session: ${session.id}`);
         }
 
-        // Update session status in database
-        await this.config.prismaClient.previewSession.update({
-          where: { id: session.id },
-          data: {
-            isActive: false,
-            updatedAt: new Date(),
-          },
+        // Update session status to stopped
+        await this.sessionManager.updateSession(session.id, {
+          status: 'stopped',
         });
 
         cleanedUpCount++;
@@ -383,65 +352,16 @@ export class CleanupService {
     this.config.logger.info('Cleanup completed', {
       total: expiredSessions.length,
       cleaned: cleanedUpCount,
+      containersStopped,
       errors: errors.length,
     });
 
-    return cleanedUpCount;
+    return {
+      sessionsCleanedUp: cleanedUpCount,
+      containersStopped,
+      errors,
+      timestamp: new Date(),
+    };
   }
 
-  /**
-   * Extracts container ID from session config JSON
-   * Handles various config structures gracefully
-   */
-  private extractContainerId(config: unknown): string | null {
-    try {
-      if (!config || typeof config !== 'object') {
-        return null;
-      }
-
-      const configObj = config as Record<string, unknown>;
-
-      // Try common field names
-      const possibleFields = [
-        'containerId',
-        'container_id',
-        'dockerContainerId',
-        'docker_container_id',
-        'containerName',
-        'container_name',
-      ];
-
-      for (const field of possibleFields) {
-        if (configObj[field] && typeof configObj[field] === 'string') {
-          return configObj[field] as string;
-        }
-      }
-
-      // Check nested docker config
-      if (configObj.docker && typeof configObj.docker === 'object') {
-        const dockerConfig = configObj.docker as Record<string, unknown>;
-        for (const field of possibleFields) {
-          if (dockerConfig[field] && typeof dockerConfig[field] === 'string') {
-            return dockerConfig[field] as string;
-          }
-        }
-      }
-
-      return null;
-    } catch (error) {
-      this.config.logger.error('Failed to extract container ID from config', error as Error);
-      return null;
-    }
-  }
-
-  /**
-   * Disconnects the Prisma client
-   * Should be called when shutting down the service
-   */
-  async disconnect(): Promise<void> {
-    if (this.cronTask) {
-      this.stop();
-    }
-    await this.config.prismaClient.$disconnect();
-  }
 }

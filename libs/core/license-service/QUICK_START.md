@@ -13,8 +13,8 @@ pnpm nx build license-service
 # Required: Set the HMAC signing secret
 export FRIENDLY_LICENSE_SECRET="your-secure-random-secret-min-32-chars"
 
-# Optional: Redis connection (defaults to localhost:6379)
-export REDIS_URL="redis://localhost:6379"
+# Optional: Redis connection (defaults to localhost:46102)
+export REDIS_URL="redis://localhost:46102"
 ```
 
 ## Basic Usage
@@ -220,7 +220,7 @@ This happens when:
 
 ```bash
 # Start Redis with Docker
-docker run -d -p 6379:6379 redis:7-alpine
+docker run -d -p 6379:46102 redis:7-alpine
 
 # Or verify Redis is running
 redis-cli ping  # Should return: PONG

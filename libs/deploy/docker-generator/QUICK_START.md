@@ -69,7 +69,7 @@ const envConfig: EnvironmentConfig = {
       password: 'secure_password',
     },
     influxdb: {
-      url: 'http://influxdb:8086',
+      url: 'http://influxdb:46101',
       token: 'influx-token',
       org: 'friendly',
       bucket: 'telemetry',

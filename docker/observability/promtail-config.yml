@@ -1,0 +1,154 @@
+# ============================================================================
+# Promtail Log Shipping Configuration
+# ============================================================================
+# Promtail is an agent that ships logs to Loki
+# It discovers targets, attaches labels, and pushes logs to Loki
+# ============================================================================
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+# Positions file to track where Promtail left off
+positions:
+  filename: /tmp/positions.yaml
+
+# Loki client configuration
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    backoff_config:
+      min_period: 100ms
+      max_period: 10s
+      max_retries: 10
+    timeout: 10s
+
+# Scrape configurations
+scrape_configs:
+  # ============================================================================
+  # Docker Container Logs
+  # ============================================================================
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["logging=promtail"]
+
+    relabel_configs:
+      # Container name
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+
+      # Container ID
+      - source_labels: ['__meta_docker_container_id']
+        target_label: 'container_id'
+
+      # Docker image
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'service'
+
+      # Environment
+      - source_labels: ['__meta_docker_container_label_environment']
+        target_label: 'environment'
+
+      # Application
+      - source_labels: ['__meta_docker_container_label_application']
+        target_label: 'application'
+
+    pipeline_stages:
+      # Parse JSON logs
+      - json:
+          expressions:
+            level: level
+            msg: msg
+            timestamp: time
+            trace_id: trace_id
+            span_id: span_id
+
+      # Extract log level
+      - labels:
+          level:
+
+      # Add timestamp
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+
+      # Output template
+      - output:
+          source: msg
+
+  # ============================================================================
+  # System Logs
+  # ============================================================================
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/*log
+
+    pipeline_stages:
+      - match:
+          selector: '{job="varlogs"}'
+          stages:
+            - regex:
+                expression: '^(?P<timestamp>\S+\s+\S+)\s+(?P<hostname>\S+)\s+(?P<service>\S+)(\[(?P<pid>\d+)\])?\:\s+(?P<message>.*)$'
+
+            - labels:
+                hostname:
+                service:
+
+            - timestamp:
+                source: timestamp
+                format: "Jan 2 15:04:05"
+
+  # ============================================================================
+  # Application Logs (File-based)
+  # ============================================================================
+  - job_name: application-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: app-logs
+          application: friendly-aep
+          __path__: /var/log/friendly-aep/*.log
+
+    pipeline_stages:
+      # Parse JSON application logs
+      - json:
+          expressions:
+            level: level
+            msg: msg
+            service: service
+            timestamp: time
+            trace_id: trace_id
+            span_id: span_id
+            http_method: http.method
+            http_url: http.url
+            http_status: http.status_code
+            duration_ms: http.duration_ms
+
+      # Extract labels
+      - labels:
+          level:
+          service:
+
+      # Add trace context labels
+      - labels:
+          trace_id:
+          span_id:
+
+      # Add timestamp
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+
+      # Output message
+      - output:
+          source: msg

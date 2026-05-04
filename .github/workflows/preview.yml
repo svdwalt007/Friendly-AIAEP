@@ -1,0 +1,262 @@
+name: Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+
+jobs:
+  deploy-preview:
+    name: Deploy Preview Environment
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+    environment:
+      name: preview-pr-${{ github.event.pull_request.number }}
+      url: https://pr-${{ github.event.pull_request.number }}.preview.friendly-aiaep.com
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: friendly
+          POSTGRES_PASSWORD: preview_password
+          POSTGRES_DB: friendly_preview_${{ github.event.pull_request.number }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U friendly"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build applications
+        run: pnpm nx run-many --target=build --all --parallel=3
+        env:
+          PREVIEW_MODE: true
+          PR_NUMBER: ${{ env.PR_NUMBER }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push preview images
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/preview:pr-${{ env.PR_NUMBER }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_VERSION=${{ env.NODE_VERSION }}
+            PR_NUMBER=${{ env.PR_NUMBER }}
+
+      - name: Deploy to preview namespace
+        run: |
+          # Create preview namespace
+          kubectl create namespace preview-pr-${{ env.PR_NUMBER }} --dry-run=client -o yaml | kubectl apply -f -
+
+          # Deploy with Helm
+          helm upgrade --install friendly-aep-pr-${{ env.PR_NUMBER }} ./deploy/helm \
+            --namespace preview-pr-${{ env.PR_NUMBER }} \
+            --set image.tag=pr-${{ env.PR_NUMBER }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/preview \
+            --set environment=preview \
+            --set ingress.enabled=true \
+            --set ingress.host=pr-${{ env.PR_NUMBER }}.preview.friendly-aiaep.com \
+            --set replicaCount=1 \
+            --set resources.requests.memory=256Mi \
+            --set resources.requests.cpu=100m \
+            --set resources.limits.memory=512Mi \
+            --set resources.limits.cpu=500m \
+            --wait \
+            --timeout 5m
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG_PREVIEW }}
+
+      - name: Run preview smoke tests
+        id: smoke-tests
+        continue-on-error: true
+        run: |
+          PREVIEW_URL="https://pr-${{ env.PR_NUMBER }}.preview.friendly-aiaep.com"
+          echo "Testing preview at ${PREVIEW_URL}"
+
+          # Wait for deployment to be ready
+          sleep 30
+
+          # Health check
+          curl -f "${PREVIEW_URL}/health" || exit 1
+
+          echo "Preview deployment is healthy"
+
+      - name: Comment PR with preview URL
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const previewUrl = `https://pr-${{ env.PR_NUMBER }}.preview.friendly-aiaep.com`;
+            const comment = `
+            ## Preview Deployment Ready! :rocket:
+
+            Your preview environment is ready for testing:
+
+            - **Preview URL**: ${previewUrl}
+            - **Health Check**: ${previewUrl}/health
+            - **API Docs**: ${previewUrl}/api/docs
+
+            ### Quick Links
+            - [View Application](${previewUrl})
+            - [View Logs](https://console.friendly-aiaep.com/logs/pr-${{ env.PR_NUMBER }})
+            - [Monitoring](https://console.friendly-aiaep.com/monitoring/pr-${{ env.PR_NUMBER }})
+
+            ### Environment Details
+            - **PR Number**: #${{ env.PR_NUMBER }}
+            - **Commit**: ${{ github.event.pull_request.head.sha }}
+            - **Branch**: ${{ github.event.pull_request.head.ref }}
+            - **Deployed at**: ${new Date().toISOString()}
+
+            ---
+            This preview will be automatically deleted when the PR is closed.
+            `;
+
+            // Find existing preview comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const previewComment = comments.find(comment =>
+              comment.body.includes('Preview Deployment Ready')
+            );
+
+            if (previewComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previewComment.id,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+            }
+
+      - name: Generate preview summary
+        if: always()
+        run: |
+          echo "## Preview Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR Number**: #${{ env.PR_NUMBER }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Preview URL**: https://pr-${{ env.PR_NUMBER }}.preview.friendly-aiaep.com" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.event.pull_request.head.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ steps.smoke-tests.outcome }}" >> $GITHUB_STEP_SUMMARY
+
+  cleanup-preview:
+    name: Cleanup Preview Environment
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Delete preview deployment
+        run: |
+          # Delete Helm release
+          helm uninstall friendly-aep-pr-${{ env.PR_NUMBER }} \
+            --namespace preview-pr-${{ env.PR_NUMBER }} || true
+
+          # Delete namespace
+          kubectl delete namespace preview-pr-${{ env.PR_NUMBER }} || true
+
+          echo "Preview environment cleaned up successfully"
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBE_CONFIG_PREVIEW }}
+
+      - name: Delete preview images
+        run: |
+          # Clean up container images
+          echo "Cleaning up preview images for PR ${{ env.PR_NUMBER }}"
+          # Note: GitHub Container Registry cleanup requires additional permissions
+
+      - name: Comment PR about cleanup
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## Preview Environment Cleaned Up :broom:\n\nThe preview environment for PR #${{ env.PR_NUMBER }} has been deleted.`,
+            });
+
+      - name: Generate cleanup summary
+        run: |
+          echo "## Preview Cleanup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR Number**: #${{ env.PR_NUMBER }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cleanup Status**: Success" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cleaned at**: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY

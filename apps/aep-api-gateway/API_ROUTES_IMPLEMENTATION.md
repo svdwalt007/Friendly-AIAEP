@@ -308,10 +308,10 @@ The following integrations are marked with TODO comments:
 
 ### Manual Testing
 1. Start the server: `pnpm nx serve aep-api-gateway`
-2. Access Swagger UI: `http://localhost:3000/docs`
+2. Access Swagger UI: `http://localhost:45001/docs`
 3. Login with demo credentials:
    ```bash
-   curl -X POST http://localhost:3000/api/v1/auth/login \
+   curl -X POST http://localhost:45001/api/v1/auth/login \
      -H "Content-Type: application/json" \
      -d '{"username": "demo", "password": "demo"}'
    ```
@@ -319,7 +319,7 @@ The following integrations are marked with TODO comments:
 
 ### WebSocket Testing
 ```javascript
-const ws = new WebSocket('ws://localhost:3000/api/v1/agent/stream?sessionId=sess_123&token=YOUR_JWT_TOKEN');
+const ws = new WebSocket('ws://localhost:45001/api/v1/agent/stream?sessionId=sess_123&token=YOUR_JWT_TOKEN');
 
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
@@ -335,8 +335,8 @@ ws.send(JSON.stringify({ type: 'pause' }));
 ## API Documentation
 
 Full API documentation is available at:
-- **Local:** `http://localhost:3000/docs`
-- **OpenAPI JSON:** `http://localhost:3000/docs/json`
+- **Local:** `http://localhost:45001/docs`
+- **OpenAPI JSON:** `http://localhost:45001/docs/json`
 
 ---
 

@@ -1,0 +1,498 @@
+name: Security Scanning
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  schedule:
+    - cron: '0 6 * * 1' # Weekly on Mondays at 6 AM UTC
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of security scan'
+        required: true
+        type: choice
+        options:
+          - all
+          - dependencies
+          - code
+          - containers
+          - secrets
+        default: 'all'
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10'
+  SCAN_TYPE: ${{ inputs.scan_type || 'all' }}
+
+jobs:
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    if: inputs.scan_type == 'all' || inputs.scan_type == 'dependencies' || github.event_name != 'workflow_dispatch'
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run pnpm audit
+        id: pnpm-audit
+        continue-on-error: true
+        run: |
+          pnpm audit --audit-level=moderate --json > pnpm-audit.json
+          pnpm audit --audit-level=moderate || true
+
+      - name: Upload pnpm audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pnpm-audit-results
+          path: pnpm-audit.json
+          retention-days: 30
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --sarif-file-output=snyk.sarif
+
+      - name: Upload Snyk results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk.sarif
+          category: snyk-dependencies
+
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'friendly-aiaep'
+          path: '.'
+          format: 'SARIF'
+          out: 'dependency-check-report'
+          args: >
+            --enableRetired
+            --enableExperimental
+
+      - name: Upload OWASP results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: dependency-check-report/dependency-check-report.sarif
+          category: owasp-dependency-check
+
+      - name: Generate dependency report
+        if: always()
+        run: |
+          echo "## Dependency Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### NPM Audit" >> $GITHUB_STEP_SUMMARY
+          pnpm audit --audit-level=moderate >> $GITHUB_STEP_SUMMARY || true
+
+  code-scan:
+    name: Code Security Scan
+    runs-on: ubuntu-latest
+    if: inputs.scan_type == 'all' || inputs.scan_type == 'code' || github.event_name != 'workflow_dispatch'
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended,security-and-quality
+          config: |
+            paths:
+              - apps
+              - libs
+            paths-ignore:
+              - '**/*.spec.ts'
+              - '**/*.test.ts'
+              - '**/test/**'
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: codeql-security
+          output: codeql-results
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/ci
+            p/security-audit
+            p/typescript
+            p/nodejs
+            p/docker
+            p/kubernetes
+          publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
+          publishDeployment: ${{ github.ref_name }}
+          generateSarif: true
+
+      - name: Upload Semgrep results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep-security
+
+      - name: Run SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=friendly-aiaep
+            -Dsonar.organization=friendly-tech
+            -Dsonar.sources=apps,libs
+            -Dsonar.tests=apps,libs
+            -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.ts
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.spec.ts,**/*.test.ts
+
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    if: inputs.scan_type == 'all' || inputs.scan_type == 'containers' || github.event_name != 'workflow_dispatch'
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+
+    strategy:
+      matrix:
+        dockerfile:
+          - apps/aep-api-gateway/Dockerfile
+          - apps/aep-builder/Dockerfile
+          - apps/aep-preview-host/Dockerfile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          IMAGE_NAME=$(echo "${{ matrix.dockerfile }}" | sed 's|/Dockerfile||' | sed 's|apps/||')
+          docker build -f ${{ matrix.dockerfile }} -t ${IMAGE_NAME}:scan .
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:scan
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          vuln-type: 'os,library'
+          scanners: 'vuln,secret,config'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-${{ env.IMAGE_NAME }}
+
+      - name: Run Anchore scan
+        uses: anchore/scan-action@v3
+        id: anchore-scan
+        with:
+          image: ${{ env.IMAGE_NAME }}:scan
+          fail-build: false
+          severity-cutoff: high
+          output-format: sarif
+
+      - name: Upload Anchore results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ${{ steps.anchore-scan.outputs.sarif }}
+          category: anchore-${{ env.IMAGE_NAME }}
+
+      - name: Run Grype vulnerability scanner
+        uses: anchore/scan-action@v3
+        with:
+          image: ${{ env.IMAGE_NAME }}:scan
+          fail-build: false
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    if: inputs.scan_type == 'all' || inputs.scan_type == 'secrets' || github.event_name != 'workflow_dispatch'
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+      - name: Run Trivy secret scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'secret'
+          format: 'sarif'
+          output: 'trivy-secret-results.sarif'
+
+      - name: Upload Trivy secret results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-secret-results.sarif
+          category: trivy-secrets
+
+  sbom-generation:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file sbom-cyclonedx.json
+          npx @cyclonedx/cyclonedx-npm --output-format XML --output-file sbom-cyclonedx.xml
+
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: ./
+          format: spdx-json
+          output-file: sbom-spdx.json
+
+      - name: Generate Syft SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: ./
+          format: cyclonedx-json
+          output-file: sbom-syft.json
+
+      - name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-files
+          path: |
+            sbom-*.json
+            sbom-*.xml
+          retention-days: 90
+
+      - name: Attest SBOM
+        uses: actions/attest-sbom@v1
+        if: github.ref == 'refs/heads/main'
+        with:
+          subject-path: sbom-cyclonedx.json
+          sbom-path: sbom-cyclonedx.json
+
+      - name: Upload SBOM to dependency graph
+        uses: advanced-security/spdx-dependency-submission-action@v0.1.0
+        if: github.ref == 'refs/heads/main'
+        with:
+          filePath: sbom-spdx.json
+
+  license-scan:
+    name: License Compliance Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run license checker
+        run: |
+          npx license-checker --json --out licenses.json
+          npx license-checker --summary
+
+      - name: Check for disallowed licenses
+        run: |
+          npx license-checker --failOn "GPL;AGPL;LGPL"
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: licenses.json
+          retention-days: 90
+
+  compliance-scan:
+    name: Compliance & Hardening Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run OSSF Scorecard
+        uses: ossf/scorecard-action@v2
+        with:
+          results_file: ossf-scorecard-results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload OSSF Scorecard results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ossf-scorecard-results.sarif
+          category: ossf-scorecard
+
+      - name: Run Checkov (Infrastructure as Code)
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: dockerfile,kubernetes,helm,github_actions
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+          category: checkov-iac
+
+  security-summary:
+    name: Security Scan Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-scan, container-scan, secret-scan, sbom-generation, license-scan, compliance-scan]
+    if: always()
+
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependencies | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Security | ${{ needs.code-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Containers | ${{ needs.container-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secrets | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SBOM | ${{ needs.sbom-generation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Licenses | ${{ needs.license-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Compliance | ${{ needs.compliance-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check for any failures
+          if [[ "${{ needs.dependency-scan.result }}" == "failure" ]] || \
+             [[ "${{ needs.code-scan.result }}" == "failure" ]] || \
+             [[ "${{ needs.container-scan.result }}" == "failure" ]] || \
+             [[ "${{ needs.secret-scan.result }}" == "failure" ]]; then
+            echo "### Critical Failures Detected" >> $GITHUB_STEP_SUMMARY
+            echo "Review the security findings in the Security tab." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Send Slack notification
+        if: always() && secrets.SLACK_WEBHOOK_URL
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Security Scan Completed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Security Scan Results*\n*Dependencies:* ${{ needs.dependency-scan.result }}\n*Code:* ${{ needs.code-scan.result }}\n*Containers:* ${{ needs.container-scan.result }}\n*Secrets:* ${{ needs.secret-scan.result }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

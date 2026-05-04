@@ -1,0 +1,78 @@
+<div class="component-picker">
+  <!-- Header with search -->
+  <div class="picker-header">
+    <h3>Component Library</h3>
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <input
+        matInput
+        placeholder="Search components..."
+        [value]="searchQuery()"
+        (input)="onSearchChange($any($event.target).value)"
+        aria-label="Search components"
+      />
+    </mat-form-field>
+  </div>
+
+  <!-- Category filter -->
+  <div class="category-filter" role="tablist" aria-label="Component categories">
+    @for (category of categories; track category.id) {
+      <button
+        class="category-chip"
+        [class.selected]="isSelectedCategory(category.id)"
+        (click)="onCategorySelect(category.id)"
+        role="tab"
+        [attr.aria-selected]="isSelectedCategory(category.id)"
+        [attr.aria-label]="category.label"
+      >
+        <mat-icon>{{ category.icon }}</mat-icon>
+        <span>{{ category.label }}</span>
+      </button>
+    }
+  </div>
+
+  <!-- Component grid -->
+  <div class="component-grid" role="tabpanel" aria-label="Available components">
+    @for (component of filteredComponents(); track component.id) {
+      <div
+        class="component-card"
+        (click)="onComponentClick(component)"
+        (mouseenter)="onComponentHover(component)"
+        role="button"
+        tabindex="0"
+        [attr.aria-label]="'Add ' + component.name + ': ' + component.description"
+        (keydown.enter)="onComponentClick(component)"
+        (keydown.space)="onComponentClick(component); $event.preventDefault()"
+      >
+        <div class="card-icon">
+          <mat-icon>{{ component.icon }}</mat-icon>
+        </div>
+        <div class="card-content">
+          <h4 class="card-title">{{ component.name }}</h4>
+          <p class="card-description">{{ component.description }}</p>
+          <div class="card-footer">
+            <span class="card-category">
+              <mat-icon>{{ getCategoryIcon(component.category) }}</mat-icon>
+              {{ component.category }}
+            </span>
+            <div class="card-tags">
+              @for (tag of component.tags.slice(0, 2); track tag) {
+                <span class="tag">{{ tag }}</span>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="card-overlay">
+          <mat-icon>add_circle</mat-icon>
+          <span>Add Component</span>
+        </div>
+      </div>
+    } @empty {
+      <div class="empty-state" role="status">
+        <mat-icon>search_off</mat-icon>
+        <p>No components found</p>
+        <small>Try adjusting your search or category filter</small>
+      </div>
+    }
+  </div>
+</div>

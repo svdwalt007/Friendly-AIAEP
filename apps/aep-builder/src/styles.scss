@@ -9,20 +9,26 @@
  * THEME IMPORTS
  * ======================================== */
 
-// 1. Load variables first (defines CSS custom properties)
+// 1. Load design tokens first (comprehensive design system)
+@use './styles/design-tokens.scss';
+
+// 2. Load variables (legacy support)
 @use './styles/variables.scss';
 
-// 2. Load Material theme (includes Material core and component styles)
+// 3. Load Material theme (includes Material core and component styles)
 @use './styles/theme.scss';
 
-// 3. Load Friendly design utilities
+// 4. Load Friendly design utilities
 @use './styles/friendly-design.scss';
+
+// 5. Load animations and micro-interactions
+@use './styles/animations.scss';
 
 /* ========================================
  * GLOBAL STYLES
  * ======================================== */
 
-// Apply Calibri font family globally
+// Apply brand font family globally
 body {
   margin: 0;
   padding: 0;

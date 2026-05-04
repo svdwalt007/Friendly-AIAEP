@@ -256,19 +256,19 @@ APP_VERSION=1.0.0
 npm start
 
 # 2. Test health check (no auth)
-curl http://localhost:3000/health
+curl http://localhost:45001/health
 
 # 3. Test login
-curl -X POST http://localhost:3000/api/v1/auth/login \
+curl -X POST http://localhost:45001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"uid":"user@tenant123","pw":"password123"}'
 
 # 4. Test protected route
-curl http://localhost:3000/api/v1/projects \
+curl http://localhost:45001/api/v1/projects \
   -H "Authorization: Bearer <token>"
 
 # 5. Test token refresh
-curl -X POST http://localhost:3000/api/v1/auth/token/refresh \
+curl -X POST http://localhost:45001/api/v1/auth/token/refresh \
   -H "Content-Type: application/json" \
   -d '{"refreshToken":"<refresh-token>"}'
 ```

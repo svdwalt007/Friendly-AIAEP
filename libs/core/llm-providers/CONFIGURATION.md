@@ -152,7 +152,7 @@ LLM_CACHE_ENABLED=true
 LLM_CACHE_BACKEND=redis
 
 # Redis connection URL (if using redis backend)
-LLM_CACHE_REDIS_URL=redis://localhost:6379
+LLM_CACHE_REDIS_URL=redis://localhost:46102
 
 # Cache TTL (seconds)
 LLM_CACHE_TTL=3600

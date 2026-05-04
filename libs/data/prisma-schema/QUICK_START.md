@@ -27,7 +27,7 @@ docker compose -f docker-compose.db.yml ps
 Set the `DATABASE_URL` in your `.env` file:
 
 ```bash
-DATABASE_URL="postgresql://username:password@localhost:5432/friendly_aep"
+DATABASE_URL="postgresql://username:password@localhost:46100/friendly_aep"
 ```
 
 ## Step 2: Set Up Environment (30 seconds)
@@ -39,7 +39,7 @@ Create a `.env` file in the library root or project root:
 cp .env.example .env
 
 # Or create manually
-echo 'DATABASE_URL="postgresql://friendly:friendly_dev_password@localhost:5432/friendly_aep"' > .env
+echo 'DATABASE_URL="postgresql://friendly:friendly_dev_password@localhost:46100/friendly_aep"' > .env
 ```
 
 ## Step 3: Generate Prisma Client (30 seconds)
@@ -202,7 +202,7 @@ pnpm exec prisma validate
 1. Verify PostgreSQL is running: `docker compose -f docker-compose.db.yml ps`
 2. Check DATABASE_URL in `.env`
 3. Ensure port 5432 is not blocked
-4. Try connecting manually: `psql postgresql://friendly:friendly_dev_password@localhost:5432/friendly_aep`
+4. Try connecting manually: `psql postgresql://friendly:friendly_dev_password@localhost:46100/friendly_aep`
 
 ### Migration Failed
 

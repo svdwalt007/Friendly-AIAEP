@@ -1,0 +1,80 @@
+config:
+  target: "{{ $processEnvironment.TARGET_URL }}"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: Warm up
+    - duration: 300
+      arrivalRate: 20
+      name: Sustained load
+    - duration: 60
+      arrivalRate: 50
+      name: Peak load
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+  processor: "./artillery-processor.js"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+
+scenarios:
+  - name: Health Check
+    weight: 30
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: status
+
+  - name: API Documentation
+    weight: 20
+    flow:
+      - get:
+          url: "/api/docs"
+          expect:
+            - statusCode: 200
+
+  - name: Builder Application
+    weight: 30
+    flow:
+      - get:
+          url: "/builder"
+          expect:
+            - statusCode:
+                - 200
+                - 404
+
+  - name: API Endpoints
+    weight: 20
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+      - think: 2
+
+      - post:
+          url: "/api/preview/create"
+          json:
+            name: "test-preview"
+            config: {}
+          expect:
+            - statusCode:
+                - 200
+                - 201
+                - 401
+
+      - think: 1
+
+      - get:
+          url: "/api/preview/status"
+          expect:
+            - statusCode:
+                - 200
+                - 401

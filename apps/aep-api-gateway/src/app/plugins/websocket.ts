@@ -8,52 +8,14 @@ import websocket from '@fastify/websocket';
  * @see https://github.com/fastify/fastify-websocket
  */
 export default fp(async function (fastify: FastifyInstance) {
-  fastify.register(websocket, {
+  await fastify.register(websocket, {
     options: {
       // Maximum payload size (10MB)
       maxPayload: 10 * 1024 * 1024,
       // Client tracking
       clientTracking: true,
-      // Compression options
-      perMessageDeflate: {
-        zlibDeflateOptions: {
-          chunkSize: 1024,
-          memLevel: 7,
-          level: 3,
-        },
-        zlibInflateOptions: {
-          chunkSize: 10 * 1024,
-        },
-        clientNoContextTakeover: true,
-        serverNoContextTakeover: true,
-        serverMaxWindowBits: 10,
-        concurrencyLimit: 10,
-        threshold: 1024,
-      },
       // Heartbeat configuration
       skipUTF8Validation: false,
-      // Verify client origin
-      verifyClient: (info, callback) => {
-        // Allow all origins in development
-        if (process.env.NODE_ENV === 'development') {
-          callback(true);
-          return;
-        }
-
-        // Verify origin in production
-        const allowedOrigins = [
-          process.env.CORS_ORIGIN_BUILDER || 'http://localhost:4200',
-          process.env.CORS_ORIGIN_PREVIEW || 'http://localhost:4201',
-          process.env.CORS_ORIGIN_ADMIN || 'http://localhost:4202',
-        ];
-
-        const origin = info.origin || info.req.headers.origin;
-        if (origin && allowedOrigins.includes(origin)) {
-          callback(true);
-        } else {
-          callback(false, 403, 'Forbidden');
-        }
-      },
     },
   });
 

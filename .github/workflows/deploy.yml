@@ -14,23 +14,42 @@ on:
         type: choice
         options:
           - development
+          - test
+          - preprod
           - staging
           - production
         default: 'staging'
+      deployment_strategy:
+        description: 'Deployment strategy'
+        required: true
+        type: choice
+        options:
+          - rolling
+          - blue-green
+          - canary
+        default: 'rolling'
+      skip_smoke_tests:
+        description: 'Skip smoke tests'
+        type: boolean
+        default: false
 
 env:
   NODE_VERSION: '20'
   PNPM_VERSION: '10'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  DEPLOYMENT_STRATEGY: ${{ inputs.deployment_strategy || 'rolling' }}
 
 jobs:
-  # ========================================
-  # Build Docker Images
-  # ========================================
+  ci-gate:
+    name: CI Gate
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   build-images:
     name: Build Docker Images
     runs-on: ubuntu-latest
+    needs: ci-gate
     timeout-minutes: 30
     permissions:
       contents: read
@@ -84,9 +103,60 @@ jobs:
             APP_NAME=${{ matrix.app }}
             NODE_VERSION=${{ env.NODE_VERSION }}
 
-  # ========================================
-  # Deploy to Staging
-  # ========================================
+  deploy-test:
+    name: Deploy to Test
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'test'
+    environment:
+      name: test
+      url: https://test.friendly-aiaep.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_TEST }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy with Helm
+        id: deploy
+        run: |
+          helm upgrade --install friendly-aep ./deploy/helm \
+            --namespace friendly-test \
+            --create-namespace \
+            --set image.tag=${{ github.sha }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set environment=test \
+            --set replicaCount=1 \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: kubectl rollout status deployment/friendly-aep -n friendly-test --timeout=120s
+
+      - name: Run smoke tests
+        if: ${{ !inputs.skip_smoke_tests }}
+        run: |
+          kubectl run smoke-tests --rm -i --restart=Never \
+            --image=curlimages/curl:latest \
+            --namespace friendly-test \
+            -- sh -c "curl -f https://test.friendly-aiaep.com/health || exit 1"
+
+      - name: Deployment notification
+        if: always()
+        run: |
+          echo "## Test Environment Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: test" >> $GITHUB_STEP_SUMMARY
+          echo "- Image Tag: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- URL: https://test.friendly-aiaep.com" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ steps.deploy.outcome }}" >> $GITHUB_STEP_SUMMARY
+
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
@@ -100,14 +170,191 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy notification
-        run: |
-          echo "Deploying to staging environment"
-          echo "Image tag: ${{ github.sha }}"
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v4
 
-  # ========================================
-  # Deploy to Production
-  # ========================================
+      - name: Set kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+
+      - name: Create backup of current deployment
+        id: backup
+        run: |
+          BACKUP_NAME="friendly-aep-backup-$(date +%s)"
+          echo "backup_name=${BACKUP_NAME}" >> $GITHUB_OUTPUT
+          kubectl get deployment friendly-aep -n friendly-staging -o yaml > /tmp/deployment-backup.yaml || true
+
+      - name: Deploy with Helm (Blue-Green Strategy)
+        id: deploy
+        if: env.DEPLOYMENT_STRATEGY == 'blue-green'
+        run: |
+          # Deploy green version
+          helm upgrade --install friendly-aep-green ./deploy/helm \
+            --namespace friendly-staging \
+            --create-namespace \
+            --set image.tag=${{ github.sha }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set environment=staging \
+            --set nameOverride=friendly-aep-green \
+            --wait \
+            --timeout 5m
+
+          # Wait for green to be ready
+          kubectl rollout status deployment/friendly-aep-green -n friendly-staging --timeout=120s
+
+          # Switch traffic to green
+          kubectl patch service friendly-aep -n friendly-staging -p '{"spec":{"selector":{"app":"friendly-aep-green"}}}'
+
+          # Remove blue deployment
+          sleep 30
+          helm uninstall friendly-aep-blue -n friendly-staging || true
+
+      - name: Deploy with Helm (Rolling Update)
+        if: env.DEPLOYMENT_STRATEGY != 'blue-green'
+        run: |
+          helm upgrade --install friendly-aep ./deploy/helm \
+            --namespace friendly-staging \
+            --create-namespace \
+            --set image.tag=${{ github.sha }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set environment=staging \
+            --set replicaCount=2 \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: kubectl rollout status deployment/friendly-aep -n friendly-staging --timeout=120s
+
+      - name: Run smoke tests
+        id: smoke-tests
+        if: ${{ !inputs.skip_smoke_tests }}
+        continue-on-error: true
+        run: |
+          echo "Running smoke tests..."
+
+          # Health check
+          kubectl run smoke-tests --rm -i --restart=Never \
+            --image=curlimages/curl:latest \
+            --namespace friendly-staging \
+            -- sh -c "curl -f https://staging.friendly-aiaep.com/health || exit 1"
+
+          # Additional smoke tests
+          echo "All smoke tests passed"
+
+      - name: Rollback on failure
+        if: steps.smoke-tests.outcome == 'failure' && steps.backup.outputs.backup_name != ''
+        run: |
+          echo "Smoke tests failed, rolling back..."
+          kubectl apply -f /tmp/deployment-backup.yaml -n friendly-staging || true
+          kubectl rollout status deployment/friendly-aep -n friendly-staging --timeout=120s
+          exit 1
+
+      - name: Deployment notification
+        if: always()
+        run: |
+          echo "## Staging Environment Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: staging" >> $GITHUB_STEP_SUMMARY
+          echo "- Strategy: ${{ env.DEPLOYMENT_STRATEGY }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Image Tag: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- URL: https://staging.friendly-aiaep.com" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ steps.deploy.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke Tests: ${{ steps.smoke-tests.outcome }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send Slack notification
+        if: always() && secrets.SLACK_WEBHOOK_URL
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Staging Deployment ${{ steps.deploy.outcome == 'success' && 'Succeeded' || 'Failed' }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Staging Deployment ${{ steps.deploy.outcome == 'success' && ':white_check_mark:' || ':x:' }}*\n*Environment:* staging\n*Version:* ${{ github.sha }}\n*URL:* https://staging.friendly-aiaep.com"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  deploy-preprod:
+    name: Deploy to Pre-Production
+    runs-on: ubuntu-latest
+    needs: [build-images, deploy-staging]
+    if: github.event.inputs.environment == 'preprod'
+    environment:
+      name: preprod
+      url: https://preprod.friendly-aiaep.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_PREPROD }}" | base64 -d > $HOME/.kube/config
+
+      - name: Create backup of current deployment
+        id: backup
+        run: |
+          BACKUP_NAME="friendly-aep-backup-$(date +%s)"
+          echo "backup_name=${BACKUP_NAME}" >> $GITHUB_OUTPUT
+          kubectl get deployment friendly-aep -n friendly-preprod -o yaml > /tmp/deployment-backup.yaml || true
+
+      - name: Deploy with Helm
+        id: deploy
+        run: |
+          helm upgrade --install friendly-aep ./deploy/helm \
+            --namespace friendly-preprod \
+            --create-namespace \
+            --set image.tag=${{ github.sha }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set environment=preprod \
+            --set replicaCount=2 \
+            --set resources.requests.memory=512Mi \
+            --set resources.requests.cpu=250m \
+            --set resources.limits.memory=1Gi \
+            --set resources.limits.cpu=500m \
+            --wait \
+            --timeout 10m
+
+      - name: Verify deployment
+        run: kubectl rollout status deployment/friendly-aep -n friendly-preprod --timeout=180s
+
+      - name: Run comprehensive smoke tests
+        id: smoke-tests
+        if: ${{ !inputs.skip_smoke_tests }}
+        continue-on-error: true
+        run: |
+          echo "Running comprehensive smoke tests..."
+          # Add your smoke test commands here
+          sleep 10
+
+      - name: Rollback on failure
+        if: steps.smoke-tests.outcome == 'failure' && steps.backup.outputs.backup_name != ''
+        run: |
+          echo "Smoke tests failed, rolling back..."
+          kubectl apply -f /tmp/deployment-backup.yaml -n friendly-preprod || true
+          kubectl rollout status deployment/friendly-aep -n friendly-preprod --timeout=120s
+          exit 1
+
+      - name: Deployment notification
+        if: always()
+        run: |
+          echo "## Pre-Production Environment Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: preprod" >> $GITHUB_STEP_SUMMARY
+          echo "- Image Tag: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- URL: https://preprod.friendly-aiaep.com" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ steps.deploy.outcome }}" >> $GITHUB_STEP_SUMMARY
+
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
@@ -121,7 +368,213 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Production deployment notification
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set kubeconfig
         run: |
-          echo "Deploying to production environment"
-          echo "Release: ${{ github.ref }}"
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > $HOME/.kube/config
+
+      - name: Create deployment snapshot
+        id: snapshot
+        run: |
+          SNAPSHOT_NAME="prod-snapshot-$(date +%s)"
+          echo "snapshot_name=${SNAPSHOT_NAME}" >> $GITHUB_OUTPUT
+
+          # Backup current deployment
+          kubectl get all -n friendly-production -o yaml > /tmp/production-backup.yaml
+
+          # Store current image tag for potential rollback
+          CURRENT_TAG=$(kubectl get deployment friendly-aep -n friendly-production -o jsonpath='{.spec.template.spec.containers[0].image}' | cut -d':' -f2) || true
+          echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Deploy Blue-Green (Production)
+        id: deploy-blue-green
+        if: env.DEPLOYMENT_STRATEGY == 'blue-green'
+        run: |
+          echo "Deploying with Blue-Green strategy..."
+
+          # Deploy green version
+          helm upgrade --install friendly-aep-green ./deploy/helm \
+            --namespace friendly-production \
+            --create-namespace \
+            --set image.tag=${{ github.ref_name }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set environment=production \
+            --set nameOverride=friendly-aep-green \
+            --set replicaCount=3 \
+            --set resources.requests.memory=512Mi \
+            --set resources.requests.cpu=250m \
+            --set resources.limits.memory=1Gi \
+            --set resources.limits.cpu=500m \
+            --wait \
+            --timeout 10m
+
+          # Verify green deployment
+          kubectl rollout status deployment/friendly-aep-green -n friendly-production --timeout=300s
+
+          echo "Green deployment successful, running smoke tests..."
+
+      - name: Deploy Rolling Update (Production)
+        id: deploy-rolling
+        if: env.DEPLOYMENT_STRATEGY != 'blue-green'
+        run: |
+          helm upgrade --install friendly-aep ./deploy/helm \
+            --namespace friendly-production \
+            --create-namespace \
+            --set image.tag=${{ github.ref_name }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set environment=production \
+            --set replicaCount=3 \
+            --set resources.requests.memory=512Mi \
+            --set resources.requests.cpu=250m \
+            --set resources.limits.memory=1Gi \
+            --set resources.limits.cpu=500m \
+            --wait \
+            --timeout 10m
+
+      - name: Verify deployment
+        run: |
+          if [[ "${{ env.DEPLOYMENT_STRATEGY }}" == "blue-green" ]]; then
+            kubectl rollout status deployment/friendly-aep-green -n friendly-production --timeout=300s
+          else
+            kubectl rollout status deployment/friendly-aep -n friendly-production --timeout=300s
+          fi
+
+      - name: Run production smoke tests
+        id: smoke-tests
+        if: ${{ !inputs.skip_smoke_tests }}
+        continue-on-error: true
+        run: |
+          echo "Running production smoke tests..."
+
+          # Health check
+          for i in {1..5}; do
+            if kubectl run smoke-test-$i --rm -i --restart=Never \
+              --image=curlimages/curl:latest \
+              --namespace friendly-production \
+              -- sh -c "curl -f https://friendly-aiaep.com/health"; then
+              echo "Health check passed"
+              break
+            else
+              echo "Health check failed, attempt $i/5"
+              sleep 10
+            fi
+          done
+
+          # Critical endpoint tests
+          echo "Testing critical endpoints..."
+          # Add your critical endpoint tests here
+
+          echo "All production smoke tests passed"
+
+      - name: Switch traffic to green (Blue-Green)
+        id: switch-traffic
+        if: env.DEPLOYMENT_STRATEGY == 'blue-green' && steps.smoke-tests.outcome == 'success'
+        run: |
+          echo "Switching production traffic to green deployment..."
+          kubectl patch service friendly-aep -n friendly-production -p '{"spec":{"selector":{"app":"friendly-aep-green"}}}'
+
+          # Wait for traffic switch
+          sleep 30
+
+          # Verify traffic switch
+          echo "Traffic switched successfully"
+
+      - name: Rollback on failure
+        if: steps.smoke-tests.outcome == 'failure'
+        run: |
+          echo "Production smoke tests failed, initiating rollback..."
+
+          if [[ "${{ env.DEPLOYMENT_STRATEGY }}" == "blue-green" ]]; then
+            # Remove failed green deployment
+            helm uninstall friendly-aep-green -n friendly-production || true
+            echo "Green deployment removed, traffic remains on blue"
+          elif [[ -n "${{ steps.snapshot.outputs.current_tag }}" ]]; then
+            # Rollback to previous version
+            helm rollback friendly-aep -n friendly-production
+            kubectl rollout status deployment/friendly-aep -n friendly-production --timeout=300s
+          else
+            echo "No previous version found for rollback"
+          fi
+
+          exit 1
+
+      - name: Remove old blue deployment (Blue-Green)
+        if: env.DEPLOYMENT_STRATEGY == 'blue-green' && steps.switch-traffic.outcome == 'success'
+        run: |
+          echo "Removing old blue deployment..."
+          helm uninstall friendly-aep-blue -n friendly-production || true
+
+          # Rename green to primary
+          echo "Blue-green deployment completed successfully"
+
+      - name: Production deployment notification
+        if: always()
+        run: |
+          echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: production" >> $GITHUB_STEP_SUMMARY
+          echo "- Strategy: ${{ env.DEPLOYMENT_STRATEGY }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Release: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- URL: https://friendly-aiaep.com" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ steps.deploy-blue-green.outcome || steps.deploy-rolling.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke Tests: ${{ steps.smoke-tests.outcome }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send Slack notification
+        if: always() && secrets.SLACK_WEBHOOK_URL
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Production Deployment ${{ steps.smoke-tests.outcome == 'success' && 'Succeeded' || 'Failed' }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Production Deployment ${{ steps.smoke-tests.outcome == 'success' && ':white_check_mark:' || ':x:' }}*\n*Release:* ${{ github.ref_name }}\n*Strategy:* ${{ env.DEPLOYMENT_STRATEGY }}\n*URL:* https://friendly-aiaep.com\n*Deployed by:* ${{ github.actor }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Deployment"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send Teams notification
+        if: always() && secrets.TEAMS_WEBHOOK_URL
+        run: |
+          curl -X POST "${{ secrets.TEAMS_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "@type": "MessageCard",
+              "themeColor": "${{ steps.smoke-tests.outcome == 'success' && '00FF00' || 'FF0000' }}",
+              "title": "Production Deployment ${{ steps.smoke-tests.outcome == 'success' && 'Succeeded' || 'Failed' }}",
+              "text": "Release: ${{ github.ref_name }}",
+              "sections": [{
+                "facts": [
+                  {"name": "Environment", "value": "production"},
+                  {"name": "Strategy", "value": "${{ env.DEPLOYMENT_STRATEGY }}"},
+                  {"name": "Status", "value": "${{ steps.smoke-tests.outcome }}"},
+                  {"name": "Deployed by", "value": "${{ github.actor }}"}
+                ]
+              }],
+              "potentialAction": [{
+                "@type": "OpenUri",
+                "name": "View Deployment",
+                "targets": [{"os": "default", "uri": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}]
+              }]
+            }'

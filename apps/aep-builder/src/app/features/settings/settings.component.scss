@@ -1,0 +1,40 @@
+.settings {
+  max-width: 800px;
+  margin: 0 auto;
+
+  h2 {
+    margin-bottom: var(--ft-spacing-lg);
+  }
+}
+
+.settings-card {
+  padding: var(--ft-spacing-lg);
+  margin-bottom: var(--ft-spacing-lg);
+
+  h3 {
+    margin: 0 0 var(--ft-spacing-md);
+    font-size: var(--ft-font-size-lg);
+  }
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ft-spacing-sm) 0;
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.setting-label {
+  font-weight: var(--ft-font-weight-medium);
+  font-size: var(--ft-font-size-sm);
+}
+
+.setting-desc {
+  font-size: var(--ft-font-size-xs);
+  margin-top: 2px;
+}

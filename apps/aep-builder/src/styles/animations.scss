@@ -1,0 +1,616 @@
+/**
+ * Animations & Micro-interactions
+ * Smooth, accessible animations following best practices
+ */
+
+// =============================================================================
+// KEYFRAME ANIMATIONS
+// =============================================================================
+
+// Fade animations
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+// Slide animations
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Scale animations
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+// Bounce animation
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+// Pulse animation
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// Shake animation
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+// Rotate animations
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotate-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+// Wiggle animation
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+}
+
+// Shimmer animation (for skeleton loaders)
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+// Progress bar animation
+@keyframes progress-indeterminate {
+  0% {
+    left: -35%;
+    right: 100%;
+  }
+  60% {
+    left: 100%;
+    right: -90%;
+  }
+  100% {
+    left: 100%;
+    right: -90%;
+  }
+}
+
+// Ripple animation
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+// Typing indicator
+@keyframes typing-dot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+// Gradient shift
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+// Blink animation
+@keyframes blink {
+  0%, 50%, 100% {
+    opacity: 1;
+  }
+  25%, 75% {
+    opacity: 0;
+  }
+}
+
+// =============================================================================
+// UTILITY CLASSES
+// =============================================================================
+
+// Fade utilities
+.ft-animate-fade-in {
+  animation: fade-in var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-animate-fade-out {
+  animation: fade-out var(--ft-transition-base) var(--ft-ease-in);
+}
+
+// Slide utilities
+.ft-animate-slide-in-up {
+  animation: slide-in-up var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-animate-slide-in-down {
+  animation: slide-in-down var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-animate-slide-in-left {
+  animation: slide-in-left var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-animate-slide-in-right {
+  animation: slide-in-right var(--ft-transition-base) var(--ft-ease-out);
+}
+
+// Scale utilities
+.ft-animate-scale-in {
+  animation: scale-in var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-animate-scale-out {
+  animation: scale-out var(--ft-transition-base) var(--ft-ease-in);
+}
+
+// Interactive animations
+.ft-animate-bounce {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.ft-animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.ft-animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.ft-animate-wiggle {
+  animation: wiggle 0.5s ease-in-out;
+}
+
+// Rotation
+.ft-animate-spin {
+  animation: rotate 1s linear infinite;
+}
+
+.ft-animate-spin-reverse {
+  animation: rotate-reverse 1s linear infinite;
+}
+
+.ft-animate-spin-slow {
+  animation: rotate 2s linear infinite;
+}
+
+// Loading states
+.ft-shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(
+    90deg,
+    var(--ft-surface-secondary) 0%,
+    var(--ft-surface-tertiary) 50%,
+    var(--ft-surface-secondary) 100%
+  );
+  background-size: 200% 100%;
+}
+
+.ft-gradient-shift {
+  animation: gradient-shift 3s ease infinite;
+  background-size: 200% 200%;
+}
+
+// =============================================================================
+// MICRO-INTERACTIONS
+// =============================================================================
+
+// Hover grow effect
+.ft-hover-grow {
+  transition: transform var(--ft-transition-base) var(--ft-ease-out);
+
+  &:hover {
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// Hover lift effect
+.ft-hover-lift {
+  transition:
+    transform var(--ft-transition-base) var(--ft-ease-out),
+    box-shadow var(--ft-transition-base) var(--ft-ease-out);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ft-elevation-3);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: var(--ft-elevation-1);
+  }
+}
+
+// Hover brightness
+.ft-hover-brighten {
+  transition: filter var(--ft-transition-fast) var(--ft-ease-in-out);
+
+  &:hover {
+    filter: brightness(1.1);
+  }
+}
+
+// Hover glow
+.ft-hover-glow {
+  transition: box-shadow var(--ft-transition-base) var(--ft-ease-in-out);
+
+  &:hover {
+    box-shadow: 0 0 20px rgba(33, 150, 243, 0.4);
+  }
+}
+
+// Icon rotation on hover
+.ft-hover-rotate-icon {
+  .icon,
+  mat-icon,
+  svg {
+    transition: transform var(--ft-transition-base) var(--ft-ease-out);
+  }
+
+  &:hover {
+    .icon,
+    mat-icon,
+    svg {
+      transform: rotate(90deg);
+    }
+  }
+}
+
+// Button ripple effect
+.ft-ripple {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  &:active::after {
+    width: 300px;
+    height: 300px;
+  }
+}
+
+// =============================================================================
+// PAGE TRANSITIONS
+// =============================================================================
+
+.ft-page-enter {
+  animation: slide-in-up var(--ft-transition-slow) var(--ft-ease-out);
+}
+
+.ft-page-leave {
+  animation: fade-out var(--ft-transition-fast) var(--ft-ease-in);
+}
+
+// =============================================================================
+// STAGGER ANIMATIONS
+// =============================================================================
+
+.ft-stagger-children {
+  > * {
+    animation: slide-in-up var(--ft-transition-base) var(--ft-ease-out);
+  }
+
+  @for $i from 1 through 10 {
+    > *:nth-child(#{$i}) {
+      animation-delay: #{$i * 0.05}s;
+    }
+  }
+}
+
+// =============================================================================
+// LOADING STATES
+// =============================================================================
+
+.ft-loading-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--ft-surface-secondary) 0%,
+    var(--ft-surface-tertiary) 50%,
+    var(--ft-surface-secondary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--ft-radius-sm);
+}
+
+.ft-typing-indicator {
+  display: inline-flex;
+  gap: 4px;
+
+  span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--ft-text-secondary);
+    animation: typing-dot 1.4s ease-in-out infinite;
+
+    &:nth-child(1) {
+      animation-delay: 0s;
+    }
+
+    &:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+  }
+}
+
+.ft-progress-indeterminate {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--ft-surface-tertiary);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -35%;
+    right: 100%;
+    background-color: var(--ft-primary);
+    animation: progress-indeterminate 2s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+  }
+}
+
+// =============================================================================
+// ENTRANCE ANIMATIONS
+// =============================================================================
+
+.ft-entrance-bottom {
+  animation: slide-in-up 0.6s var(--ft-ease-out);
+}
+
+.ft-entrance-top {
+  animation: slide-in-down 0.6s var(--ft-ease-out);
+}
+
+.ft-entrance-left {
+  animation: slide-in-left 0.6s var(--ft-ease-out);
+}
+
+.ft-entrance-right {
+  animation: slide-in-right 0.6s var(--ft-ease-out);
+}
+
+.ft-entrance-fade {
+  animation: fade-in 0.6s var(--ft-ease-out);
+}
+
+.ft-entrance-scale {
+  animation: scale-in 0.6s var(--ft-ease-out);
+}
+
+// =============================================================================
+// REDUCED MOTION SUPPORT
+// =============================================================================
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .ft-animate-bounce,
+  .ft-animate-pulse,
+  .ft-animate-shake,
+  .ft-animate-wiggle,
+  .ft-animate-spin,
+  .ft-animate-spin-reverse,
+  .ft-shimmer,
+  .ft-gradient-shift {
+    animation: none !important;
+  }
+}
+
+// =============================================================================
+// FOCUS ANIMATIONS
+// =============================================================================
+
+.ft-focus-ring {
+  transition: box-shadow var(--ft-transition-fast) var(--ft-ease-in-out);
+
+  &:focus-visible {
+    box-shadow: var(--ft-focus-ring);
+    animation: pulse 1s ease-in-out 2;
+  }
+}
+
+// =============================================================================
+// NOTIFICATION ANIMATIONS
+// =============================================================================
+
+.ft-notification-enter {
+  animation: slide-in-right var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-notification-leave {
+  animation: slide-in-right var(--ft-transition-base) var(--ft-ease-in) reverse;
+}
+
+// =============================================================================
+// MODAL/DIALOG ANIMATIONS
+// =============================================================================
+
+.ft-modal-backdrop-enter {
+  animation: fade-in var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-modal-backdrop-leave {
+  animation: fade-out var(--ft-transition-base) var(--ft-ease-in);
+}
+
+.ft-modal-content-enter {
+  animation: scale-in var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-modal-content-leave {
+  animation: scale-out var(--ft-transition-base) var(--ft-ease-in);
+}
+
+// =============================================================================
+// DRAWER ANIMATIONS
+// =============================================================================
+
+.ft-drawer-left-enter {
+  animation: slide-in-left var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-drawer-left-leave {
+  animation: slide-in-left var(--ft-transition-base) var(--ft-ease-in) reverse;
+}
+
+.ft-drawer-right-enter {
+  animation: slide-in-right var(--ft-transition-base) var(--ft-ease-out);
+}
+
+.ft-drawer-right-leave {
+  animation: slide-in-right var(--ft-transition-base) var(--ft-ease-in) reverse;
+}

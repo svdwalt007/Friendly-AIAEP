@@ -161,11 +161,66 @@ async function seedBillingPlans() {
   console.log('✅ Billing plans seeded successfully!');
 }
 
+async function seedDemoData() {
+  console.log('🌱 Seeding demo tenant, user, and project...');
+
+  // Create or get demo tenant
+  const tenant = await prisma.tenant.upsert({
+    where: { subdomain: 'demo' },
+    create: {
+      name: 'Demo Tenant',
+      subdomain: 'demo',
+      tier: Tier.PROFESSIONAL,
+      maxProjects: 25,
+      maxUsers: 50,
+    },
+    update: {},
+  });
+  console.log(`  ✓ Demo tenant: ${tenant.name} (${tenant.id})`);
+
+  // Create or get demo user
+  const user = await prisma.user.upsert({
+    where: { email: 'demo@friendly-tech.com' },
+    create: {
+      email: 'demo@friendly-tech.com',
+      name: 'Demo User',
+      tenantId: tenant.id,
+      passwordHash: '$2a$10$demohashdemohashdemohashdemohashdemohashdemohashdemo', // Demo hash
+      role: 'ADMIN',
+      isActive: true,
+    },
+    update: {},
+  });
+  console.log(`  ✓ Demo user: ${user.name} (${user.id})`);
+
+  // Create or get demo project
+  const project = await prisma.project.upsert({
+    where: { name: 'My First IoT App' },
+    create: {
+      name: 'My First IoT App',
+      description: 'A sample IoT dashboard application for monitoring devices',
+      tenantId: tenant.id,
+      ownerId: user.id,
+      status: 'ACTIVE',
+      config: {
+        framework: 'angular',
+        version: '21.0.0',
+        features: ['device-monitoring', 'real-time-charts', 'alerts'],
+      },
+    },
+    update: {},
+  });
+  console.log(`  ✓ Demo project: ${project.name} (${project.id})`);
+
+  console.log('✅ Demo data seeded successfully!');
+}
+
 async function main() {
   console.log('🚀 Starting database seed...\n');
 
   try {
     await seedBillingPlans();
+    await seedDemoData();
 
     console.log('\n✅ Database seed completed successfully!');
   } catch (error) {

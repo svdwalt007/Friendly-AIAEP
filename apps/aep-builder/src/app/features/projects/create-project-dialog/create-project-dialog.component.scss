@@ -1,0 +1,19 @@
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-spacing-sm);
+  min-width: 380px;
+  padding-top: var(--ft-spacing-sm);
+}
+
+.full-width {
+  width: 100%;
+}
+
+.form-error {
+  padding: var(--ft-spacing-sm) var(--ft-spacing-md);
+  background-color: #fef2f2;
+  color: var(--ft-error);
+  border-radius: var(--ft-radius-sm);
+  font-size: var(--ft-font-size-sm);
+}

@@ -95,18 +95,18 @@ export default async function (fastify: FastifyInstance) {
 
 ```bash
 # Start Redis (if not already running)
-docker run -d -p 6379:6379 redis:7-alpine
+docker run -d -p 6379:46102 redis:7-alpine
 
 # Start your Fastify server
 npm run dev
 
 # Test login
-curl -X POST http://localhost:3000/api/v1/auth/login \
+curl -X POST http://localhost:45001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"uid":"user@tenant123","pw":"password123"}'
 
 # Save the accessToken from response, then test protected route
-curl http://localhost:3000/api/v1/example \
+curl http://localhost:45001/api/v1/example \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE"
 ```
 

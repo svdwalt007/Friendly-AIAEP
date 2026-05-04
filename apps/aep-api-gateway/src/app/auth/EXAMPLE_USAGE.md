@@ -508,7 +508,7 @@ class AepApiClient {
 }
 
 // Usage
-const client = new AepApiClient('http://localhost:3000');
+const client = new AepApiClient('http://localhost:45001');
 await client.login('user@tenant123', 'password123');
 const projects = await client.getProjects();
 ```
@@ -517,17 +517,17 @@ const projects = await client.getProjects();
 
 ```bash
 # Login
-curl -X POST http://localhost:3000/api/v1/auth/login \
+curl -X POST http://localhost:45001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"uid":"user@tenant123","pw":"password123"}' \
   | jq -r '.accessToken' > token.txt
 
 # Use access token
-curl http://localhost:3000/api/v1/projects \
+curl http://localhost:45001/api/v1/projects \
   -H "Authorization: Bearer $(cat token.txt)"
 
 # Refresh token
-curl -X POST http://localhost:3000/api/v1/auth/token/refresh \
+curl -X POST http://localhost:45001/api/v1/auth/token/refresh \
   -H "Content-Type: application/json" \
   -d "{\"refreshToken\":\"$(cat token.txt)\"}"
 ```

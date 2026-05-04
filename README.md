@@ -71,7 +71,7 @@ pnpm nx serve aep-builder
 pnpm nx serve aep-preview-host
 ```
 
-Access the builder at: **http://localhost:4200**
+Access the builder at: **http://localhost:45000**
 
 ---
 
@@ -171,13 +171,16 @@ Friendly-AIAEP/
 │   └── workflows/
 │       ├── ci.yml                # Build, Test, Lint
 │       └── deploy.yml            # Deploy to K8s
-├── docs/                          # Documentation
-├── ARCHITECTURE_WORKFLOW.md       # System Architecture
-├── USER_JOURNEY_WORKFLOW.md       # User Journey
-├── UI_MOCKUPS.md                  # UI Designs
-├── CONTRIBUTING.md                # Contribution Guide
-├── SECURITY.md                    # Security Policy
-└── CODE_OF_CONDUCT.md             # Code of Conduct
+└── docs/                          # Complete Documentation
+    ├── getting-started/           # Setup and installation guides
+    ├── architecture/              # System design and specifications
+    ├── guides/                    # How-to guides and workflows
+    ├── development/               # Development processes
+    ├── deployment/                # Docker, K8s, CI/CD guides
+    ├── testing/                   # Testing strategies
+    ├── api-reference/             # API documentation
+    ├── security/                  # Security policies
+    └── contributing/              # Contribution guidelines
 ```
 
 ---
@@ -308,7 +311,7 @@ AI Response:
 
 The API Gateway exposes OpenAPI 3.0 documentation at:
 
-**http://localhost:3001/docs**
+**http://localhost:46000/docs**
 
 ### Key Endpoints
 
@@ -329,7 +332,7 @@ The API Gateway exposes OpenAPI 3.0 documentation at:
 
 ### Grafana Dashboards
 
-Access Grafana at: **http://localhost:3000**
+Access Grafana at: **http://localhost:45001**
 
 **Pre-configured Dashboards:**
 - Platform Performance (API Gateway metrics)
@@ -390,11 +393,27 @@ UNLICENSED - Proprietary Software
 
 ## Documentation
 
-- **[Architecture Workflow](ARCHITECTURE_WORKFLOW.md)** - Complete system architecture and data flow
-- **[User Journey Workflow](USER_JOURNEY_WORKFLOW.md)** - End-to-end user experience (8 phases)
-- **[UI Mockups](UI_MOCKUPS.md)** - Builder interface and generated app designs
-- **[Build & Test Report](BUILD_AND_TEST_REPORT.md)** - Comprehensive build status
-- **[Test Coverage Summary](TEST_COVERAGE_SUMMARY.md)** - Coverage statistics
+**Complete documentation is now available in the [`/docs`](./docs/) directory**, organized into logical sections:
+
+### 📚 Quick Links
+
+- **[📖 Documentation Home](./docs/README.md)** - Complete documentation index
+- **[🚀 Getting Started Guide](./docs/getting-started/GETTING-STARTED.md)** - Setup, debugging, and monitoring
+- **[💻 Development Guide](./docs/guides/DEVELOPMENT-GUIDE.md)** - Developer workflows and best practices
+- **[🚢 Deployment Guide](./docs/guides/DEPLOYMENT-GUIDE.md)** - Multi-environment deployment
+- **[🔒 Security Guide](./docs/security/SECURITY.md)** - Security policies and best practices
+
+### 📂 Documentation Sections
+
+- **[Getting Started](./docs/getting-started/)** - Installation, setup, and quick start guides
+- **[Architecture](./docs/architecture/)** - System design and technical specifications
+- **[Guides](./docs/guides/)** - How-to guides for common tasks
+- **[Development](./docs/development/)** - Development processes and environment setup
+- **[Deployment](./docs/deployment/)** - Docker, Kubernetes, CI/CD, and multi-environment strategy
+- **[Testing](./docs/testing/)** - Testing strategies, E2E, and coverage reports
+- **[API Reference](./docs/api-reference/)** - REST API, WebSocket, and IoT integration
+- **[Security](./docs/security/)** - Authentication, authorization, and security best practices
+- **[Contributing](./docs/contributing/)** - Contribution guidelines and code of conduct
 
 ---
 
@@ -407,11 +426,16 @@ UNLICENSED - Proprietary Software
 
 ---
 
-## References
+## Environment Support
 
-- System Specification: `docs/Friendly_AI_AEP_System_Specification_v2.2.docx`
-- Module Reference: `docs/Friendly_AI_AEP_Module_Reference_v2.2.docx`
-- Phase 1 Playbook: `docs/Friendly_AI_AEP_Phase1_Prompt_Playbook.docx`
+Friendly AI AEP supports four distinct environments for the complete SDLC:
+
+- **Development (Dev)** - Local development with hot-reload and debug tools
+- **Test** - Automated testing and CI/CD integration
+- **Pre-Production (Pre-Prod)** - Production-like environment for final validation
+- **Production (Prod)** - Live deployment with monitoring and high availability
+
+See [Multi-Environment Strategy](./docs/deployment/MULTI-ENVIRONMENT.md) for details.
 
 ---
 

@@ -59,14 +59,14 @@
 - [x] Nginx reverse proxy configuration
 - [x] Upstream definitions for all services:
   - [x] frontend:80
-  - [x] grafana:3000
+  - [x] grafana:45001
   - [x] iot-api-proxy:8080
   - [x] license-agent:8080
   - [x] ollama:11434 (Enterprise only)
 - [x] Location blocks:
   - [x] /health -> health check endpoint
   - [x] /api/* -> iot-api-proxy:8080
-  - [x] /grafana/* -> grafana:3000
+  - [x] /grafana/* -> grafana:45001
   - [x] /license/* -> license-agent:8080 (internal only)
   - [x] /ollama/* -> ollama:11434 (Enterprise, internal only)
   - [x] /ws/* -> WebSocket routes

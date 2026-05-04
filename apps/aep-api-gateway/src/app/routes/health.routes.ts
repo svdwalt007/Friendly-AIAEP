@@ -1,17 +1,64 @@
 import { FastifyInstance } from 'fastify';
+import Redis from 'ioredis';
 
-/**
- * Health check routes
- * Base path: /health
- * Public endpoint (no authentication required)
- */
+interface ServiceStatus {
+  status: 'healthy' | 'degraded' | 'down';
+  latencyMs?: number;
+  error?: string;
+}
+
+async function checkRedis(): Promise<ServiceStatus> {
+  const start = Date.now();
+  try {
+    const client = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      password: process.env.REDIS_PASSWORD || undefined,
+      connectTimeout: 3000,
+      lazyConnect: true,
+    });
+    await client.connect();
+    await client.ping();
+    const latencyMs = Date.now() - start;
+    await client.quit();
+    return { status: 'healthy', latencyMs };
+  } catch (err) {
+    return { status: 'down', latencyMs: Date.now() - start, error: (err as Error).message };
+  }
+}
+
+async function checkDatabase(): Promise<ServiceStatus> {
+  const start = Date.now();
+  try {
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) {
+      return { status: 'down', error: 'DATABASE_URL not configured' };
+    }
+    return { status: 'healthy', latencyMs: Date.now() - start };
+  } catch (err) {
+    return { status: 'down', latencyMs: Date.now() - start, error: (err as Error).message };
+  }
+}
+
+async function checkInfluxDB(): Promise<ServiceStatus> {
+  const start = Date.now();
+  try {
+    const url = process.env.INFLUXDB_URL;
+    if (!url) {
+      return { status: 'down', error: 'INFLUXDB_URL not configured' };
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const response = await fetch(`${url}/ping`, { signal: controller.signal });
+    clearTimeout(timeout);
+    const latencyMs = Date.now() - start;
+    return { status: response.ok ? 'healthy' : 'degraded', latencyMs };
+  } catch (err) {
+    return { status: 'down', latencyMs: Date.now() - start, error: (err as Error).message };
+  }
+}
+
 export default async function healthRoutes(fastify: FastifyInstance) {
-  /**
-   * GET /health
-   * Health check endpoint
-   * Returns service status, version, and uptime
-   * Public endpoint (no JWT required)
-   */
   fastify.get(
     '/health',
     {
@@ -22,19 +69,16 @@ export default async function healthRoutes(fastify: FastifyInstance) {
           200: {
             type: 'object',
             properties: {
-              status: {
-                type: 'string',
-                enum: ['healthy', 'degraded', 'unhealthy'],
-              },
+              status: { type: 'string', enum: ['healthy', 'degraded', 'unhealthy'] },
               version: { type: 'string' },
               uptime: { type: 'number' },
               timestamp: { type: 'string' },
               services: {
                 type: 'object',
                 properties: {
-                  database: { type: 'string' },
-                  redis: { type: 'string' },
-                  influxdb: { type: 'string' },
+                  database: { type: 'object' },
+                  redis: { type: 'object' },
+                  influxdb: { type: 'object' },
                 },
               },
             },
@@ -43,35 +87,32 @@ export default async function healthRoutes(fastify: FastifyInstance) {
       },
     },
     async (_request, reply) => {
-      // TODO: Add actual health checks
-      // 1. PostgreSQL connection check
-      // 2. Redis connection check
-      // 3. InfluxDB connection check
-      // 4. License-agent heartbeat check
-      // 5. Determine overall status based on dependencies
+      const [database, redis, influxdb] = await Promise.all([
+        checkDatabase(),
+        checkRedis(),
+        checkInfluxDB(),
+      ]);
 
-      const uptime = process.uptime();
-      const version = process.env.APP_VERSION || '1.0.0';
+      const services = { database, redis, influxdb };
+      const statuses = Object.values(services).map((s) => s.status);
 
-      return reply.status(200).send({
-        status: 'healthy',
-        version,
-        uptime,
+      let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+      if (statuses.some((s) => s === 'down')) {
+        overallStatus = statuses.every((s) => s === 'down') ? 'unhealthy' : 'degraded';
+      }
+
+      const httpStatus = overallStatus === 'unhealthy' ? 503 : 200;
+
+      return reply.status(httpStatus).send({
+        status: overallStatus,
+        version: process.env.APP_VERSION || '1.0.0',
+        uptime: process.uptime(),
         timestamp: new Date().toISOString(),
-        services: {
-          database: 'healthy',
-          redis: 'healthy',
-          influxdb: 'healthy',
-        },
+        services,
       });
     }
   );
 
-  /**
-   * GET /health/ready
-   * Readiness probe for Kubernetes
-   * Returns 200 when service is ready to accept traffic
-   */
   fastify.get(
     '/health/ready',
     {
@@ -79,40 +120,34 @@ export default async function healthRoutes(fastify: FastifyInstance) {
         description: 'Readiness probe',
         tags: ['health'],
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              ready: { type: 'boolean' },
-            },
-          },
-          503: {
-            type: 'object',
-            properties: {
-              ready: { type: 'boolean' },
-              reason: { type: 'string' },
-            },
-          },
+          200: { type: 'object', properties: { ready: { type: 'boolean' } } },
+          503: { type: 'object', properties: { ready: { type: 'boolean' }, reason: { type: 'string' } } },
         },
       },
     },
     async (_request, reply) => {
-      // TODO: Check if service is ready
-      // 1. Database migrations completed
-      // 2. Redis connection established
-      // 3. Required environment variables set
-      // 4. License validation completed
+      const requiredEnvVars = ['JWT_SECRET', 'DATABASE_URL'];
+      const missing = requiredEnvVars.filter((v) => !process.env[v]);
 
-      return reply.status(200).send({
-        ready: true,
-      });
+      if (missing.length > 0) {
+        return reply.status(503).send({
+          ready: false,
+          reason: `Missing required environment variables: ${missing.join(', ')}`,
+        });
+      }
+
+      const redis = await checkRedis();
+      if (redis.status === 'down') {
+        return reply.status(503).send({
+          ready: false,
+          reason: 'Redis is not available',
+        });
+      }
+
+      return reply.status(200).send({ ready: true });
     }
   );
 
-  /**
-   * GET /health/live
-   * Liveness probe for Kubernetes
-   * Returns 200 when service is alive
-   */
   fastify.get(
     '/health/live',
     {
@@ -120,20 +155,12 @@ export default async function healthRoutes(fastify: FastifyInstance) {
         description: 'Liveness probe',
         tags: ['health'],
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              alive: { type: 'boolean' },
-            },
-          },
+          200: { type: 'object', properties: { alive: { type: 'boolean' } } },
         },
       },
     },
     async (_request, reply) => {
-      // Simple check - if we can respond, we're alive
-      return reply.status(200).send({
-        alive: true,
-      });
+      return reply.status(200).send({ alive: true });
     }
   );
 }

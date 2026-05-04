@@ -71,7 +71,7 @@ const containerInfo = await manager.createPreviewContainer({
   mockApiImage: 'node:20-alpine',
   env: {
     NODE_ENV: 'production',
-    API_URL: 'http://mock-api:3000'
+    API_URL: 'http://mock-api:45001'
   }
 });
 
@@ -471,7 +471,7 @@ async function deployPreview() {
       enableMockApi: true,
       env: {
         NODE_ENV: 'preview',
-        API_URL: 'http://mock-api:3000'
+        API_URL: 'http://mock-api:45001'
       },
       labels: {
         'project': 'my-app',
@@ -646,8 +646,8 @@ const containerInfo = await manager.createPreviewContainer({
   volumePath: '/path/to/dist',
   enableMockApi: true,
   env: {
-    // Main container can access sidecar at http://mock-api:3000
-    API_URL: 'http://mock-api:3000'
+    // Main container can access sidecar at http://mock-api:45001
+    API_URL: 'http://mock-api:45001'
   }
 });
 

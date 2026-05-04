@@ -360,7 +360,7 @@ export function useAgentStream(sessionId: string, token: string) {
 
   useEffect(() => {
     const ws = new WebSocket(
-      `ws://localhost:3000/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
+      `ws://localhost:45001/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
     );
 
     ws.onopen = () => setIsConnected(true);
@@ -406,7 +406,7 @@ export function useAgentStream(sessionId: string, token: string) {
 
   onMounted(() => {
     ws = new WebSocket(
-      `ws://localhost:3000/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
+      `ws://localhost:45001/api/v1/agent/stream?sessionId=${sessionId}&token=${token}`
     );
 
     ws.onopen = () => isConnected.value = true;

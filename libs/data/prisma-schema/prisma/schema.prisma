@@ -4,7 +4,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
+  output   = "../../../../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -397,8 +397,11 @@ model PreviewSession {
   id           String   @id @default(cuid())
   projectId    String
   userId       String
+  tenantId     String
   sessionToken String   @unique
-  config       Json // Preview configuration
+  mode         String   @default("mock") // mock, live, disconnected-sim
+  status       String   @default("starting") // starting, running, stopping, stopped, error
+  config       Json // Preview configuration (port, containerIds, etc.)
   expiresAt    DateTime
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -410,7 +413,9 @@ model PreviewSession {
 
   @@index([projectId])
   @@index([userId])
+  @@index([tenantId])
   @@index([sessionToken])
   @@index([expiresAt])
   @@index([isActive])
+  @@index([status])
 }

@@ -1,0 +1,87 @@
+<mat-sidenav-container class="shell-container">
+  <!-- Sidenav -->
+  <mat-sidenav
+    mode="side"
+    [opened]="true"
+    [class.collapsed]="sidenavCollapsed()"
+    class="shell-sidenav"
+  >
+    <!-- Brand -->
+    <div class="sidenav-brand">
+      <img
+        src="assets/logo-icon.svg"
+        alt="Friendly"
+        class="brand-icon"
+        onerror="this.style.display='none'"
+      />
+      @if (!sidenavCollapsed()) {
+        <span class="brand-text">Friendly AEP</span>
+      }
+    </div>
+
+    <!-- Navigation -->
+    <mat-nav-list>
+      @for (item of navItems; track item.route) {
+        <a
+          mat-list-item
+          [routerLink]="item.route"
+          routerLinkActive="active-link"
+          [matTooltip]="sidenavCollapsed() ? item.label : ''"
+          matTooltipPosition="right"
+        >
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          @if (!sidenavCollapsed()) {
+            <span matListItemTitle>{{ item.label }}</span>
+          }
+        </a>
+      }
+    </mat-nav-list>
+
+    <!-- Collapse toggle -->
+    <div class="sidenav-footer">
+      <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidebar">
+        <mat-icon>{{ sidenavCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+      </button>
+    </div>
+  </mat-sidenav>
+
+  <!-- Main content -->
+  <mat-sidenav-content class="shell-content">
+    <!-- Toolbar -->
+    <mat-toolbar class="shell-toolbar">
+      <span class="toolbar-spacer"></span>
+
+      <!-- Theme toggle -->
+      <button mat-icon-button (click)="themeService.toggle()" [matTooltip]="themeService.isDark() ? 'Light mode' : 'Dark mode'">
+        <mat-icon>{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
+
+      <!-- User menu -->
+      <button mat-icon-button [matMenuTriggerFor]="userMenu" aria-label="User menu">
+        <mat-icon>account_circle</mat-icon>
+      </button>
+      <mat-menu #userMenu="matMenu">
+        @if (authService.user(); as user) {
+          <div class="user-menu-header">
+            <strong>{{ user.username }}</strong>
+            <small>{{ user.role }}</small>
+          </div>
+          <mat-divider></mat-divider>
+        }
+        <button mat-menu-item routerLink="/settings">
+          <mat-icon>settings</mat-icon>
+          <span>Settings</span>
+        </button>
+        <button mat-menu-item (click)="onLogout()">
+          <mat-icon>logout</mat-icon>
+          <span>Logout</span>
+        </button>
+      </mat-menu>
+    </mat-toolbar>
+
+    <!-- Page content -->
+    <div class="page-content">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

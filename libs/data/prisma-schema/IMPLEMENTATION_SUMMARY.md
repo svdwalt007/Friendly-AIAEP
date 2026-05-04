@@ -176,7 +176,7 @@ Complete implementation of the Prisma database schema for the Friendly AI AEP To
 
 **Services:**
 - PostgreSQL 15-alpine
-- Port 5432:5432 (configurable)
+- Port 5432:46100 (configurable)
 - Volume for data persistence
 - Healthcheck configuration
 - Environment variables for all settings

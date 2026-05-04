@@ -17,7 +17,7 @@ docker run --name aep-postgres \
   -e POSTGRES_DB=aep_dev \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -p 5432:5432 \
+  -p 5432:46100 \
   -d postgres:15
 
 # Verify it's running
@@ -37,7 +37,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5432:46100"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

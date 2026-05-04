@@ -109,7 +109,12 @@
       ],
       "@friendly-tech/deploy/helm-generator": [
         "libs/deploy/helm-generator/src/index.ts"
-      ]
+      ],
+      "@friendly-aep/shared-observability": [
+        "libs/shared/observability/src/index.ts"
+      ],
+      "@friendly-aep/shared-cache": ["libs/shared/cache/src/index.ts"],
+      "@friendly-aep/shared-secrets": ["libs/shared/secrets/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

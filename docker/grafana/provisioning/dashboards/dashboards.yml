@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'Friendly AEP'
+    orgId: 1
+    folder: 'Friendly AEP'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: false

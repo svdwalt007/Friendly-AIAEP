@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { PreviewMode } from '@friendly-tech/builder/preview-runtime';
 
 // Request schemas
 const triggerPreviewSchema = z.object({
@@ -77,28 +78,36 @@ export default async function previewRoutes(fastify: FastifyInstance) {
         const { id: projectId } = request.params;
         const { mode, duration = 30 } = triggerPreviewSchema.parse(request.body);
 
-        // TODO: Integrate with preview-runtime (libs/builder/preview-runtime)
-        // 1. Verify project exists and belongs to tenant
-        // 2. Generate preview build via codegen
-        // 3. Create ephemeral Docker container
-        // 4. Set preview mode:
-        //    - mock: Use mock-api-server for all 3 Friendly APIs
-        //    - live: Use iot-api-proxy for real API calls
-        //    - disconnected-sim: Simulate periodic connectivity drops
-        // 5. Configure hot-reload WebSocket
-        // 6. Set auto-destroy timer (max 30 minutes)
-        // 7. Emit billing event for preview minutes
+        // Extract user info from JWT token
+        const user = request.user as { sub: string; tenantId: string };
+        if (!user || !user.sub || !user.tenantId) {
+          return reply.status(401).send({
+            statusCode: 401,
+            error: 'Unauthorized',
+            message: 'Invalid or missing authentication token',
+          });
+        }
 
-        const previewId = `preview_${Date.now()}`;
-        const expiresAt = new Date(Date.now() + duration * 60 * 1000).toISOString();
-        const previewUrl = `https://preview-${projectId}.aep.friendly-tech.com`;
+        // Map string mode to PreviewMode enum
+        const previewMode = mode === 'mock' ? PreviewMode.MOCK :
+                           mode === 'live' ? PreviewMode.LIVE :
+                           PreviewMode.DISCONNECTED_SIM;
+
+        // Create preview session using PreviewRuntimeService
+        const session = await fastify.previewRuntime.launchPreview({
+          projectId,
+          tenantId: user.tenantId,
+          mode: previewMode,
+          durationMinutes: duration,
+          enableHotReload: true,
+        });
 
         return reply.status(202).send({
-          previewId,
-          previewUrl,
-          mode,
-          expiresAt,
-          status: 'building',
+          previewId: session.sessionId,
+          previewUrl: session.previewUrl,
+          mode: session.mode,
+          expiresAt: session.expiresAt.toISOString(),
+          status: session.status,
         });
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -109,6 +118,223 @@ export default async function previewRoutes(fastify: FastifyInstance) {
             details: error.issues,
           });
         }
+
+        // Handle preview runtime errors
+        const err = error as Error;
+        if (err.message.includes('Session limit exceeded')) {
+          return reply.status(429).send({
+            statusCode: 429,
+            error: 'Too Many Requests',
+            message: err.message,
+          });
+        }
+
+        if (err.message.includes('Project not found') || err.message.includes('Tenant not found')) {
+          return reply.status(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: err.message,
+          });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  /**
+   * GET /api/v1/projects/:id/preview/:previewId
+   * Get preview session status
+   * Protected by JWT middleware
+   */
+  fastify.get<{ Params: { id: string; previewId: string } }>(
+    '/api/v1/projects/:id/preview/:previewId',
+    {
+      onRequest: [fastify.authenticate],
+      schema: {
+        description: 'Get preview session status',
+        tags: ['projects', 'preview'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id', 'previewId'],
+          properties: {
+            id: { type: 'string' },
+            previewId: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              previewId: { type: 'string' },
+              previewUrl: { type: 'string' },
+              mode: { type: 'string' },
+              status: { type: 'string' },
+              expiresAt: { type: 'string' },
+              createdAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Params: { id: string; previewId: string } }>, reply: FastifyReply) => {
+      try {
+        const { previewId } = request.params;
+
+        // Get preview session status
+        const status = await fastify.previewRuntime.getPreviewStatus(previewId);
+
+        if (!status) {
+          return reply.status(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: `Preview session ${previewId} not found`,
+          });
+        }
+
+        return reply.status(200).send({
+          previewId: status.sessionId,
+          previewUrl: status.previewUrl,
+          status: status.status,
+          ttl: status.ttl,
+          timestamp: status.timestamp.toISOString(),
+        });
+      } catch (error) {
+        const err = error as Error;
+        if (err.message.includes('not found')) {
+          return reply.status(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: err.message,
+          });
+        }
+        throw error;
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/v1/projects/:id/preview/:previewId
+   * Stop and destroy preview session
+   * Protected by JWT middleware
+   */
+  fastify.delete<{ Params: { id: string; previewId: string } }>(
+    '/api/v1/projects/:id/preview/:previewId',
+    {
+      onRequest: [fastify.authenticate],
+      schema: {
+        description: 'Stop and destroy preview session',
+        tags: ['projects', 'preview'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id', 'previewId'],
+          properties: {
+            id: { type: 'string' },
+            previewId: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+              previewId: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Params: { id: string; previewId: string } }>, reply: FastifyReply) => {
+      try {
+        const { previewId } = request.params;
+
+        // Stop the preview session
+        await fastify.previewRuntime.stopPreview(previewId);
+
+        return reply.status(200).send({
+          message: 'Preview session stopped successfully',
+          previewId,
+        });
+      } catch (error) {
+        const err = error as Error;
+        if (err.message.includes('not found')) {
+          return reply.status(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: err.message,
+          });
+        }
+        throw error;
+      }
+    }
+  );
+
+  /**
+   * GET /api/v1/projects/:id/previews
+   * List all active preview sessions for a project
+   * Protected by JWT middleware
+   */
+  fastify.get<{ Params: { id: string } }>(
+    '/api/v1/projects/:id/previews',
+    {
+      onRequest: [fastify.authenticate],
+      schema: {
+        description: 'List active preview sessions for project',
+        tags: ['projects', 'preview'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              previews: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    previewId: { type: 'string' },
+                    previewUrl: { type: 'string' },
+                    mode: { type: 'string' },
+                    status: { type: 'string' },
+                    expiresAt: { type: 'string' },
+                    createdAt: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      try {
+        // Extract user info from JWT token
+        const user = request.user as { sub: string; tenantId: string };
+        if (!user || !user.tenantId) {
+          return reply.status(401).send({
+            statusCode: 401,
+            error: 'Unauthorized',
+            message: 'Invalid or missing authentication token',
+          });
+        }
+
+        // List all active sessions for this tenant
+        const response = await fastify.previewRuntime.listActiveSessions(user.tenantId);
+
+        return reply.status(200).send({
+          previews: response.sessions,
+          total: response.total,
+          usage: response.usage,
+        });
+      } catch (error) {
         throw error;
       }
     }

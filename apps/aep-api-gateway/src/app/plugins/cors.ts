@@ -18,7 +18,7 @@ export default fp(async function (fastify: FastifyInstance) {
 
       // Define allowed origins based on environment
       const allowedOrigins = [
-        process.env.CORS_ORIGIN_BUILDER || 'http://localhost:4200',
+        process.env.CORS_ORIGIN_BUILDER || 'http://localhost:45000',
         process.env.CORS_ORIGIN_PREVIEW || 'http://localhost:4201',
         process.env.CORS_ORIGIN_ADMIN || 'http://localhost:4202',
       ];

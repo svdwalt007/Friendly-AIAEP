@@ -64,10 +64,10 @@ The service is part of the Nx monorepo. Ensure Redis is available:
 
 ```bash
 # Using Docker
-docker run -d -p 6379:6379 redis:7-alpine
+docker run -d -p 6379:46102 redis:7-alpine
 
 # Or configure existing Redis instance
-export REDIS_URL=redis://localhost:6379
+export REDIS_URL=redis://localhost:46102
 ```
 
 ### Basic Usage
@@ -269,7 +269,7 @@ enum LicenseFeature {
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `FRIENDLY_LICENSE_SECRET` | Yes | HMAC signing secret (min 32 chars recommended) |
-| `REDIS_URL` | No | Redis connection URL (defaults to `redis://localhost:6379`) |
+| `REDIS_URL` | No | Redis connection URL (defaults to `redis://localhost:46102`) |
 
 ## Security Considerations
 
