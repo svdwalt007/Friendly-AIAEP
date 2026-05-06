@@ -1,5 +1,10 @@
+packages:
+  - 'libs/*/*'
+
 allowBuilds:
   '@parcel/watcher': false
+  '@percy/core': true
+  '@prisma/client': true
   '@swc/core': false
   cpu-features: false
   esbuild: false
@@ -7,6 +12,7 @@ allowBuilds:
   lmdb: false
   msgpackr-extract: false
   nx: false
+  playwright-chromium: true
   protobufjs: false
   ssh2: false
   unrs-resolver: false
