@@ -1,19 +1,18 @@
 /**
- * SDK Generator for Friendly AI AEP
- * Generates TypeScript SDK from unified API model
+ * SDK Generator for Friendly AI AEP.
+ * Generates TypeScript SDK from a unified API model.
  */
 
-// @ts-nocheck - TODO: Fix type issues with swagger-ingestion integration
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import Handlebars from 'handlebars';
 import type { OpenAPIV3 } from 'openapi-types';
-
-// TODO: Fix circular dependency with swagger-ingestion - define types locally
-type UnifiedApiModel = any;
-type ApiId = any;
-type ApiSpec = any;
-type Operation = any;
+import type {
+  UnifiedApiModel,
+  ApiId,
+  ApiSpec,
+  Operation,
+} from '@friendly-tech/iot/types-shared';
 import type {
   GeneratedSdk,
   TypeDefinition,
@@ -54,7 +53,7 @@ export class SdkGenerationError extends Error {
 export class SdkGenerator {
   private readonly model: UnifiedApiModel;
   private readonly outputDir: string;
-  private readonly options: Required<Omit<SdkGeneratorOptions, 'model' | 'outputDir'>>;
+  private readonly options: Required<Omit<SdkGeneratorOptions, 'model' | 'outputDir' | 'customTemplatesPath'>> & { customTemplatesPath?: string };
   private readonly templates: Map<TemplateName, HandlebarsTemplateDelegate>;
   private readonly templateDir: string;
 
@@ -72,7 +71,7 @@ export class SdkGenerator {
       includeJsDoc: options.includeJsDoc ?? true,
       includeValidation: options.includeValidation ?? false,
       templateEngine: options.templateEngine ?? 'handlebars',
-      customTemplatesPath: options.customTemplatesPath ?? undefined,
+      customTemplatesPath: options.customTemplatesPath,
       formatCode: options.formatCode ?? true,
       prettierConfig: options.prettierConfig ?? {},
     };
@@ -483,9 +482,10 @@ export class SdkGenerator {
         return 'boolean';
       case 'object':
         return 'Record<string, unknown>';
-      case 'null':
-        return 'null';
       default:
+        // OpenAPI 3.0 schema types are: string, number, integer, boolean, array, object.
+        // 'null' is not a standalone type in OAS 3.0 (it uses nullable: true instead).
+        // We return 'unknown' for any unrecognised schema type.
         return 'unknown';
     }
   }
@@ -553,24 +553,6 @@ export class SdkGenerator {
       .map((part) => this.toPascalCase(part));
 
     return this.toCamelCase(`${method}_${pathParts.join('_')}`);
-  }
-
-  /**
-   * Generates parameter list string for method signature
-   * @param operation - Operation
-   * @returns Parameter list string
-   */
-  private generateParameterList(operation: Operation): string {
-    const params = operation.parameters.map((param) => {
-      const optional = param.required ? '' : '?';
-      return `${param.name}${optional}: ${this.schemaToTypeString(param.schema)}`;
-    });
-
-    if (operation.requestBody) {
-      params.push(`body: ${this.generateRequestTypeName(operation)}`);
-    }
-
-    return params.join(', ');
   }
 
   /**

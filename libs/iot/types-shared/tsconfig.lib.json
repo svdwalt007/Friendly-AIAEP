@@ -3,14 +3,10 @@
   "compilerOptions": {
     "outDir": "../../../dist/out-tsc",
     "declaration": true,
-    "types": ["node"],
-    "paths": {
-      "@friendly-tech/iot/types-shared": ["dist/libs/iot/types-shared/src/index.d.ts"]
-    }
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"],
   "exclude": [
-    "libs/iot/types-shared/**/*",
     "vite.config.ts",
     "vite.config.mts",
     "vitest.config.ts",
@@ -18,10 +14,6 @@
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
     "src/**/*.test.tsx",
-    "src/**/*.spec.tsx",
-    "src/**/*.test.js",
-    "src/**/*.spec.js",
-    "src/**/*.test.jsx",
-    "src/**/*.spec.jsx"
+    "src/**/*.spec.tsx"
   ]
 }

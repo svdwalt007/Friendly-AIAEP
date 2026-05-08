@@ -8,6 +8,7 @@
 import {
   LLMConfig,
   LLMProvider,
+  LLMProviderInterface,
   ProviderType,
   TenantLLMConfig,
   ProviderEvent,
@@ -455,6 +456,40 @@ export function getProvider(
 ): LLMProvider {
   const config = resolveLLMConfig(agentRole, tenantConfig);
   return createProviderInstance(config.provider, config.model);
+}
+
+/**
+ * Get an LLM provider that implements the `LLMProviderInterface` (new `complete()` API).
+ *
+ * Use this overload in preference to `getProvider` when the caller needs the newer
+ * `complete()` / `streamComplete()` methods (e.g. agent runtime nodes).
+ *
+ * @param agentRole - The agent role requesting the provider
+ * @param tenantConfig - Optional tenant-specific configuration
+ * @returns Provider instance typed as `LLMProviderInterface`
+ * @throws Error if the underlying provider does not implement `LLMProviderInterface`
+ */
+export function getProviderInterface(
+  agentRole: AgentRole,
+  tenantConfig?: TenantLLMConfig
+): LLMProviderInterface {
+  const config = resolveLLMConfig(agentRole, tenantConfig);
+  const instance = createProviderInstance(config.provider, config.model);
+
+  // AnthropicProvider and any future provider that implements LLMProviderInterface
+  // satisfies this check.  The factory stores them as the legacy LLMProvider type
+  // internally, so we perform a runtime duck-type check here.
+  if (
+    typeof (instance as unknown as LLMProviderInterface).complete !== 'function' ||
+    typeof (instance as unknown as LLMProviderInterface).validateConfig !== 'function'
+  ) {
+    throw new Error(
+      `Provider '${config.provider}' does not implement LLMProviderInterface. ` +
+        `Ensure it exposes complete() and validateConfig().`
+    );
+  }
+
+  return instance as unknown as LLMProviderInterface;
 }
 
 /**

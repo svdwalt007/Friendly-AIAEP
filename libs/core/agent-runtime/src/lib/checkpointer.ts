@@ -1,6 +1,7 @@
-// @ts-nocheck - TODO: Fix pg module types and process.env index signature issues
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
-import { Pool, PoolConfig } from 'pg';
+import { Pool } from 'pg';
+import type { PoolConfig } from 'pg';
+import type { ConnectionOptions as TLSConnectionOptions } from 'tls';
 
 /**
  * Configuration options for the PostgreSQL checkpointer
@@ -22,8 +23,8 @@ export interface CheckpointerConfig {
   idleTimeoutMillis?: number;
   /** Milliseconds before timing out when connecting a new client (default: 5000) */
   connectionTimeoutMillis?: number;
-  /** SSL configuration (optional) */
-  ssl?: boolean | object;
+  /** SSL configuration (optional). Pass `true` for default TLS or a `ConnectionOptions` object for custom TLS. */
+  ssl?: boolean | TLSConnectionOptions;
 }
 
 /**
@@ -197,17 +198,17 @@ export async function createCheckpointerFromEnv(): Promise<CheckpointerInstance>
   }
 
   const config: CheckpointerConfig = {
-    host: process.env.POSTGRES_HOST ?? 'localhost',
-    port: process.env.POSTGRES_PORT
-      ? parseInt(process.env.POSTGRES_PORT, 10)
+    host: process.env['POSTGRES_HOST'] ?? 'localhost',
+    port: process.env['POSTGRES_PORT']
+      ? parseInt(process.env['POSTGRES_PORT'], 10)
       : 5432,
-    database: process.env.POSTGRES_DB!,
-    user: process.env.POSTGRES_USER!,
-    password: process.env.POSTGRES_PASSWORD!,
-    maxConnections: process.env.POSTGRES_MAX_CONNECTIONS
-      ? parseInt(process.env.POSTGRES_MAX_CONNECTIONS, 10)
+    database: process.env['POSTGRES_DB'] as string,
+    user: process.env['POSTGRES_USER'] as string,
+    password: process.env['POSTGRES_PASSWORD'] as string,
+    maxConnections: process.env['POSTGRES_MAX_CONNECTIONS']
+      ? parseInt(process.env['POSTGRES_MAX_CONNECTIONS'], 10)
       : 10,
-    ssl: process.env.POSTGRES_SSL === 'true',
+    ssl: process.env['POSTGRES_SSL'] === 'true',
   };
 
   return createCheckpointer(config);

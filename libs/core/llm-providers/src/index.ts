@@ -81,6 +81,7 @@ export {
 export {
   AGENT_LLM_MAP,
   getProvider,
+  getProviderInterface,
   getProviderWithFallback,
   executeWithFallback,
   resolveLLMConfig,

@@ -180,8 +180,12 @@ export type StreamChunk =
   | CompletionChunk;
 
 /**
- * Compiled graph interface (placeholder for LangGraph CompiledGraph)
- * This will be replaced with actual LangGraph types when integrated
+ * Compiled graph interface used by the streaming service.
+ *
+ * This mirrors the shape of the Pregel graph compiled by LangGraph 0.0.12.
+ * The `invoke` and `stream` methods are the two entry points used here.
+ * Typed locally so that `streaming.ts` does not depend on `graph.ts` and
+ * introduce a circular reference inside the `agent-runtime` package.
  */
 export interface CompiledGraph {
   stream(

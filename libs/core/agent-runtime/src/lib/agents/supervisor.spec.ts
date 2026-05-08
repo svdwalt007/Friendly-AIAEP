@@ -8,13 +8,19 @@ import type { AEPAgentState } from '../types';
 import { AgentRole } from '../types';
 import type { BaseMessage } from '@langchain/core/messages';
 
-// Mock the llm-providers factory
+// Mock the llm-providers factory.
+// Note: vi.mock is hoisted, so we cannot reference variables defined in module
+// scope inside the factory.  We use vi.fn() inline and then retrieve the mock
+// via import() inside beforeEach where the hoisting constraints don't apply.
 vi.mock('@friendly-tech/core/llm-providers', () => ({
   getProvider: vi.fn(() => ({
     type: 'anthropic',
-    config: {
-      defaultModel: 'claude-opus-4-6',
-    },
+    config: { defaultModel: 'claude-opus-4-6' },
+    complete: vi.fn(),
+  })),
+  getProviderInterface: vi.fn(() => ({
+    type: 'anthropic',
+    config: { defaultModel: 'claude-opus-4-6' },
     complete: vi.fn(),
   })),
   AgentRole: {
@@ -29,8 +35,8 @@ describe('Supervisor Agent', () => {
   let getProviderMock: any;
 
   beforeEach(async () => {
-    const { getProvider } = await import('@friendly-tech/core/llm-providers');
-    getProviderMock = vi.mocked(getProvider);
+    const { getProviderInterface } = await import('@friendly-tech/core/llm-providers');
+    getProviderMock = vi.mocked(getProviderInterface);
 
     mockProvider = {
       type: 'anthropic',

@@ -52,6 +52,9 @@
       "@friendly-tech/core/audit-service": [
         "libs/core/audit-service/src/index.ts"
       ],
+      "@friendly-tech/iot/types-shared": [
+        "libs/iot/types-shared/src/index.ts"
+      ],
       "@friendly-tech/iot/swagger-ingestion": [
         "libs/iot/swagger-ingestion/src/index.ts"
       ],

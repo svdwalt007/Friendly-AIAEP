@@ -342,11 +342,11 @@ function createInitialState(userMessage: string): AEPAgentState {
 }
 
 describe('Agent Runtime Integration Tests', () => {
-  let originalGetProvider: typeof llmProviders.getProvider;
+  let originalGetProvider: typeof llmProviders.getProviderInterface;
 
   beforeEach(() => {
     // Store the original getProvider function
-    originalGetProvider = llmProviders.getProvider;
+    originalGetProvider = llmProviders.getProviderInterface;
   });
 
   afterEach(() => {
@@ -366,7 +366,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningBuildDashboard,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -464,7 +464,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.iotDomainLwM2MObjects,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -539,7 +539,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningAddTelemetryCharts,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider1 as any;
         }
@@ -602,7 +602,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningAddTelemetryCharts,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -658,7 +658,7 @@ describe('Agent Runtime Integration Tests', () => {
         },
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation(() => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation(() => {
         return supervisorProvider as any;
       });
 
@@ -697,7 +697,7 @@ describe('Agent Runtime Integration Tests', () => {
         close: vi.fn(),
       };
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -730,7 +730,7 @@ describe('Agent Runtime Integration Tests', () => {
 
     it('should handle LLM provider initialization failure', async () => {
       // Mock getProvider to throw an error
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation(() => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation(() => {
         throw new Error('No LLM provider configured');
       });
 
@@ -758,7 +758,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningBuildDashboard,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -795,7 +795,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningBuildDashboard,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -833,7 +833,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningBuildDashboard,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -865,7 +865,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.supervisorFinish,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation(() => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation(() => {
         return supervisorProvider as any;
       });
 
@@ -899,7 +899,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningBuildDashboard,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -939,7 +939,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.iotDomainLwM2MObjects,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -974,7 +974,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningBuildDashboard,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -1043,7 +1043,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningBuildDashboard,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }
@@ -1089,7 +1089,7 @@ describe('Agent Runtime Integration Tests', () => {
         mockLLMResponses.planningBuildDashboard,
       ]);
 
-      vi.spyOn(llmProviders, 'getProvider').mockImplementation((role) => {
+      vi.spyOn(llmProviders, 'getProviderInterface').mockImplementation((role) => {
         if (role === llmProviders.AgentRole.SUPERVISOR) {
           return supervisorProvider as any;
         }

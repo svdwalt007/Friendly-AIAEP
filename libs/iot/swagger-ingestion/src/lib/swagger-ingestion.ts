@@ -8,7 +8,6 @@ import { EventEmitter } from 'events';
 import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
 import { parse as parseYaml } from 'yaml';
-// import { FriendlyAuthAdapter } from '@friendly-tech/iot/auth-adapter';
 import {
   BreakingChangeType,
   type ApiId,
@@ -24,8 +23,36 @@ import {
   type SwaggerIngestionEvents,
 } from './types';
 
-// TODO: Fix circular dependency with auth-adapter
-type FriendlyAuthAdapter = any;
+/**
+ * Minimal interface the SwaggerIngestionService requires from a credential adapter.
+ *
+ * When fetching specs from authenticated URLs, the service calls `getAuthHeaders`
+ * with a per-request auth config object.  This is a different call signature from
+ * the full FriendlyAuthAdapter (which takes an ApiId string) and is intentional:
+ * swagger-ingestion needs to fetch arbitrary URLs with per-request credentials,
+ * not persistent tenant API tokens.
+ *
+ * Defining this interface locally avoids any circular dependency with
+ * `@friendly-tech/iot/auth-adapter`.
+ */
+interface SwaggerAuthAdapter {
+  getAuthHeaders(config: {
+    id: string;
+    baseUrl: string;
+    authMethods: string[];
+    primaryAuth: string;
+    credentials?: {
+      username?: string;
+      password?: string;
+      apiKey?: string;
+    };
+  }): Promise<Record<string, string>>;
+}
+
+/**
+ * Local alias used throughout the file.
+ */
+type FriendlyAuthAdapter = SwaggerAuthAdapter;
 
 /**
  * Service for ingesting and managing OpenAPI/Swagger specifications

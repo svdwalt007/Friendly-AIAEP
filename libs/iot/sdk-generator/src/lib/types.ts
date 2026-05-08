@@ -1,12 +1,22 @@
 /**
- * TypeScript type definitions for SDK generation
- * Defines interfaces for generated SDK structure, service operations, and type definitions
+ * TypeScript type definitions for SDK generation.
+ * Defines interfaces for generated SDK structure, service operations, and type definitions.
+ *
+ * Shared OpenAPI model types (UnifiedApiModel, ApiId, Operation) are imported from
+ * `@friendly-tech/iot/types-shared` — the dedicated shared-types package that sits below
+ * both swagger-ingestion and sdk-generator in the dependency graph, eliminating the
+ * previous circular dependency.
  */
 
-// TODO: Fix circular dependency with swagger-ingestion - define types locally
-export type UnifiedApiModel = any;
-export type ApiId = any;
-export type Operation = any;
+// Import and re-export shared types so callers of this package can reference them from one
+// place, while the interfaces below can also reference them locally.
+import type {
+  UnifiedApiModel,
+  ApiId,
+  Operation,
+} from '@friendly-tech/iot/types-shared';
+
+export type { UnifiedApiModel, ApiId, Operation };
 
 /**
  * Result of SDK generation process

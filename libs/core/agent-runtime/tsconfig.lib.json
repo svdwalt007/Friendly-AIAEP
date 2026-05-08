@@ -7,8 +7,8 @@
     "skipLibCheck": true,
     "noEmitOnError": false,
     "paths": {
-      "@friendly-tech/core/llm-providers": ["../../../dist/libs/core/llm-providers/src/index.d.ts"],
-      "@friendly-tech/iot/iot-tool-functions": ["../../../dist/libs/iot/iot-tool-functions/src/index.d.ts"]
+      "@friendly-tech/core/llm-providers": ["dist/libs/core/llm-providers/src/index.d.ts"],
+      "@friendly-tech/iot/iot-tool-functions": ["dist/libs/iot/iot-tool-functions/src/index.d.ts"]
     }
   },
   "include": ["src/**/*.ts"],

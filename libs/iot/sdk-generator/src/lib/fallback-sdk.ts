@@ -9,9 +9,13 @@
  */
 
 import { FriendlyApiError } from './errors';
+import type { FriendlyAuthAdapterInterface, ApiId } from '@friendly-tech/iot/types-shared';
 
-// TODO: Fix circular dependency with auth-adapter
-type FriendlyAuthAdapter = any;
+/**
+ * Alias kept for readability within this file.
+ * All SDK methods are typed against the minimal interface, not the full class.
+ */
+type FriendlyAuthAdapter = FriendlyAuthAdapterInterface;
 
 /**
  * Configuration for the Fallback SDK
@@ -274,10 +278,10 @@ export class FallbackSdk {
    * Internal method to make HTTP requests with authentication
    */
   private async request<T>(
-    apiId: 'northbound' | 'events' | 'qoe',
+    apiId: ApiId,
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     endpoint: string,
-    body?: any,
+    body?: unknown,
     retryOn401 = true
   ): Promise<T> {
     const url = `${this.baseProxyUrl}/${apiId}${endpoint}`;
@@ -318,7 +322,7 @@ export class FallbackSdk {
         throw new FriendlyApiError({
           statusCode: response.status,
           message: `API request failed: ${response.statusText}`,
-          apiSource: apiId as 'northbound' | 'events' | 'qoe',
+          apiSource: apiId,
           details: { endpoint, error: errorDetails },
         });
       }
@@ -335,7 +339,7 @@ export class FallbackSdk {
           throw new FriendlyApiError({
             statusCode: 408,
             message: `Request timeout after ${this.timeout}ms`,
-            apiSource: apiId as 'northbound' | 'events' | 'qoe',
+            apiSource: apiId,
             details: { endpoint, timeout: this.timeout },
           });
         }
@@ -343,7 +347,7 @@ export class FallbackSdk {
         throw new FriendlyApiError({
           statusCode: 0,
           message: `Request failed: ${error.message}`,
-          apiSource: apiId as 'northbound' | 'events' | 'qoe',
+          apiSource: apiId,
           details: { endpoint, error: error.message },
         });
       }
@@ -351,7 +355,7 @@ export class FallbackSdk {
       throw new FriendlyApiError({
         statusCode: 0,
         message: 'Unknown error occurred',
-        apiSource: apiId as 'northbound' | 'events' | 'qoe',
+        apiSource: apiId,
         details: { endpoint },
       });
     }

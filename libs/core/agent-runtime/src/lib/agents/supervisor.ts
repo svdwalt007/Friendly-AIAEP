@@ -5,12 +5,11 @@
  * It uses Claude Opus 4.6 to analyze messages and determine the next agent to execute.
  */
 
-// @ts-nocheck - TODO: Fix type issues with LLMProvider
 import type { BaseMessage } from '@langchain/core/messages';
 import { AIMessage } from '@langchain/core/messages';
 import type { AEPAgentState, SupervisorOutput } from '../types';
 import { AgentRole } from '../types';
-import { getProvider, AgentRole as LLMAgentRole } from '@friendly-tech/core/llm-providers';
+import { getProviderInterface, AgentRole as LLMAgentRole } from '@friendly-tech/core/llm-providers';
 import type { LLMProviderInterface } from '@friendly-tech/core/llm-providers';
 import { SUPERVISOR_PROMPT } from '../constants';
 
@@ -50,13 +49,18 @@ function parseSupervisorOutput(content: string): SupervisorOutput {
     }
 
     // Validate next value
-    const validNextValues = ['planning', 'iot_domain', 'FINISH'] as const;
-    if (!validNextValues.includes(parsed.next as any)) {
-      throw new Error(`Invalid "next" value: ${parsed.next}. Must be one of: ${validNextValues.join(', ')}`);
+    const validNextValues: ReadonlyArray<'planning' | 'iot_domain' | 'FINISH'> = [
+      'planning',
+      'iot_domain',
+      'FINISH',
+    ];
+    const nextValue = parsed.next as string;
+    if (!validNextValues.includes(nextValue as 'planning' | 'iot_domain' | 'FINISH')) {
+      throw new Error(`Invalid "next" value: ${nextValue}. Must be one of: ${validNextValues.join(', ')}`);
     }
 
     return {
-      next: parsed.next as 'planning' | 'iot_domain' | 'FINISH',
+      next: nextValue as 'planning' | 'iot_domain' | 'FINISH',
       reasoning: parsed.reasoning,
     };
   } catch (error) {
@@ -148,7 +152,7 @@ export function createSupervisorNode(): (state: AEPAgentState) => Promise<Partia
       // Get the LLM provider for the supervisor role
       let provider: LLMProviderInterface;
       try {
-        provider = getProvider(LLMAgentRole.SUPERVISOR);
+        provider = getProviderInterface(LLMAgentRole.SUPERVISOR);
         logInfo(`Using provider: ${provider.type}`);
       } catch (error) {
         logError('Failed to get LLM provider', error);

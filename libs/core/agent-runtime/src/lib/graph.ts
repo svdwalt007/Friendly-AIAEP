@@ -2,118 +2,148 @@
  * @fileoverview LangGraph StateGraph workflow for AEP Multi-Agent System
  * @module @friendly-tech/core/agent-runtime
  *
- * This module defines the core graph structure for the multi-agent system,
- * orchestrating the flow between the Supervisor, Planning, and IoT Domain agents.
+ * Defines the core graph structure for the multi-agent system, orchestrating
+ * the flow between the Supervisor, Planning, and IoT Domain agents.
+ *
+ * Uses the LangGraph 0.0.12 `channels`-based StateGraph API.
  */
 
-// @ts-nocheck - TODO: Fix StateGraph type issues
 import {
   StateGraph,
   START,
   END,
-  Annotation,
 } from '@langchain/langgraph';
 import type { BaseMessage } from '@langchain/core/messages';
-import type { SupervisorOutput, BuildTask, GeneratedAsset, AgentError, ApprovalRequest } from './types';
+import type { BaseCheckpointSaver } from '@langchain/langgraph';
+import type {
+  SupervisorOutput,
+  BuildTask,
+  GeneratedAsset,
+  AgentError,
+  ApprovalRequest,
+  AEPAgentState,
+} from './types';
 import { AgentRole } from './types';
 import { createSupervisorNode } from './agents/supervisor';
 import { createPlanningNode } from './agents/planning';
 import { createIoTDomainNode } from './agents/iot-domain';
+import type { ToolConfig } from '@friendly-tech/iot/iot-tool-functions';
 
 /**
  * Configuration options for the agent graph
  */
 export interface GraphConfig {
   /**
-   * Optional checkpointer for persisting conversation state
-   * Enables features like conversation history, resume, and time-travel debugging
+   * Optional checkpointer for persisting conversation state.
+   * Enables conversation history, resume, and time-travel debugging.
    */
-  checkpointer?: any;
+  checkpointer?: BaseCheckpointSaver;
 
   /**
-   * Whether to enable verbose logging for debugging
+   * IoT SDK and cache configuration for the IoT Domain agent.
+   *
+   * Must be provided for the agent to make real device API calls.
+   * When omitted (e.g. in unit tests where `createIoTDomainNode` is mocked),
+   * a type-safe null-stub is used internally — callers are responsible for
+   * ensuring the IoT tools are replaced via the mock layer before any tool
+   * invocation occurs.
+   */
+  toolConfig?: ToolConfig;
+
+  /**
+   * Whether to enable verbose logging for debugging.
    * @default false
    */
   debug?: boolean;
 }
 
 /**
- * Define the state annotation for the agent graph
- * This replaces the manual channel definition approach
+ * LangGraph 0.0.12 channel definition for an `AEPAgentState` field.
+ *
+ * `value` is the reducer: a `BinaryOperator<T>` that merges the previous
+ * state value with the new value returned by a node.  When set to `null`
+ * the channel uses the "last-write-wins" built-in.
+ *
+ * `default` provides the initial value.
  */
-const AgentStateAnnotation = Annotation.Root({
-  messages: Annotation<BaseMessage[]>({
-    reducer: (left, right) => left.concat(right),
+type ChannelDef<T> = {
+  value: ((a: T, b: T) => T) | null;
+  default?: () => T;
+};
+
+/**
+ * Channel map that matches every field of `AEPAgentState`.
+ *
+ * This is the typed equivalent of what was previously expressed using the
+ * `Annotation.Root` API (available in LangGraph >=0.2.x).  LangGraph 0.0.12
+ * requires us to supply the channels map directly.
+ */
+const stateChannels: { [K in keyof AEPAgentState]: ChannelDef<AEPAgentState[K]> } = {
+  messages: {
+    value: (left: BaseMessage[], right: BaseMessage[]) => left.concat(right),
     default: () => [],
-  }),
-  currentAgent: Annotation<AgentRole>({
-    reducer: (left, right) => right ?? left,
+  },
+  currentAgent: {
+    // Take the new value; fall back to existing if the node returns undefined.
+    value: (_left: AgentRole, right: AgentRole) => right ?? _left,
     default: () => AgentRole.SUPERVISOR,
-  }),
-  projectId: Annotation<string>({
-    reducer: (left, right) => right || left,
+  },
+  projectId: {
+    value: (left: string, right: string) => right || left,
     default: () => '',
-  }),
-  tenantId: Annotation<string>({
-    reducer: (left, right) => right || left,
+  },
+  tenantId: {
+    value: (left: string, right: string) => right || left,
     default: () => '',
-  }),
-  buildPlan: Annotation<BuildTask[]>({
-    reducer: (left, right) => (right && right.length > 0 ? right : left),
+  },
+  buildPlan: {
+    value: (left: BuildTask[], right: BuildTask[]) =>
+      right && right.length > 0 ? right : left,
     default: () => [],
-  }),
-  completedTasks: Annotation<BuildTask[]>({
-    reducer: (left, right) => left.concat(right),
+  },
+  completedTasks: {
+    value: (left: BuildTask[], right: BuildTask[]) => left.concat(right),
     default: () => [],
-  }),
-  generatedAssets: Annotation<GeneratedAsset[]>({
-    reducer: (left, right) => left.concat(right),
+  },
+  generatedAssets: {
+    value: (left: GeneratedAsset[], right: GeneratedAsset[]) => left.concat(right),
     default: () => [],
-  }),
-  errors: Annotation<AgentError[]>({
-    reducer: (left, right) => left.concat(right),
+  },
+  errors: {
+    value: (left: AgentError[], right: AgentError[]) => left.concat(right),
     default: () => [],
-  }),
-  approvals: Annotation<ApprovalRequest[]>({
-    reducer: (left, right) => left.concat(right),
+  },
+  approvals: {
+    value: (left: ApprovalRequest[], right: ApprovalRequest[]) => left.concat(right),
     default: () => [],
-  }),
-});
+  },
+};
 
 /**
- * Type for the agent state derived from the annotation
- */
-type AgentState = typeof AgentStateAnnotation.State;
-
-/**
- * Extract supervisor decision from the last message in state
+ * Extract the supervisor decision from the last message in state.
  *
- * The supervisor node adds its decision to the messages array as an AIMessage
- * with additional_kwargs.supervisor_decision containing the SupervisorOutput.
- *
- * @param state - Current agent state
- * @returns The supervisor's routing decision, or null if not found
+ * The supervisor node appends an `AIMessage` whose `additional_kwargs` field
+ * contains `supervisor_decision: SupervisorOutput`.
  */
 function extractSupervisorDecision(
-  state: AgentState
+  state: AEPAgentState
 ): SupervisorOutput | null {
   if (!state.messages || state.messages.length === 0) {
     return null;
   }
 
-  // Get the last message
   const lastMessage = state.messages[state.messages.length - 1];
 
-  // Check if it's an AI message with supervisor decision
+  // Primary path: check additional_kwargs
   if (
     lastMessage._getType() === 'ai' &&
-    lastMessage.additional_kwargs &&
+    lastMessage.additional_kwargs != null &&
     'supervisor_decision' in lastMessage.additional_kwargs
   ) {
     return lastMessage.additional_kwargs['supervisor_decision'] as SupervisorOutput;
   }
 
-  // Try to parse from message content as fallback
+  // Fallback: try to parse JSON content
   try {
     const content =
       typeof lastMessage.content === 'string'
@@ -121,44 +151,38 @@ function extractSupervisorDecision(
         : JSON.stringify(lastMessage.content);
 
     const parsed = JSON.parse(content) as Partial<SupervisorOutput>;
-
     if (parsed.next) {
       return parsed as SupervisorOutput;
     }
   } catch {
-    // Not JSON or not a supervisor decision
+    // Not JSON or not a supervisor decision — continue to return null
   }
 
   return null;
 }
 
 /**
- * Routing function that determines the next node based on supervisor output
+ * Conditional routing function executed after the `supervisor` node.
  *
- * This function is used as a conditional edge from the supervisor node.
- * It examines the supervisor's decision and routes to the appropriate specialist agent or END.
- *
- * @param state - Current agent state
- * @returns Next node name: 'planning', 'iot_domain', or END
+ * Returns the name of the next node (`'planning'`, `'iot_domain'`) or the
+ * built-in `END` sentinel when the supervisor signals completion.
  */
 function routeFromSupervisor(
-  state: AgentState
-): typeof END | 'planning' | 'iot_domain' {
+  state: AEPAgentState
+): string {
   const decision = extractSupervisorDecision(state);
 
   if (!decision) {
-    // If we can't find a decision, check the currentAgent field as fallback
+    // Fall back to `currentAgent` if no decision message is found
     if (state.currentAgent === AgentRole.PLANNING) {
       return 'planning';
     } else if (state.currentAgent === AgentRole.IOT_DOMAIN) {
       return 'iot_domain';
     }
-    // Default to END if no decision can be determined
     console.warn('[Graph] No supervisor decision found, routing to END');
     return END;
   }
 
-  // Route based on supervisor's decision
   switch (decision.next) {
     case 'planning':
       return 'planning';
@@ -166,114 +190,84 @@ function routeFromSupervisor(
       return 'iot_domain';
     case 'FINISH':
       return END;
-    default:
+    default: {
       console.warn(
-        `[Graph] Unknown supervisor decision: ${decision.next}, routing to END`
+        `[Graph] Unknown supervisor decision: ${String(decision.next)}, routing to END`
       );
       return END;
+    }
   }
 }
 
 /**
- * Creates and compiles the agent graph workflow
+ * Creates and compiles the agent graph workflow.
  *
- * The graph structure:
+ * Graph structure:
  * ```
  *   START
  *     ↓
  * supervisor (routing hub)
- *     ├→ planning → supervisor (return after plan)
- *     ├→ iot_domain → supervisor (return after answer)
- *     └→ END (when next === 'FINISH')
+ *     ├→ planning → supervisor
+ *     ├→ iot_domain → supervisor
+ *     └→ END  (when next === 'FINISH')
  * ```
  *
- * Features:
- * - Conditional routing from supervisor based on user intent
- * - Specialist agents return control to supervisor after execution
- * - Support for streaming and checkpointing
- * - Proper error handling and state management
- *
- * @param config - Optional configuration for the graph
- * @returns Compiled graph ready for execution
- *
- * @example
- * ```typescript
- * import { createAgentGraph } from '@friendly-tech/core/agent-runtime';
- * import { HumanMessage } from '@langchain/core/messages';
- * import { AgentRole } from '@friendly-tech/core/agent-runtime';
- *
- * // Create the graph
- * const graph = createAgentGraph({ debug: true });
- *
- * // Initialize state
- * const initialState = {
- *   messages: [new HumanMessage('Build a fleet dashboard')],
- *   currentAgent: AgentRole.SUPERVISOR,
- *   projectId: 'proj-123',
- *   tenantId: 'tenant-456',
- *   buildPlan: [],
- *   completedTasks: [],
- *   generatedAssets: [],
- *   errors: [],
- *   approvals: [],
- * };
- *
- * // Run the graph
- * const result = await graph.invoke(initialState);
- * console.log('Final state:', result);
- * ```
- *
- * @example Streaming example:
- * ```typescript
- * const graph = createAgentGraph();
- *
- * // Stream events as the graph executes
- * for await (const event of graph.stream(initialState)) {
- *   console.log('Event:', event);
- * }
- * ```
+ * @param config - Optional graph configuration
+ * @returns Compiled Pregel graph ready for invocation
  */
-export function createAgentGraph(config?: GraphConfig) {
-  const debug = config?.debug ?? false;
+/**
+ * Null-stub ToolConfig used when `toolConfig` is omitted from `GraphConfig`.
+ * This satisfies the TypeScript type but will throw at runtime if any tool
+ * method is actually invoked.  Use this only in contexts where
+ * `createIoTDomainNode` is replaced by a mock (unit tests).
+ */
+const NULL_TOOL_CONFIG: ToolConfig = {
+  sdk: {
+    getDeviceList: () => { throw new Error('IoT SDK not configured'); },
+    getDeviceById: () => { throw new Error('IoT SDK not configured'); },
+    getDeviceTelemetry: () => { throw new Error('IoT SDK not configured'); },
+    subscribeToEvents: () => { throw new Error('IoT SDK not configured'); },
+    getFleetKpis: () => { throw new Error('IoT SDK not configured'); },
+  },
+  redis: undefined,
+};
+
+export function createAgentGraph(config: GraphConfig = { toolConfig: NULL_TOOL_CONFIG }) {
+  const debug = config.debug ?? false;
 
   if (debug) {
     console.log('[Graph] Creating agent graph with config:', config);
   }
 
-  // Initialize the StateGraph with the annotation
-  const workflow = new StateGraph(AgentStateAnnotation);
+  // Initialise the StateGraph with the typed channels map
+  const workflow = new StateGraph<AEPAgentState>({
+    channels: stateChannels,
+  });
 
-  // Add agent nodes to the graph
-  if (debug) {
-    console.log('[Graph] Adding agent nodes...');
-  }
-
+  // Register agent nodes
   workflow.addNode('supervisor', createSupervisorNode());
   workflow.addNode('planning', createPlanningNode());
-  workflow.addNode('iot_domain', createIoTDomainNode());
+  workflow.addNode('iot_domain', createIoTDomainNode(config.toolConfig ?? NULL_TOOL_CONFIG));
 
   if (debug) {
     console.log('[Graph] Agent nodes added: supervisor, planning, iot_domain');
   }
 
-  // Define edges
-  if (debug) {
-    console.log('[Graph] Defining edges...');
-  }
-
-  // Start with supervisor
+  // Entry edge
   workflow.addEdge(START, 'supervisor');
 
-  // Specialist agents return to supervisor after execution
+  // Specialist agents return to supervisor
   workflow.addEdge('planning', 'supervisor');
   workflow.addEdge('iot_domain', 'supervisor');
 
-  // Conditional edge from supervisor
-  // Routes to planning, iot_domain, or END based on supervisor's decision
-  workflow.addConditionalEdges('supervisor', routeFromSupervisor);
+  // Conditional routing from supervisor
+  workflow.addConditionalEdges('supervisor', routeFromSupervisor, {
+    planning: 'planning',
+    iot_domain: 'iot_domain',
+    [END]: END,
+  });
 
   if (debug) {
-    console.log('[Graph] Edges defined');
     console.log('[Graph] Graph structure:');
     console.log('  START → supervisor');
     console.log('  supervisor → [conditional] → planning | iot_domain | END');
@@ -281,10 +275,7 @@ export function createAgentGraph(config?: GraphConfig) {
     console.log('  iot_domain → supervisor');
   }
 
-  // Compile the graph
-  const compiledGraph = workflow.compile({
-    checkpointer: config?.checkpointer,
-  });
+  const compiledGraph = workflow.compile(config?.checkpointer);
 
   if (debug) {
     console.log('[Graph] Graph compiled successfully');
@@ -294,7 +285,6 @@ export function createAgentGraph(config?: GraphConfig) {
 }
 
 /**
- * Type alias for the compiled graph
- * Exported for convenience and type safety
+ * Type alias for the compiled graph.
  */
 export type CompiledGraph = ReturnType<typeof createAgentGraph>;

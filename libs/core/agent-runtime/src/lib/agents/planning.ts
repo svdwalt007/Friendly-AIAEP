@@ -6,12 +6,12 @@
  * operations and uses Claude Opus 4.6 via the llm-providers abstraction.
  */
 
-// @ts-nocheck - TODO: Fix type issues with LLMProvider
 import { AIMessage, HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { getProvider, AgentRole as LLMAgentRole } from '@friendly-tech/core/llm-providers';
+import { getProviderInterface, AgentRole as LLMAgentRole } from '@friendly-tech/core/llm-providers';
+import type { Tool } from '@friendly-tech/core/llm-providers';
 import type { AEPAgentState, BuildTask } from '../types';
 import { PLANNING_PROMPT, TASK_TYPES } from '../constants';
 import { AgentRole } from '../types';
@@ -317,9 +317,9 @@ export function createPlanningNode(): (state: AEPAgentState) => Promise<Partial<
     console.log('[Planning Agent] Starting planning process for project:', state.projectId);
 
     try {
-      // Get LLM provider for Planning agent role
-      // Uses Claude Opus 4.6 by default as configured in AGENT_LLM_MAP
-      const provider = getProvider(LLMAgentRole.PLANNING);
+      // Get LLM provider for Planning agent role.
+      // Uses Claude Opus 4.6 by default as configured in AGENT_LLM_MAP.
+      const provider = getProviderInterface(LLMAgentRole.PLANNING);
       const config = provider.config;
 
       // Prepare messages for the LLM
@@ -377,36 +377,50 @@ Example:
 
       const response = await provider.complete({
         model: config.defaultModel || 'claude-opus-4-6',
-        messages: messages.map((msg) => ({
-          role: msg._getType() === 'system' ? 'system' : msg._getType() === 'human' ? 'user' : 'assistant',
-          content: typeof msg.content === 'string' ? msg.content : '',
-        })),
-        max_tokens: config.maxTokens || 8192,
-        temperature: config.temperature,
-        tools: [createProjectTool, updateProjectTool, getProjectTool].map((tool) => ({
-          name: tool.name,
-          description: tool.description,
-          parameters: {
-            type: 'object',
-            properties: Object.fromEntries(
-              Object.entries((tool as unknown as { schema: { shape: Record<string, unknown> } }).schema.shape).map(
-                ([key, value]) => [
-                  key,
-                  {
-                    type: 'string',
-                    description: (value as { description?: string }).description || '',
-                  },
-                ]
-              )
-            ),
-            required: Object.keys((tool as unknown as { schema: { shape: Record<string, unknown> } }).schema.shape),
-          },
-        })),
+        messages: messages.map((msg) => {
+          const t = msg._getType();
+          const role =
+            t === 'system' ? ('system' as const) :
+            t === 'human'  ? ('user' as const) :
+            ('assistant' as const);
+          return {
+            role,
+            content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+          };
+        }),
+        max_tokens: 8192,
+        temperature: 0.6,
+        tools: [createProjectTool, updateProjectTool, getProjectTool].map(
+          (tool): Tool => {
+            // DynamicStructuredTool wraps a Zod schema. We access `.shape` to extract
+            // individual parameter descriptions for the provider tool definition.
+            const zodSchema = (tool as unknown as { schema: { shape: Record<string, { description?: string }> } }).schema;
+            const shapeEntries = Object.entries(zodSchema.shape);
+            return {
+              name: tool.name,
+              description: tool.description,
+              parameters: {
+                type: 'object',
+                properties: Object.fromEntries(
+                  shapeEntries.map(([key, field]) => [
+                    key,
+                    {
+                      type: 'string' as const,
+                      description: field.description ?? '',
+                    },
+                  ])
+                ),
+                required: shapeEntries.map(([key]) => key),
+              },
+            };
+          }
+        ),
       });
 
       // Extract the response content
+      const textBlock = response.content.find((block) => block.type === 'text');
       const responseContent =
-        response.content.find((block) => block.type === 'text')?.text ||
+        (textBlock && 'text' in textBlock ? textBlock.text : null) ??
         'I understand your requirements. Let me create a build plan for your IoT application.';
 
       console.log('[Planning Agent] LLM Response:', responseContent.substring(0, 200) + '...');
