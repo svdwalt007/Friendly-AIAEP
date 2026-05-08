@@ -281,7 +281,7 @@ export class PreviewRuntimeService {
         createdAt: session.createdAt,
         lastActivityAt: new Date(sessionConfig.lastActivityAt),
         expiresAt: session.expiresAt,
-        error: session.error || undefined,
+        error: (session.config as Record<string, unknown>)?.['error'] as string | undefined,
       };
     } catch (error) {
       throw new Error(
@@ -387,7 +387,7 @@ export class PreviewRuntimeService {
       status: session.status as PreviewSessionStatus,
       previewUrl: session.status === 'running' ? previewUrl : undefined,
       ttl,
-      error: session.error || undefined,
+      error: (session.config as Record<string, unknown>)?.['error'] as string | undefined,
       timestamp: new Date(),
     };
   }
@@ -430,7 +430,7 @@ export class PreviewRuntimeService {
         createdAt: session.createdAt,
         lastActivityAt: new Date(sessionConfig.lastActivityAt),
         expiresAt: session.expiresAt,
-        error: session.error || undefined,
+        error: (session.config as Record<string, unknown>)?.['error'] as string | undefined,
       };
     });
 
@@ -483,7 +483,7 @@ export class PreviewRuntimeService {
       createdAt: session.createdAt,
       lastActivityAt: new Date(sessionConfig.lastActivityAt),
       expiresAt: session.expiresAt,
-      error: session.error || undefined,
+      error: (session.config as Record<string, unknown>)?.['error'] as string | undefined,
     };
   }
 

@@ -165,20 +165,15 @@ export default fp(async function (fastify: FastifyInstance) {
   // Register rate limiting plugin
   await fastify.register(rateLimit, {
     global: true,
-    max: async (request: FastifyRequest) => {
+    max: (request: FastifyRequest, _key: string) => {
       const userInfo = getUserInfo(request);
       const limits = TIER_LIMITS[userInfo.tier] || DEFAULT_LIMIT;
       return limits.max;
     },
-    timeWindow: async (request: FastifyRequest) => {
+    timeWindow: (request: FastifyRequest, _key: string) => {
       const userInfo = getUserInfo(request);
       const limits = TIER_LIMITS[userInfo.tier] || DEFAULT_LIMIT;
       return limits.timeWindow;
-    },
-    ban: async (request: FastifyRequest) => {
-      const userInfo = getUserInfo(request);
-      const limits = TIER_LIMITS[userInfo.tier] || DEFAULT_LIMIT;
-      return limits.ban || undefined;
     },
     cache: 10000, // Cache size for in-memory mode
     allowList: (request: FastifyRequest) => {
@@ -215,7 +210,7 @@ export default fp(async function (fastify: FastifyInstance) {
         message: `Rate limit exceeded for ${userInfo.tier} tier`,
         tier: userInfo.tier,
         limit: context.max,
-        remaining: context.after ? 0 : context.max - context.current,
+        remaining: context.after ? 0 : 0,
         resetTime: new Date(Date.now() + context.ttl).toISOString(),
         retryAfter: Math.ceil(context.ttl / 1000),
       };

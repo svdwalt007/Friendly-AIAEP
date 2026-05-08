@@ -6,7 +6,14 @@ import {
   OllamaConnectionError,
   SSEParser,
 } from './ollama';
-import { CompletionOptions, ProviderConfig } from '../types';
+import {
+  ChatOptions,
+  LLMConfig,
+  LLMErrorType,
+  Message,
+  ChatResponse,
+  StreamChunk,
+} from '../types';
 import { AgentRole } from '../usage-tracker';
 
 describe('SSEParser', () => {
@@ -90,12 +97,16 @@ describe('SSEParser', () => {
 
 describe('OllamaProvider', () => {
   let provider: OllamaProvider;
-  let config: ProviderConfig;
+  // OllamaProvider takes LLMConfig (provider/model based) at runtime; we cast to
+  // any to match the historical 'type' shape some existing tests use.
+  let config: any;
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     config = {
       type: 'ollama',
+      provider: 'ollama',
+      model: 'llama2',
       baseUrl: 'http://localhost:11434',
       timeout: 5000,
     };
@@ -116,21 +127,21 @@ describe('OllamaProvider', () => {
 
   describe('constructor', () => {
     it('should use default baseUrl if not provided', () => {
-      const p = new OllamaProvider({ type: 'ollama' });
-      expect(p.config.baseUrl).toBe('http://localhost:11434');
+      const p = new OllamaProvider({ type: 'ollama' } as any);
+      expect((p as any).config.baseUrl).toBe('http://localhost:11434');
     });
 
     it('should use custom baseUrl if provided', () => {
       const p = new OllamaProvider({
         type: 'ollama',
         baseUrl: 'http://custom:8080',
-      });
-      expect(p.config.baseUrl).toBe('http://custom:8080');
+      } as any);
+      expect((p as any).config.baseUrl).toBe('http://custom:8080');
     });
 
     it('should use default timeout if not provided', () => {
-      const p = new OllamaProvider({ type: 'ollama' });
-      expect(p.config.timeout).toBe(30000);
+      const p = new OllamaProvider({ type: 'ollama' } as any);
+      expect((p as any).config.timeout).toBe(30000);
     });
   });
 
@@ -149,7 +160,7 @@ describe('OllamaProvider', () => {
     });
 
     it('should throw OllamaTimeoutError on timeout', async () => {
-      fetchMock.mockImplementationOnce(() => {
+      fetchMock.mockImplementationOnce(function () {
         return new Promise((_, reject) => {
           setTimeout(() => {
             const error = new Error('Timeout');
@@ -173,10 +184,12 @@ describe('OllamaProvider', () => {
     });
   });
 
-  describe('complete', () => {
-    const options: CompletionOptions = {
+  // OllamaProvider exposes a `chat(messages, options)` API (LLMProvider interface),
+  // returning ChatResponse for non-streaming and AsyncGenerator<StreamChunk> for streaming.
+  describe('chat (non-streaming)', () => {
+    const messages: Message[] = [{ role: 'user', content: 'Hello' }];
+    const options: ChatOptions = {
       model: 'llama2',
-      messages: [{ role: 'user', content: 'Hello' }],
       max_tokens: 100,
     };
 
@@ -193,7 +206,7 @@ describe('OllamaProvider', () => {
               role: 'assistant' as const,
               content: 'Hi there!',
             },
-            finish_reason: 'stop',
+            finish_reason: 'stop' as const,
           },
         ],
         usage: {
@@ -206,20 +219,20 @@ describe('OllamaProvider', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
+        text: async () => '',
       });
 
-      const result = await provider.complete(options);
+      const result = (await provider.chat(messages, options)) as ChatResponse;
 
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0]).toEqual({
-        type: 'text',
-        text: 'Hi there!',
-      });
-      expect(result.usage.input_tokens).toBe(10);
-      expect(result.usage.output_tokens).toBe(5);
+      expect(result.message.content).toBe('Hi there!');
+      expect(result.message.role).toBe('assistant');
+      expect(result.finish_reason).toBe('stop');
+      expect(result.usage.prompt_tokens).toBe(10);
+      expect(result.usage.completion_tokens).toBe(5);
+      expect(result.usage.total_tokens).toBe(15);
     });
 
-    it('should handle function calls in response', async () => {
+    it('should propagate tool_calls from response', async () => {
       const mockResponse = {
         id: 'test-id',
         object: 'chat.completion',
@@ -230,13 +243,19 @@ describe('OllamaProvider', () => {
             index: 0,
             message: {
               role: 'assistant' as const,
-              content: null,
-              function_call: {
-                name: 'test_function',
-                arguments: '{"arg": "value"}',
-              },
+              content: '',
+              tool_calls: [
+                {
+                  id: 'call_1',
+                  type: 'function' as const,
+                  function: {
+                    name: 'test_function',
+                    arguments: '{"arg": "value"}',
+                  },
+                },
+              ],
             },
-            finish_reason: 'function_call',
+            finish_reason: 'tool_calls' as const,
           },
         ],
         usage: {
@@ -249,16 +268,14 @@ describe('OllamaProvider', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
+        text: async () => '',
       });
 
-      const result = await provider.complete(options);
+      const result = (await provider.chat(messages, options)) as ChatResponse;
 
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0].type).toBe('tool_use');
-      if (result.content[0].type === 'tool_use') {
-        expect(result.content[0].name).toBe('test_function');
-        expect(result.content[0].input).toEqual({ arg: 'value' });
-      }
+      expect(result.message.tool_calls).toHaveLength(1);
+      expect(result.message.tool_calls?.[0].function.name).toBe('test_function');
+      expect(result.finish_reason).toBe('tool_calls');
     });
 
     it('should throw OllamaError on API error', async () => {
@@ -268,26 +285,22 @@ describe('OllamaProvider', () => {
         text: async () => 'Internal server error',
       });
 
-      await expect(provider.complete(options)).rejects.toThrow(OllamaError);
+      await expect(provider.chat(messages, options)).rejects.toThrow(OllamaError);
     });
 
     it('should throw OllamaTimeoutError on timeout', async () => {
-      fetchMock.mockImplementationOnce(() => {
-        return new Promise((_, reject) => {
-          setTimeout(() => {
-            const error = new Error('Timeout');
-            error.name = 'AbortError';
-            reject(error);
-          }, 100);
-        });
+      fetchMock.mockImplementationOnce(function () {
+        const err = new Error('Timeout');
+        err.name = 'AbortError';
+        return Promise.reject(err);
       });
 
-      await expect(provider.complete(options)).rejects.toThrow(
+      await expect(provider.chat(messages, options)).rejects.toThrow(
         OllamaTimeoutError
       );
     });
 
-    it('should include system message in request', async () => {
+    it('should send user messages in OpenAI request shape', async () => {
       const mockResponse = {
         id: 'test-id',
         object: 'chat.completion',
@@ -297,29 +310,36 @@ describe('OllamaProvider', () => {
           {
             index: 0,
             message: { role: 'assistant' as const, content: 'Response' },
-            finish_reason: 'stop',
+            finish_reason: 'stop' as const,
           },
         ],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
       };
 
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
+        text: async () => '',
       });
 
-      await provider.complete({
-        ...options,
-        system: 'You are a helpful assistant',
-      });
+      const systemMessages: Message[] = [
+        { role: 'system', content: 'You are a helpful assistant' },
+        { role: 'user', content: 'Hello' },
+      ];
+      await provider.chat(systemMessages, options);
 
       const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      // JSON serialization drops undefined fields, so only role/content remain.
       expect(requestBody.messages[0]).toEqual({
         role: 'system',
         content: 'You are a helpful assistant',
       });
+      expect(requestBody.messages[1].role).toBe('user');
+      expect(requestBody.model).toBe('llama2');
+      expect(requestBody.stream).toBe(false);
     });
 
-    it('should convert tools to functions', async () => {
+    it('should serialize tools (ToolDef) into OpenAI tools field', async () => {
       const mockResponse = {
         id: 'test-id',
         object: 'chat.completion',
@@ -329,57 +349,66 @@ describe('OllamaProvider', () => {
           {
             index: 0,
             message: { role: 'assistant' as const, content: 'Response' },
-            finish_reason: 'stop',
+            finish_reason: 'stop' as const,
           },
         ],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
       };
 
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
+        text: async () => '',
       });
 
-      await provider.complete({
+      await provider.chat(messages, {
         ...options,
         tools: [
           {
-            name: 'get_weather',
-            description: 'Get weather for a location',
-            parameters: {
-              type: 'object',
-              properties: {
-                location: { type: 'string' },
+            type: 'function',
+            function: {
+              name: 'get_weather',
+              description: 'Get weather for a location',
+              parameters: {
+                type: 'object',
+                properties: {
+                  location: { type: 'string' },
+                },
+                required: ['location'],
               },
-              required: ['location'],
             },
           },
         ],
       });
 
       const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
-      expect(requestBody.functions).toHaveLength(1);
-      expect(requestBody.functions[0]).toEqual({
-        name: 'get_weather',
-        description: 'Get weather for a location',
-        parameters: {
-          type: 'object',
-          properties: {
-            location: { type: 'string' },
+      expect(requestBody.tools).toHaveLength(1);
+      expect(requestBody.tools[0]).toEqual({
+        type: 'function',
+        function: {
+          name: 'get_weather',
+          description: 'Get weather for a location',
+          parameters: {
+            type: 'object',
+            properties: {
+              location: { type: 'string' },
+            },
+            required: ['location'],
           },
-          required: ['location'],
         },
       });
     });
   });
 
-  describe('streamComplete', () => {
-    const options: CompletionOptions = {
+  describe('chat (streaming)', () => {
+    const messages: Message[] = [{ role: 'user', content: 'Hello' }];
+    const options: ChatOptions = {
       model: 'llama2',
-      messages: [{ role: 'user', content: 'Hello' }],
       max_tokens: 100,
+      stream: true,
     };
 
-    it('should handle streaming response', async () => {
+    it('should yield StreamChunk values for streaming response', async () => {
       const streamData = [
         'data: {"id":"1","object":"chat.completion.chunk","created":1234567890,"model":"llama2","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}\n\n',
         'data: {"id":"1","object":"chat.completion.chunk","created":1234567890,"model":"llama2","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}\n\n',
@@ -401,22 +430,26 @@ describe('OllamaProvider', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         body: stream,
+        text: async () => '',
       });
 
-      const deltas = [];
-      let finalResponse;
+      const generator = (await provider.chat(
+        messages,
+        options
+      )) as AsyncGenerator<StreamChunk, void, unknown>;
 
-      for await (const delta of provider.streamComplete(options)) {
-        if (typeof delta === 'object' && 'id' in delta) {
-          finalResponse = delta;
-        } else {
-          deltas.push(delta);
-        }
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of generator) {
+        chunks.push(chunk);
       }
 
-      expect(deltas.length).toBeGreaterThan(0);
-      expect(deltas[0]).toHaveProperty('type');
-      expect(finalResponse).toBeDefined();
+      expect(chunks.length).toBeGreaterThan(0);
+      // First chunk should announce the assistant role.
+      expect(chunks[0].delta.role).toBe('assistant');
+      // Some intermediate chunk should carry content text.
+      expect(chunks.some((c) => c.delta.content === 'Hello')).toBe(true);
+      // Final chunk should carry the stop finish_reason.
+      expect(chunks[chunks.length - 1].finish_reason).toBe('stop');
     });
 
     it('should throw OllamaError on streaming API error', async () => {
@@ -426,7 +459,10 @@ describe('OllamaProvider', () => {
         text: async () => 'Error',
       });
 
-      const generator = provider.streamComplete(options);
+      const generator = (await provider.chat(
+        messages,
+        options
+      )) as AsyncGenerator<StreamChunk, void, unknown>;
 
       await expect(generator.next()).rejects.toThrow(OllamaError);
     });
@@ -435,46 +471,61 @@ describe('OllamaProvider', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         body: null,
+        text: async () => '',
       });
 
-      const generator = provider.streamComplete(options);
+      const generator = (await provider.chat(
+        messages,
+        options
+      )) as AsyncGenerator<StreamChunk, void, unknown>;
 
       await expect(generator.next()).rejects.toThrow('No response body');
     });
   });
 
   describe('tool format conversion', () => {
-    it('should convert Claude tool format to OpenAI function format', () => {
+    it('should serialize ToolDef arguments faithfully through buildOpenAIRequest', () => {
+      // OllamaProvider.buildOpenAIRequest is private; reach it via cast for unit test.
       const tool = {
-        name: 'calculate',
-        description: 'Perform calculation',
-        parameters: {
-          type: 'object',
-          properties: {
-            expression: {
-              type: 'string',
-              description: 'Math expression',
+        type: 'function' as const,
+        function: {
+          name: 'calculate',
+          description: 'Perform calculation',
+          parameters: {
+            type: 'object' as const,
+            properties: {
+              expression: {
+                type: 'string',
+                description: 'Math expression',
+              },
             },
+            required: ['expression'],
           },
-          required: ['expression'],
         },
       };
 
-      // Access private method through any
-      const func = (provider as any).claudeToolToOpenAIFunction(tool);
+      const request = (provider as any).buildOpenAIRequest(
+        [{ role: 'user', content: 'Hi' }],
+        { model: 'llama2', tools: [tool] },
+        false
+      );
 
-      expect(func).toEqual({
-        name: 'calculate',
-        description: 'Perform calculation',
-        parameters: {
-          type: 'object',
-          properties: {
-            expression: {
-              type: 'string',
-              description: 'Math expression',
+      expect(request.tools).toHaveLength(1);
+      expect(request.tools[0]).toEqual({
+        type: 'function',
+        function: {
+          name: 'calculate',
+          description: 'Perform calculation',
+          parameters: {
+            type: 'object',
+            properties: {
+              expression: {
+                type: 'string',
+                description: 'Math expression',
+              },
             },
+            required: ['expression'],
           },
-          required: ['expression'],
         },
       });
     });

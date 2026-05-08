@@ -42,7 +42,7 @@ describe('AnthropicProvider', () => {
     };
 
     // Mock the Anthropic constructor
-    vi.mocked(Anthropic).mockImplementation(() => mockClient as unknown as Anthropic);
+    vi.mocked(Anthropic).mockImplementation(function () { return mockClient as unknown as Anthropic; });
 
     provider = new AnthropicProvider(config);
   });
@@ -421,6 +421,8 @@ describe('AnthropicProvider', () => {
         'Invalid API key',
         {}
       );
+      // Auto-mock leaves these unset; production reads error.status / error.message
+      Object.assign(apiError, { status: 401, message: 'Invalid API key' });
 
       mockClient.messages.create.mockRejectedValue(apiError);
 
@@ -439,6 +441,7 @@ describe('AnthropicProvider', () => {
         'Rate limit exceeded',
         {}
       );
+      Object.assign(rateLimitError, { status: 429, message: 'Rate limit exceeded' });
 
       mockClient.messages.create.mockRejectedValue(rateLimitError);
 
@@ -457,6 +460,7 @@ describe('AnthropicProvider', () => {
         'Invalid request',
         {}
       );
+      Object.assign(badRequestError, { status: 400, message: 'Invalid request' });
 
       mockClient.messages.create.mockRejectedValue(badRequestError);
 
@@ -472,6 +476,7 @@ describe('AnthropicProvider', () => {
         'Server error',
         {}
       );
+      Object.assign(serverError, { status: 500, message: 'Server error' });
 
       mockClient.messages.create.mockRejectedValue(serverError);
 
@@ -650,6 +655,7 @@ describe('AnthropicProvider', () => {
         'Invalid API key',
         {}
       );
+      Object.assign(authError, { status: 401, message: 'Invalid API key' });
 
       mockClient.messages.create.mockRejectedValue(authError);
 
@@ -666,6 +672,7 @@ describe('AnthropicProvider', () => {
         'Internal error',
         {}
       );
+      Object.assign(serverError, { status: 500, message: 'Internal error' });
 
       mockClient.messages.create.mockRejectedValue(serverError);
 

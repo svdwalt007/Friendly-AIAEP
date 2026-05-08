@@ -1,0 +1,55 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Conflict API",
+    "version": "1.0.0",
+    "description": "API with conflicting Device schema for merge testing"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/conflict/v1"
+    }
+  ],
+  "paths": {
+    "/status": {
+      "get": {
+        "operationId": "getStatus",
+        "summary": "Get status",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Device": {
+        "type": "object",
+        "description": "Device with conflicting type for 'name'",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "ID as integer (conflicts with string in other specs)"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "Alert": {
+        "type": "object",
+        "description": "Alert with properties (schema1 has no properties for merge branch)",
+        "properties": {
+          "alertId": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

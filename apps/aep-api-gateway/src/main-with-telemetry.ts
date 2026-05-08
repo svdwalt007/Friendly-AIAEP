@@ -12,7 +12,7 @@
 import Fastify from 'fastify';
 import compress from '@fastify/compress';
 import { app } from './app/app';
-import { initializeTelemetry, getLogger, shutdownTelemetry } from '@friendly-aep/shared-observability';
+import { initializeTelemetry, getLogger, shutdownTelemetry, LogLevel } from '@friendly-aep/shared-observability';
 import telemetryMiddleware from './app/middleware/telemetry.middleware';
 
 // ============================================================================
@@ -61,7 +61,7 @@ async function createServer() {
   // Get logger instance (after telemetry is initialized)
   const logger = getLogger({
     name: serviceName,
-    level: isProduction ? 'info' : 'debug',
+    level: isProduction ? LogLevel.INFO : LogLevel.DEBUG,
   });
 
   // Create Fastify instance with Pino logger
@@ -141,8 +141,8 @@ async function createServer() {
   // ============================================================================
   // Performance Headers Hook
   // ============================================================================
-  server.addHook('onSend', async (request, reply) => {
-    const responseTime = reply.getResponseTime();
+  server.addHook('onSend', async (_request, reply) => {
+    const responseTime = reply.elapsedTime;
     reply.header('Server-Timing', `total;dur=${responseTime.toFixed(2)}`);
     reply.header('X-Response-Time', `${responseTime.toFixed(2)}ms`);
   });
@@ -165,17 +165,17 @@ async function createServer() {
       const statusCode = (error as any).statusCode || 500;
       reply.code(statusCode).send({
         statusCode,
-        error: statusCode >= 500 ? 'Internal Server Error' : error.name,
-        message: statusCode >= 500 ? 'An unexpected error occurred' : error.message,
+        error: statusCode >= 500 ? 'Internal Server Error' : (error as Error).name,
+        message: statusCode >= 500 ? 'An unexpected error occurred' : (error as Error).message,
       });
     } else {
       // Development error response (show details)
       const statusCode = (error as any).statusCode || 500;
       reply.code(statusCode).send({
         statusCode,
-        error: error.name,
-        message: error.message,
-        stack: error.stack,
+        error: (error as Error).name,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
       });
     }
   });

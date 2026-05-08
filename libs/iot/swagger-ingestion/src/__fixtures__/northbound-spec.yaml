@@ -1,0 +1,202 @@
+basePath: /northbound/v1
+consumes:
+- application/json
+definitions:
+  Alert:
+    properties:
+      acknowledged:
+        default: false
+        type: boolean
+      deviceId:
+        description: Associated device ID
+        type: string
+      id:
+        description: Unique alert identifier
+        type: string
+      message:
+        description: Alert message
+        type: string
+      severity:
+        description: Alert severity level
+        enum:
+        - critical
+        - warning
+        - info
+        type: string
+      timestamp:
+        format: date-time
+        type: string
+    required:
+    - id
+    - severity
+    - message
+    type: object
+  Device:
+    properties:
+      createdAt:
+        format: date-time
+        type: string
+      id:
+        description: Unique device identifier
+        type: string
+      location:
+        properties:
+          latitude:
+            type: number
+          longitude:
+            type: number
+        type: object
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        description: Device name
+        type: string
+      status:
+        description: Current device status
+        enum:
+        - active
+        - inactive
+        - maintenance
+        type: string
+      type:
+        description: Device type
+        enum:
+        - sensor
+        - actuator
+        - gateway
+        type: string
+      updatedAt:
+        format: date-time
+        type: string
+    required:
+    - id
+    - name
+    - type
+    type: object
+host: api.example.com
+info:
+  description: Northbound API for device management and monitoring
+  title: Northbound API
+  version: 1.0.0
+paths:
+  /alerts:
+    get:
+      description: Retrieve a list of all system alerts
+      operationId: listAlerts
+      parameters:
+      - description: Filter by alert severity
+        enum:
+        - critical
+        - warning
+        - info
+        in: query
+        name: severity
+        required: false
+        type: string
+      - description: Filter by device ID
+        in: query
+        name: deviceId
+        required: false
+        type: string
+      responses:
+        '200':
+          description: List of alerts
+          schema:
+            properties:
+              alerts:
+                items:
+                  $ref: '#/definitions/Alert'
+                type: array
+              total:
+                type: integer
+            type: object
+      summary: List all alerts
+      tags:
+      - Alerts
+  /devices:
+    get:
+      description: Retrieve a list of all registered devices
+      operationId: listDevices
+      parameters:
+      - default: 100
+        description: Maximum number of devices to return
+        in: query
+        name: limit
+        required: false
+        type: integer
+      - default: 0
+        description: Offset for pagination
+        in: query
+        name: offset
+        required: false
+        type: integer
+      - description: Filter by device status
+        enum:
+        - active
+        - inactive
+        - maintenance
+        in: query
+        name: status
+        required: false
+        type: string
+      responses:
+        '200':
+          description: List of devices
+          schema:
+            properties:
+              devices:
+                items:
+                  $ref: '#/definitions/Device'
+                type: array
+              total:
+                type: integer
+            type: object
+      summary: List all devices
+      tags:
+      - Devices
+    post:
+      description: Register a new device in the system
+      operationId: createDevice
+      parameters:
+      - description: Device information
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/Device'
+      responses:
+        '201':
+          description: Device created
+          schema:
+            $ref: '#/definitions/Device'
+        '400':
+          description: Invalid input
+      summary: Create a new device
+      tags:
+      - Devices
+  /devices/{id}:
+    get:
+      description: Retrieve detailed information about a specific device
+      operationId: getDevice
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        '200':
+          description: Device details
+          schema:
+            $ref: '#/definitions/Device'
+        '404':
+          description: Device not found
+      summary: Get device by ID
+      tags:
+      - Devices
+produces:
+- application/json
+schemes:
+- https
+swagger: '2.0'

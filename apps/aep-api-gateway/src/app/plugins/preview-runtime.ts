@@ -25,7 +25,7 @@ export default fp(async function (fastify: FastifyInstance) {
         previewUrlPattern: 'local',
       });
       await service.initialize();
-      previewRuntime = service;
+      previewRuntime = service as unknown as StubPreviewRuntime;
       fastify.log.info('Preview Runtime Service initialized');
     } else {
       throw new Error('PreviewRuntimeService not available');

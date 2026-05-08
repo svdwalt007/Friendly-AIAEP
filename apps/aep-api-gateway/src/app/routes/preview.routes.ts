@@ -106,7 +106,7 @@ export default async function previewRoutes(fastify: FastifyInstance) {
           previewId: session.sessionId,
           previewUrl: session.previewUrl,
           mode: session.mode,
-          expiresAt: session.expiresAt.toISOString(),
+          expiresAt: (session.expiresAt as Date).toISOString(),
           status: session.status,
         });
       } catch (error) {
@@ -198,7 +198,7 @@ export default async function previewRoutes(fastify: FastifyInstance) {
           previewUrl: status.previewUrl,
           status: status.status,
           ttl: status.ttl,
-          timestamp: status.timestamp.toISOString(),
+          timestamp: (status.timestamp as Date).toISOString(),
         });
       } catch (error) {
         const err = error as Error;

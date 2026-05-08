@@ -103,7 +103,7 @@ export class CacheService {
    */
   private async initializeRedis(): Promise<void> {
     try {
-      const redisUrl = this.config.redis.url || process.env.REDIS_URL;
+      const redisUrl = this.config.redis.url || process.env['REDIS_URL'];
 
       if (!redisUrl && !this.config.redis.host) {
         this.logger.info('Redis not configured, using in-memory cache only');

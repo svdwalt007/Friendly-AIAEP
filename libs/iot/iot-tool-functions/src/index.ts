@@ -47,6 +47,7 @@ export {
 
 // Export types and interfaces
 export type {
+  IoTSdk,
   ToolConfig,
   CachedResponse,
   DeviceFilters,

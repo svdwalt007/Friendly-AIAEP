@@ -173,6 +173,7 @@ export class SessionManager {
       data: {
         projectId,
         userId,
+        tenantId,
         sessionToken,
         config: config as unknown as Prisma.InputJsonValue,
         expiresAt,
@@ -225,7 +226,7 @@ export class SessionManager {
     }
 
     // Update lastActivityAt in config
-    const config = session.config as SessionConfig;
+    const config = session.config as unknown as SessionConfig;
     const updatedConfig: SessionConfig = {
       ...config,
       lastActivityAt: new Date().toISOString(),
@@ -437,7 +438,7 @@ export class SessionManager {
 
     // Filter sessions with lastActivityAt older than threshold
     const sessionsToExpire = activeSessions.filter((session) => {
-      const config = session.config as SessionConfig;
+      const config = session.config as unknown as SessionConfig;
       const lastActivity = new Date(config.lastActivityAt);
       return lastActivity < inactivityThreshold;
     });
@@ -651,7 +652,7 @@ export class SessionManager {
       ENTERPRISE: { maxConcurrentSessions: 50, maxSessionsPerDay: Infinity, maxDurationMinutes: 480 }
     };
 
-    const limits = tierLimits[tier] || tierLimits.FREE;
+    const limits = tierLimits[tier] || tierLimits['FREE'];
     return {
       maxConcurrentSessions: limits.maxConcurrentSessions,
       maxSessionsPerDay: limits.maxSessionsPerDay,

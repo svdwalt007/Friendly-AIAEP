@@ -1,0 +1,485 @@
+# GitHub Actions — Quality Gate
+# Version: 2.0 | Multi-Language / Platform-Adaptive
+# ─────────────────────────────────────────────────────────────────────────────
+# Usage: Copy to .github/workflows/quality-gate.yml
+# Configure: Set the LANGUAGE env var (or use path-based triggers) and
+#             fill in platform-specific build/test commands.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Quality Gate
+
+on:
+  push:
+    branches: [ main, develop, 'release/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+# Prevent concurrent runs on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ENVIRONMENT — configure per project
+# ─────────────────────────────────────────────────────────────────────────────
+env:
+  # Set ONE of: cpp | java | python | typescript | go | rust
+  LANGUAGE: typescript
+  
+  # Coverage thresholds (percent)
+  MIN_LINE_COVERAGE: 100
+  MIN_BRANCH_COVERAGE: 100
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOBS
+# ─────────────────────────────────────────────────────────────────────────────
+
+jobs:
+
+  # ── GATE 1: FORBIDDEN PATTERNS ─────────────────────────────────────────────
+  grep-gate:
+    name: "Gate 1 · Forbidden Patterns"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Scan for forbidden patterns
+        run: |
+          FAIL=0
+          SOURCE_DIRS="src lib app"
+          
+          declare -a PATTERNS=(
+            "TODO" "FIXME" "HACK" "XXX" "NOCOMMIT"
+            "stub" "placeholder"
+            "not implemented" "not yet implemented"
+            "throw new RuntimeException"
+            "raise NotImplementedError"
+            "unimplemented!()"
+            "todo!()"
+          )
+          
+          for dir in $SOURCE_DIRS; do
+            [ -d "$dir" ] || continue
+            for pattern in "${PATTERNS[@]}"; do
+              if grep -rn "$pattern" "$dir" \
+                   --include="*.cpp" --include="*.hpp" --include="*.h" \
+                   --include="*.java" --include="*.py" \
+                   --include="*.ts" --include="*.tsx" \
+                   --include="*.go" --include="*.rs" 2>/dev/null; then
+                echo "::error::Forbidden pattern '$pattern' found in $dir"
+                FAIL=1
+              fi
+            done
+          done
+          
+          [ $FAIL -eq 0 ] || exit 1
+          echo "✅ Grep gate passed — no forbidden patterns"
+
+  # ── GATE 2: C/C++ ──────────────────────────────────────────────────────────
+  cpp-gate:
+    name: "Gate 2 · C/C++ Build, Test, Coverage, Lint"
+    runs-on: ubuntu-latest
+    if: env.LANGUAGE == 'cpp' || contains(github.event.head_commit.modified, '.cpp')
+    needs: grep-gate
+    
+    strategy:
+      matrix:
+        # Add/remove configurations as needed
+        config:
+          - { name: "Linux x86_64 Debug",   os: ubuntu-latest, cmake_flags: "-DCMAKE_BUILD_TYPE=Debug" }
+          - { name: "Linux x86_64 Release",  os: ubuntu-latest, cmake_flags: "-DCMAKE_BUILD_TYPE=Release" }
+          # - { name: "Linux ARM64",  os: ubuntu-24.04-arm, cmake_flags: "-DCMAKE_BUILD_TYPE=Debug" }
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            cmake ninja-build \
+            clang-tidy cppcheck \
+            gcovr lcov \
+            libgtest-dev libgmock-dev
+      
+      - name: Configure (warnings as errors, coverage instrumentation)
+        run: |
+          cmake \
+            ${{ matrix.config.cmake_flags }} \
+            -DCMAKE_CXX_FLAGS="-Wall -Wextra -Werror -fsanitize=address,undefined -fprofile-arcs -ftest-coverage" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined --coverage" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -G Ninja \
+            -B build
+      
+      - name: Build
+        run: cmake --build build -j$(nproc) 2>&1 | tee build.log
+      
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -j$(nproc) 2>&1 | tee test.log
+      
+      - name: Coverage gate
+        run: |
+          gcovr \
+            --root . \
+            --exclude '.*test.*' --exclude '.*mock.*' \
+            --exclude '.*third_party.*' --exclude '.*generated.*' \
+            --branches \
+            --fail-under-line ${{ env.MIN_LINE_COVERAGE }} \
+            --fail-under-branch ${{ env.MIN_BRANCH_COVERAGE }} \
+            --html-details coverage/index.html \
+            --print-summary
+      
+      - name: clang-tidy
+        run: |
+          clang-tidy \
+            $(find src/ -name "*.cpp" -o -name "*.cc" 2>/dev/null | head -100) \
+            -p build/ \
+            --warnings-as-errors='*' \
+            2>&1 | tee lint.log
+          grep -c "warning:\|error:" lint.log && exit 1 || true
+      
+      - name: cppcheck (SAST)
+        run: |
+          cppcheck \
+            --enable=all \
+            --error-exitcode=1 \
+            --suppress=missingInclude \
+            src/
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-cpp-${{ matrix.config.name }}
+          path: coverage/
+
+  # ── GATE 3: JAVA ────────────────────────────────────────────────────────────
+  java-gate:
+    name: "Gate 3 · Java Build, Test, Coverage, Lint"
+    runs-on: ubuntu-latest
+    if: env.LANGUAGE == 'java'
+    needs: grep-gate
+    
+    strategy:
+      matrix:
+        java: [ '21' ]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+          cache: gradle
+      
+      - name: Build, test, coverage
+        run: |
+          ./gradlew clean test \
+            jacocoTestReport \
+            jacocoTestCoverageVerification \
+            checkstyleMain checkstyleTest \
+            spotbugsMain \
+            --no-daemon 2>&1 | tee gate.log
+      
+      - name: Verify coverage thresholds
+        run: |
+          # jacoco configured in build.gradle with minimum=1.0 (100%)
+          # this step fails if coverage is below threshold
+          ./gradlew jacocoTestCoverageVerification --no-daemon
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-java
+          path: build/reports/jacoco/
+
+  # ── GATE 4: PYTHON ──────────────────────────────────────────────────────────
+  python-gate:
+    name: "Gate 4 · Python Build, Test, Coverage, Lint"
+    runs-on: ubuntu-latest
+    if: env.LANGUAGE == 'python'
+    needs: grep-gate
+    
+    strategy:
+      matrix:
+        python: [ '3.12' ]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      
+      - name: Install
+        run: pip install -e ".[dev]" --quiet
+      
+      - name: Type check (mypy)
+        run: mypy src/ --strict 2>&1 | tee typecheck.log
+      
+      - name: Test + Coverage
+        run: |
+          pytest \
+            --cov=src \
+            --cov-branch \
+            --cov-report=term-missing \
+            --cov-report=html:coverage/ \
+            --cov-fail-under=${{ env.MIN_LINE_COVERAGE }} \
+            -x -v 2>&1 | tee test.log
+      
+      - name: Lint (ruff)
+        run: ruff check src/ tests/ --output-format=github
+      
+      - name: Security (bandit)
+        run: bandit -r src/ -ll
+      
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-python
+          path: coverage/
+
+  # ── GATE 5: TYPESCRIPT ──────────────────────────────────────────────────────
+  typescript-gate:
+    name: "Gate 5 · TypeScript Build, Test, Coverage, Lint"
+    runs-on: ubuntu-latest
+    if: env.LANGUAGE == 'typescript'
+    needs: grep-gate
+    
+    strategy:
+      matrix:
+        node: [ '20' ]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      
+      - name: Install
+        run: npm ci
+      
+      - name: Type check
+        run: npx tsc --noEmit
+      
+      - name: Test + Coverage
+        run: |
+          npx jest \
+            --coverage \
+            --coverageThreshold='{"global":{"lines":${{ env.MIN_LINE_COVERAGE }},"branches":${{ env.MIN_BRANCH_COVERAGE }},"functions":100,"statements":100}}' \
+            --forceExit
+      
+      - name: Lint
+        run: npx eslint src/ --ext .ts,.tsx --max-warnings 0
+      
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-typescript
+          path: coverage/
+
+  # ── GATE 6: GO ──────────────────────────────────────────────────────────────
+  go-gate:
+    name: "Gate 6 · Go Build, Test, Coverage, Lint"
+    runs-on: ubuntu-latest
+    if: env.LANGUAGE == 'go'
+    needs: grep-gate
+    
+    strategy:
+      matrix:
+        go: [ '1.22' ]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go ${{ matrix.go }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+      
+      - name: Build
+        run: go build ./...
+      
+      - name: Test + Coverage
+        run: |
+          go test \
+            -race \
+            -coverprofile=coverage.out \
+            -covermode=atomic \
+            ./... 2>&1 | tee test.log
+          
+          COVERAGE=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
+          echo "Coverage: $COVERAGE%"
+          awk -v c="$COVERAGE" -v min="${{ env.MIN_LINE_COVERAGE }}" \
+            'BEGIN{if(c+0<min+0){printf "FAIL: %s%% < %s%%\n",c,min; exit 1}}'
+      
+      - name: Lint (golangci-lint)
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          args: --timeout=5m
+      
+      - name: Security (gosec)
+        run: |
+          go install github.com/securecoding/gosec/v2/cmd/gosec@latest
+          gosec ./...
+
+  # ── GATE 7: RUST ────────────────────────────────────────────────────────────
+  rust-gate:
+    name: "Gate 7 · Rust Build, Test, Coverage, Lint"
+    runs-on: ubuntu-latest
+    if: env.LANGUAGE == 'rust'
+    needs: grep-gate
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin --quiet
+      
+      - name: Build (warnings as errors)
+        run: RUSTFLAGS="-D warnings" cargo build
+      
+      - name: Test
+        run: cargo test
+      
+      - name: Coverage
+        run: |
+          cargo tarpaulin \
+            --fail-under ${{ env.MIN_LINE_COVERAGE }} \
+            --branches \
+            --out Html \
+            --output-dir coverage/
+      
+      - name: Clippy (lint)
+        run: cargo clippy -- -D warnings
+      
+      - name: Security audit
+        run: |
+          cargo install cargo-audit --quiet
+          cargo audit
+      
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-rust
+          path: coverage/
+
+  # ── GATE 8: EMBEDDED (Zephyr) ───────────────────────────────────────────────
+  embedded-zephyr-gate:
+    name: "Gate 8 · Zephyr Host Test + Cross Compile"
+    runs-on: ubuntu-latest
+    if: env.LANGUAGE == 'embedded-zephyr'
+    needs: grep-gate
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Set up Zephyr SDK
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: .
+          toolchains: arm-zephyr-eabi;x86_64-zephyr-elf
+      
+      - name: Build and test on native_posix (coverage)
+        run: |
+          west build -b native_posix -- -DCONFIG_COVERAGE=y -DCONFIG_COVERAGE_GCOV=y
+          ./build/zephyr/zephyr.exe --coverage 2>&1 | tee test.log
+          
+          gcovr \
+            --root . \
+            --exclude '.*zephyr.*' --exclude '.*test.*' --exclude '.*hal.*' \
+            --branches \
+            --fail-under-line ${{ env.MIN_LINE_COVERAGE }} \
+            --fail-under-branch ${{ env.MIN_BRANCH_COVERAGE }} \
+            --print-summary
+      
+      - name: Cross-compile for target (build integrity check)
+        run: |
+          # Replace <TARGET_BOARD> with your board
+          west build -b <TARGET_BOARD> 2>&1 | tee target_build.log
+          [ ${PIPESTATUS[0]} -eq 0 ] || { echo "TARGET BUILD FAILED"; exit 1; }
+          echo "Target build size:"
+          west build -t rom_report || true
+          west build -t ram_report || true
+
+  # ── GATE 9: DEPENDENCY VULNERABILITY SCAN ──────────────────────────────────
+  dependency-scan:
+    name: "Gate 9 · Dependency Vulnerability Scan"
+    runs-on: ubuntu-latest
+    needs: grep-gate
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          format: 'table'
+      
+      # Additional language-specific checks
+      - name: npm audit (if Node project)
+        if: hashFiles('package.json') != ''
+        run: npm audit --audit-level=high
+      
+      - name: pip-audit (if Python project)
+        if: hashFiles('requirements*.txt') != '' || hashFiles('pyproject.toml') != ''
+        run: |
+          pip install pip-audit --quiet
+          pip-audit --severity high
+
+  # ── FINAL GATE: SUMMARY ─────────────────────────────────────────────────────
+  quality-gate-summary:
+    name: "✅ Quality Gate — Final"
+    runs-on: ubuntu-latest
+    needs:
+      - grep-gate
+      - dependency-scan
+      # Add language gate here:
+      # - cpp-gate
+      # - java-gate
+      # - python-gate
+      # - typescript-gate
+      # - go-gate
+      # - rust-gate
+    if: always()
+    
+    steps:
+      - name: Check all gates passed
+        run: |
+          echo "Gate results:"
+          echo "  grep-gate:        ${{ needs.grep-gate.result }}"
+          echo "  dependency-scan:  ${{ needs.dependency-scan.result }}"
+          
+          if [[ "${{ needs.grep-gate.result }}" != "success" ]] || \
+             [[ "${{ needs.dependency-scan.result }}" != "success" ]]; then
+            echo "::error::One or more quality gates failed"
+            exit 1
+          fi
+          echo "✅ All quality gates passed — safe to merge"

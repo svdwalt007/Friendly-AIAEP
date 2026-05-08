@@ -11,7 +11,7 @@
  * @module TelemetryMiddleware
  */
 
-import { FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
+import { FastifyRequest, FastifyInstance } from 'fastify';
 import fastifyPlugin from 'fastify-plugin';
 import { context, trace, SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { getTelemetry, getLogger, getMetrics } from '@friendly-aep/shared-observability';
@@ -91,7 +91,7 @@ async function telemetryMiddleware(
   // ============================================================================
   // Request Hook - Start tracing and timing
   // ============================================================================
-  fastify.addHook('onRequest', async (request, reply) => {
+  fastify.addHook('onRequest', async (request, _reply) => {
     // Skip ignored routes
     if (shouldIgnoreRoute(request.url, config.ignoreRoutes || [])) {
       return;
@@ -209,7 +209,7 @@ async function telemetryMiddleware(
   // ============================================================================
   // Error Hook - Record errors in traces and metrics
   // ============================================================================
-  fastify.addHook('onError', async (request, reply, error) => {
+  fastify.addHook('onError', async (request, _reply, error) => {
     // Skip ignored routes
     if (shouldIgnoreRoute(request.url, config.ignoreRoutes || [])) {
       return;

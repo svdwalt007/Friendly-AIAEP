@@ -1,0 +1,96 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "QoE API",
+    "version": "1.0.0",
+    "description": "Quality of Experience API for testing entity merging"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/qoe/v1"
+    }
+  ],
+  "paths": {
+    "/metrics": {
+      "get": {
+        "operationId": "getMetrics",
+        "summary": "Get QoE metrics",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "metrics": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Telemetry"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Device": {
+        "type": "object",
+        "description": "Device from QoE perspective",
+        "required": ["id", "name", "health"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "health": {
+            "type": "number",
+            "description": "Health score from 0-100"
+          },
+          "lastMetricAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Telemetry": {
+        "type": "object",
+        "description": "Telemetry data point",
+        "required": ["timestamp", "value"],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "value": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "metric": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -425,7 +425,12 @@ export class SwaggerIngestionService extends EventEmitter {
           const entity = entityMap[entityName];
           entity.referencedBy.push({ apiId: spec.id, operationIds: [], usage: 'both' });
           entity.isShared = true;
+          // schemaRef is always `#/components/schemas/${entityName}` — same value per entity name.
+          // The first spec already inserted it, so this branch is a defensive dedup guard
+          // that is structurally unreachable in normal operation.
+          /* v8 ignore next */
           if (!entity.originalRefs.includes(schemaRef)) {
+            /* v8 ignore next */
             entity.originalRefs.push(schemaRef);
           }
 

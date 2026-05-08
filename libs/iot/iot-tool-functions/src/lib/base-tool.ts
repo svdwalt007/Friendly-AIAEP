@@ -12,10 +12,8 @@
 
 import { StructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
-// TODO: Fix circular dependency with sdk-generator
-type FallbackSdk = any;
 import { CacheHelper } from './cache';
-import type { ToolConfig, ToolResult } from './types';
+import type { IoTSdk, ToolConfig, ToolResult } from './types';
 
 /**
  * Base class for all IoT StructuredTools
@@ -52,8 +50,8 @@ import type { ToolConfig, ToolResult } from './types';
 export abstract class IoTTool<
   TSchema extends z.ZodObject<any> = z.ZodObject<any>
 > extends StructuredTool {
-  /** FallbackSdk instance for API calls */
-  protected sdk: FallbackSdk;
+  /** IoTSdk instance for API calls */
+  protected sdk: IoTSdk;
 
   /** Optional cache helper for Redis caching */
   protected cache?: CacheHelper;
@@ -212,7 +210,7 @@ export abstract class IoTTool<
   /**
    * Gets the SDK instance
    */
-  protected getSdk(): FallbackSdk {
+  protected getSdk(): IoTSdk {
     return this.sdk;
   }
 

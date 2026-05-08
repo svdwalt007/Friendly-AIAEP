@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
 
 /**
@@ -330,7 +330,7 @@ export default fp(async function performanceMonitoring(
   const monitor = getPerformanceMonitor(options, fastify.log);
 
   // Add request timing hook
-  fastify.addHook('onRequest', async (request, reply) => {
+  fastify.addHook('onRequest', async (request, _reply) => {
     (request as any).startTime = process.hrtime.bigint();
 
     // Track request size if enabled
@@ -383,30 +383,30 @@ export default fp(async function performanceMonitoring(
   });
 
   // Add performance metrics endpoints
-  fastify.get('/metrics/performance', async (request, reply) => {
+  fastify.get('/metrics/performance', async (_request, _reply) => {
     return monitor.getSummary();
   });
 
-  fastify.get('/metrics/performance/endpoints', async (request, reply) => {
+  fastify.get('/metrics/performance/endpoints', async (request, _reply) => {
     const endpoint = request.query && (request.query as any).endpoint;
     return monitor.getEndpointMetrics(endpoint);
   });
 
-  fastify.get('/metrics/performance/slow', async (request, reply) => {
+  fastify.get('/metrics/performance/slow', async (request, _reply) => {
     const limit = request.query && (request.query as any).limit
       ? parseInt((request.query as any).limit)
       : 100;
     return monitor.getSlowRequests(limit);
   });
 
-  fastify.get('/metrics/performance/recent', async (request, reply) => {
+  fastify.get('/metrics/performance/recent', async (request, _reply) => {
     const limit = request.query && (request.query as any).limit
       ? parseInt((request.query as any).limit)
       : 100;
     return monitor.getRecentMetrics(limit);
   });
 
-  fastify.post('/metrics/performance/reset', async (request, reply) => {
+  fastify.post('/metrics/performance/reset', async (_request, _reply) => {
     monitor.reset();
     return { success: true, message: 'Performance metrics reset' };
   });

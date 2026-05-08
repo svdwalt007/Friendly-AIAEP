@@ -24,13 +24,8 @@ describe('Tenant Middleware', () => {
     });
 
     it('should attach tenant context with tenantId from JWT', async () => {
-      await fastify.register(tenantMiddleware);
-
-      fastify.get('/test', async (request) => {
-        return request.tenantContext;
-      });
-
-      // Mock auth middleware setting user
+      // Mock auth middleware setting user must run BEFORE the tenant
+      // middleware reads request.user, so register the auth-stub hook first.
       fastify.addHook('onRequest', async (request) => {
         request.user = {
           tenantId: 'tenant-123',
@@ -38,6 +33,12 @@ describe('Tenant Middleware', () => {
           role: 'user',
           tier: 'professional',
         } as JwtPayload;
+      });
+
+      await fastify.register(tenantMiddleware);
+
+      fastify.get('/test', async (request) => {
+        return request.tenantContext;
       });
 
       const response = await fastify.inject({
@@ -92,14 +93,8 @@ describe('Tenant Middleware', () => {
     });
 
     it('should allow request when requireTenantId is true and tenantId is present', async () => {
-      await fastify.register(tenantMiddleware, {
-        requireTenantId: true,
-      });
-
-      fastify.get('/test', async (request) => {
-        return { tenantId: request.tenantContext.tenantId };
-      });
-
+      // Auth-stub hook must precede the tenant middleware so request.user is
+      // populated before the tenant context is built.
       fastify.addHook('onRequest', async (request) => {
         request.user = {
           tenantId: 'tenant-789',
@@ -107,6 +102,14 @@ describe('Tenant Middleware', () => {
           role: 'user',
           tier: 'professional',
         } as JwtPayload;
+      });
+
+      await fastify.register(tenantMiddleware, {
+        requireTenantId: true,
+      });
+
+      fastify.get('/test', async (request) => {
+        return { tenantId: request.tenantContext.tenantId };
       });
 
       const response = await fastify.inject({
@@ -126,13 +129,9 @@ describe('Tenant Middleware', () => {
     });
 
     it('should set shouldFilterByTenant to false in dedicated mode', async () => {
-      await fastify.register(tenantMiddleware);
-
-      fastify.get('/test', async (request) => {
-        return request.tenantContext;
-      });
-
-      // Even with tenantId in JWT, should not filter in dedicated mode
+      // Even with tenantId in JWT, should not filter in dedicated mode.
+      // Register the auth-stub before the tenant middleware so request.user
+      // is set before the tenant context is built.
       fastify.addHook('onRequest', async (request) => {
         request.user = {
           tenantId: 'tenant-123',
@@ -140,6 +139,12 @@ describe('Tenant Middleware', () => {
           role: 'user',
           tier: 'professional',
         } as JwtPayload;
+      });
+
+      await fastify.register(tenantMiddleware);
+
+      fastify.get('/test', async (request) => {
+        return request.tenantContext;
       });
 
       const response = await fastify.inject({
@@ -288,6 +293,19 @@ describe('Tenant Middleware', () => {
     it('should work with multiple requests with different tenants', async () => {
       process.env.DEPLOYMENT_MODE = 'multi-tenant';
 
+      // Mutable holder so a single onRequest hook can serve every iteration
+      // without re-registering hooks after the server has started listening.
+      const currentTenant = { tenantId: '' };
+
+      fastify.addHook('onRequest', async (request) => {
+        request.user = {
+          tenantId: currentTenant.tenantId,
+          userId: 'user-123',
+          role: 'user',
+          tier: 'professional',
+        } as JwtPayload;
+      });
+
       await fastify.register(tenantMiddleware);
 
       const tenantContexts: TenantContext[] = [];
@@ -301,14 +319,7 @@ describe('Tenant Middleware', () => {
       const tenants = ['tenant-1', 'tenant-2', 'tenant-3'];
 
       for (const tenantId of tenants) {
-        fastify.addHook('onRequest', async (request) => {
-          request.user = {
-            tenantId,
-            userId: 'user-123',
-            role: 'user',
-            tier: 'professional',
-          } as JwtPayload;
-        });
+        currentTenant.tenantId = tenantId;
 
         await fastify.inject({
           method: 'GET',
@@ -317,7 +328,8 @@ describe('Tenant Middleware', () => {
       }
 
       // Each request should have isolated tenant context
-      expect(tenantContexts.length).toBeGreaterThan(0);
+      expect(tenantContexts.length).toBe(tenants.length);
+      expect(tenantContexts.map((c) => c.tenantId)).toEqual(tenants);
     });
   });
 });

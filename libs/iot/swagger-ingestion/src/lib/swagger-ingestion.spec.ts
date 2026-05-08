@@ -1121,4 +1121,393 @@ paths: {}
       expect(result.spec.openapi).toBe('3.0.3'); // Deprecated alias
     });
   });
+
+  describe('YAML File Loading', () => {
+    it('should load YAML spec from file', async () => {
+      const config: SpecConfig = {
+        apiId: 'northbound',
+        source: {
+          type: 'file',
+          location: join(fixturesPath, 'northbound-spec.yaml'),
+        },
+      };
+
+      const result = await service.ingestSpec(config);
+
+      expect(result).toBeDefined();
+      expect(result.apiId).toBe('northbound');
+      expect(result.spec.id).toBe('northbound');
+    });
+
+    it('should load YML spec from file', async () => {
+      const config: SpecConfig = {
+        apiId: 'northbound',
+        source: {
+          type: 'file',
+          location: join(fixturesPath, 'northbound-spec.yml'),
+        },
+      };
+
+      const result = await service.ingestSpec(config);
+
+      expect(result).toBeDefined();
+      expect(result.apiId).toBe('northbound');
+    });
+  });
+
+  describe('diffSpecs - Response Schema Deep Comparison', () => {
+    it('should detect removed required field in response schema', async () => {
+      const configs: SpecConfig[] = [
+        {
+          apiId: 'northbound',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'northbound-swagger.json'),
+          },
+        },
+      ];
+
+      const oldModel = await service.ingestAll(configs);
+      const newModel = JSON.parse(JSON.stringify(oldModel));
+
+      // Find an operation with a 200 response that has schema properties
+      const getDeviceOp = newModel.apis['northbound'].operations.find(
+        (op: any) => op.operationId === 'getDevice'
+      );
+      if (getDeviceOp && getDeviceOp.responses['200']) {
+        // Add content with schema to old model's response for comparison
+        const oldGetDeviceOp = oldModel.apis['northbound'].operations.find(
+          (op: any) => op.operationId === 'getDevice'
+        );
+
+        // Set up schemas with properties and required fields for comparison
+        const schema = {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            status: { type: 'string' },
+          },
+          required: ['id', 'name'],
+        };
+
+        oldGetDeviceOp!.responses['200'] = {
+          description: 'Success',
+          content: {
+            'application/json': { schema },
+          },
+        };
+
+        // New model removes the 'name' property from response
+        const newSchema = {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            status: { type: 'string' },
+          },
+          required: ['id'],
+        };
+
+        getDeviceOp.responses['200'] = {
+          description: 'Success',
+          content: {
+            'application/json': { schema: newSchema },
+          },
+        };
+      }
+
+      const changes = service.diffSpecs(oldModel, newModel);
+
+      const removedField = changes.find(
+        (c) => c.type === BreakingChangeType.REMOVED_REQUIRED_FIELD
+      );
+      expect(removedField).toBeDefined();
+      expect(removedField!.severity).toBe('major');
+      expect(removedField!.description).toContain('name');
+    });
+
+    it('should detect response field type change', async () => {
+      const configs: SpecConfig[] = [
+        {
+          apiId: 'northbound',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'northbound-swagger.json'),
+          },
+        },
+      ];
+
+      const oldModel = await service.ingestAll(configs);
+      const newModel = JSON.parse(JSON.stringify(oldModel));
+
+      const oldGetDeviceOp = oldModel.apis['northbound'].operations.find(
+        (op: any) => op.operationId === 'getDevice'
+      );
+      const newGetDeviceOp = newModel.apis['northbound'].operations.find(
+        (op: any) => op.operationId === 'getDevice'
+      );
+
+      // Set up schemas with a property type change
+      oldGetDeviceOp!.responses['200'] = {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                count: { type: 'integer' },
+              },
+            },
+          },
+        },
+      };
+
+      newGetDeviceOp!.responses['200'] = {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                count: { type: 'string' }, // Changed from integer to string
+              },
+            },
+          },
+        },
+      };
+
+      const changes = service.diffSpecs(oldModel, newModel);
+
+      const typeChange = changes.find(
+        (c) =>
+          c.type === BreakingChangeType.RESPONSE_SCHEMA_CHANGED &&
+          c.description.includes('count')
+      );
+      expect(typeChange).toBeDefined();
+      expect(typeChange!.oldValue).toBe('integer');
+      expect(typeChange!.newValue).toBe('string');
+    });
+
+    it('should handle responses without content/schema', async () => {
+      const configs: SpecConfig[] = [
+        {
+          apiId: 'northbound',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'northbound-swagger.json'),
+          },
+        },
+      ];
+
+      const oldModel = await service.ingestAll(configs);
+      const newModel = JSON.parse(JSON.stringify(oldModel));
+
+      // Set up a 204 response (no content) to test the !oldResponse branch
+      const oldOp = oldModel.apis['northbound'].operations.find(
+        (op: any) => op.operationId === 'getDevice'
+      );
+      oldOp!.responses['204'] = { description: 'No Content' };
+
+      const newOp = newModel.apis['northbound'].operations.find(
+        (op: any) => op.operationId === 'getDevice'
+      );
+      newOp!.responses['204'] = { description: 'No Content' };
+
+      // Should not produce breaking changes for 204 without content
+      const changes = service.diffSpecs(oldModel, newModel);
+      const resp204Changes = changes.filter(
+        (c) => c.description.includes('204')
+      );
+      expect(resp204Changes).toHaveLength(0);
+    });
+  });
+
+  describe('Schema Merging Edge Cases', () => {
+    it('should merge Device entity when both specs define it (isShared=true)', async () => {
+      // Use events + qoe specs — both define Device in components/schemas
+      const configs: SpecConfig[] = [
+        {
+          apiId: 'events',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'events-openapi.json'),
+          },
+        },
+        {
+          apiId: 'qoe',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'qoe-openapi.json'),
+          },
+        },
+      ];
+
+      const model = await service.ingestAll(configs);
+
+      // Device entity should be shared between events and qoe
+      const deviceEntity = model.sharedEntities['Device'];
+      expect(deviceEntity).toBeDefined();
+      expect(deviceEntity.isShared).toBe(true);
+      expect(deviceEntity.referencedBy).toHaveLength(2);
+
+      // Merged schema should contain properties from both specs
+      expect(deviceEntity.schema.properties).toBeDefined();
+      const propNames = Object.keys(deviceEntity.schema.properties!);
+      expect(propNames).toContain('id');
+      expect(propNames).toContain('name');
+      // 'health' comes from qoe spec only
+      expect(propNames).toContain('health');
+
+      // Required fields should be merged
+      expect(deviceEntity.schema.required).toBeDefined();
+      expect(deviceEntity.schema.required).toContain('id');
+      expect(deviceEntity.schema.required).toContain('name');
+      expect(deviceEntity.schema.required).toContain('health');
+
+      // Original refs should include both
+      expect(deviceEntity.originalRefs).toContain('#/components/schemas/Device');
+    });
+
+    it('should identify Telemetry entity from qoe spec', async () => {
+      const configs: SpecConfig[] = [
+        {
+          apiId: 'qoe',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'qoe-openapi.json'),
+          },
+        },
+      ];
+
+      const model = await service.ingestAll(configs);
+
+      expect(model.sharedEntities['Telemetry']).toBeDefined();
+      expect(model.sharedEntities['Telemetry'].type).toBe('telemetry');
+      expect(model.sharedEntities['Telemetry'].isShared).toBe(false);
+    });
+
+    it('should detect conflicting property types during merge', async () => {
+      // events spec has Device.id as string, conflict spec has Device.id as integer
+      const configs: SpecConfig[] = [
+        {
+          apiId: 'events',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'events-openapi.json'),
+          },
+        },
+        {
+          apiId: 'qoe',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'conflict-openapi.json'),
+          },
+        },
+      ];
+
+      const model = await service.ingestAll(configs);
+      const device = model.sharedEntities['Device'];
+
+      // Device should be shared and merged despite type conflict
+      expect(device).toBeDefined();
+      expect(device.isShared).toBe(true);
+      expect(device.schema.properties).toBeDefined();
+      // Both 'id' properties exist (conflicting types are noted but not rejected)
+      expect(device.schema.properties!['id']).toBeDefined();
+    });
+
+    it('should merge when schema1 has no properties but schema2 does', async () => {
+      // noprops spec has Alert with no properties,
+      // conflict spec has Alert with properties
+      // This exercises the "else if (schema2.properties)" branch
+      const configs: SpecConfig[] = [
+        {
+          apiId: 'northbound',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'noprops-openapi.json'),
+          },
+        },
+        {
+          apiId: 'events',
+          source: {
+            type: 'file',
+            location: join(fixturesPath, 'conflict-openapi.json'),
+          },
+        },
+      ];
+
+      const model = await service.ingestAll(configs);
+      const alert = model.sharedEntities['Alert'];
+
+      // Alert should be shared
+      expect(alert).toBeDefined();
+      expect(alert.isShared).toBe(true);
+      // Merged schema should have properties from conflict spec (schema2)
+      expect(alert.schema.properties).toBeDefined();
+      expect(alert.schema.properties!['alertId']).toBeDefined();
+      expect(alert.schema.properties!['severity']).toBeDefined();
+    });
+  });
+
+  describe('Spec with no paths', () => {
+    it('should handle spec with empty paths', async () => {
+      const emptyPathsSpec = {
+        openapi: '3.0.3',
+        info: { title: 'Empty Paths API', version: '1.0.0' },
+        paths: {},
+      };
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        headers: new Map([['content-type', 'application/json']]),
+        text: async () => JSON.stringify(emptyPathsSpec),
+      });
+
+      const config: SpecConfig = {
+        apiId: 'northbound',
+        source: {
+          type: 'url',
+          location: 'https://api.example.com/empty-paths.json',
+        },
+      };
+
+      const result = await service.ingestSpec(config);
+      expect(result.spec.operations).toHaveLength(0);
+    });
+  });
+
+  describe('Spec without auth adapter', () => {
+    it('should ingest from URL without auth adapter when auth is provided', async () => {
+      const serviceNoAuth = new SwaggerIngestionService();
+
+      const mockSpec = JSON.parse(
+        await readFile(join(fixturesPath, 'northbound-swagger.json'), 'utf-8')
+      );
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        headers: new Map([['content-type', 'application/json']]),
+        text: async () => JSON.stringify(mockSpec),
+      });
+
+      const config: SpecConfig = {
+        apiId: 'northbound',
+        source: {
+          type: 'url',
+          location: 'https://api.example.com/swagger.json',
+        },
+        auth: {
+          type: 'basic',
+          credentials: { username: 'user', password: 'pass' },
+        },
+      };
+
+      // Should work without auth adapter (auth headers won't be added)
+      const result = await serviceNoAuth.ingestSpec(config);
+      expect(result).toBeDefined();
+    });
+  });
 });

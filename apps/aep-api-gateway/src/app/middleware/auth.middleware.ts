@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { verify, decode, JwtPayload } from 'jsonwebtoken';
+import { verify, JwtPayload } from 'jsonwebtoken';
 
 /**
  * Enhanced JWT Authentication Middleware

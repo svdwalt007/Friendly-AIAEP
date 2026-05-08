@@ -19,7 +19,7 @@ const server = Fastify({
       ? {
           // Production logging format
           serializers: {
-            req(req) {
+            req(req: any) {
               return {
                 method: req.method,
                 url: req.url,
@@ -27,7 +27,7 @@ const server = Fastify({
                 remoteAddress: req.ip,
               };
             },
-            res(res) {
+            res(res: any) {
               return {
                 statusCode: res.statusCode,
               };
@@ -121,9 +121,9 @@ server.addHook('onSend', async (request, reply) => {
 // ============================================================================
 // Performance Headers Hook
 // ============================================================================
-server.addHook('onSend', async (request, reply) => {
+server.addHook('onSend', async (_request, reply) => {
   // Add Server-Timing header for performance monitoring
-  const responseTime = reply.getResponseTime();
+  const responseTime = reply.elapsedTime;
   reply.header('Server-Timing', `total;dur=${responseTime.toFixed(2)}`);
 
   // Add custom performance headers
@@ -175,17 +175,17 @@ server.setErrorHandler((error, request, reply) => {
     const statusCode = (error as any).statusCode || 500;
     reply.code(statusCode).send({
       statusCode,
-      error: statusCode >= 500 ? 'Internal Server Error' : error.name,
-      message: statusCode >= 500 ? 'An unexpected error occurred' : error.message,
+      error: statusCode >= 500 ? 'Internal Server Error' : (error as Error).name,
+      message: statusCode >= 500 ? 'An unexpected error occurred' : (error as Error).message,
     });
   } else {
     // Development error response (show details)
     const statusCode = (error as any).statusCode || 500;
     reply.code(statusCode).send({
       statusCode,
-      error: error.name,
-      message: error.message,
-      stack: error.stack,
+      error: (error as Error).name,
+      message: (error as Error).message,
+      stack: (error as Error).stack,
     });
   }
 });

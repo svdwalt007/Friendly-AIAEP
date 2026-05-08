@@ -83,6 +83,23 @@ export default async function healthRoutes(fastify: FastifyInstance) {
               },
             },
           },
+          503: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', enum: ['healthy', 'degraded', 'unhealthy'] },
+              version: { type: 'string' },
+              uptime: { type: 'number' },
+              timestamp: { type: 'string' },
+              services: {
+                type: 'object',
+                properties: {
+                  database: { type: 'object' },
+                  redis: { type: 'object' },
+                  influxdb: { type: 'object' },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -103,7 +120,7 @@ export default async function healthRoutes(fastify: FastifyInstance) {
 
       const httpStatus = overallStatus === 'unhealthy' ? 503 : 200;
 
-      return reply.status(httpStatus).send({
+      return reply.code(httpStatus).send({
         status: overallStatus,
         version: process.env.APP_VERSION || '1.0.0',
         uptime: process.uptime(),

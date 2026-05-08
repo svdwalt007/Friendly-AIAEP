@@ -7,16 +7,125 @@
  * @module types
  */
 
-// TODO: Fix circular dependency with sdk-generator
-type FallbackSdk = any;
 import type Redis from 'ioredis';
+
+/**
+ * Minimal interface for the SDK methods used by IoT tools.
+ *
+ * This mirrors the subset of FallbackSdk (from @friendly-tech/iot/sdk-generator)
+ * that the tool classes actually call. A local interface is used instead of a
+ * direct cross-project source import because the @nx/js:tsc executor resolves
+ * tsconfig path aliases to source .ts files, which violates the rootDir
+ * constraint when projects live in separate directories.
+ *
+ * When FallbackSdk's method signatures change, update this interface to match.
+ */
+export interface IoTSdk {
+  getDeviceList(params?: {
+    limit?: number;
+    offset?: number;
+    filter?: {
+      status?: 'online' | 'offline' | 'degraded' | 'unknown';
+      type?: string;
+      search?: string;
+    };
+  }): Promise<{
+    devices: Array<{
+      deviceId: string;
+      name: string;
+      type: string;
+      status: string;
+      firmwareVersion?: string;
+      lastSeen?: Date;
+      location?: { latitude?: number; longitude?: number; address?: string };
+      metadata?: Record<string, unknown>;
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+  }>;
+
+  getDeviceById(deviceId: string): Promise<{
+    deviceId: string;
+    name: string;
+    type: string;
+    status: string;
+    firmwareVersion?: string;
+    lastSeen?: Date;
+    location?: { latitude?: number; longitude?: number; address?: string };
+    metadata?: Record<string, unknown>;
+    lwm2mObjects?: Array<{
+      objectId: number;
+      instanceId: number;
+      resources: Record<string, unknown>;
+    }>;
+  }>;
+
+  getDeviceTelemetry(
+    deviceId: string,
+    params: {
+      startTime: Date;
+      endTime: Date;
+      metrics?: string[];
+      interval?: '1m' | '5m' | '15m' | '1h' | '1d';
+    }
+  ): Promise<{
+    deviceId: string;
+    startTime: Date;
+    endTime: Date;
+    dataPoints: Array<{
+      timestamp: Date;
+      metric: string;
+      value: number;
+      unit?: string;
+    }>;
+  }>;
+
+  subscribeToEvents(subscription: {
+    eventTypes: string[];
+    filters?: {
+      deviceId?: string;
+      deviceType?: string;
+      severity?: string;
+      [key: string]: unknown;
+    };
+    webhookUrl?: string;
+    callbackUrl?: string;
+  }): Promise<{
+    subscriptionId: string;
+    eventTypes: string[];
+    filters?: Record<string, unknown>;
+    webhookUrl?: string;
+    createdAt: Date;
+    expiresAt?: Date;
+  }>;
+
+  getFleetKpis(params?: {
+    startTime?: Date;
+    endTime?: Date;
+    deviceType?: string;
+  }): Promise<{
+    totalDevices: number;
+    onlineDevices: number;
+    offlineDevices: number;
+    degradedDevices: number;
+    averageUptime: number;
+    alertCounts: {
+      critical: number;
+      high: number;
+      medium: number;
+      low: number;
+    };
+    timestamp: Date;
+  }>;
+}
 
 /**
  * Configuration for IoT Tools
  */
 export interface ToolConfig {
-  /** FallbackSdk instance for making API calls */
-  sdk: FallbackSdk;
+  /** IoTSdk instance for making API calls (compatible with FallbackSdk) */
+  sdk: IoTSdk;
 
   /** Optional Redis client for caching responses */
   redis?: Redis;

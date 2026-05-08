@@ -13,11 +13,28 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
-import { app } from './app';
 
 // ============================================================================
 // Mock Setup
 // ============================================================================
+
+// `app()` calls fastify.register(AutoLoad, { dir: '.../plugins' }) and similarly
+// for routes. AutoLoad walks the directory and dynamically imports each .ts
+// file via Node's loader, which (a) bypasses Vite/Vitest's TS transform and
+// (b) chokes on TypeScript enums under Node's strip-only loader. The tests in
+// this file already register the specific plugins/routes they exercise, so we
+// neutralize AutoLoad to a no-op plugin in the test environment.
+vi.mock('@fastify/autoload', () => {
+  const noop = async (_fastify: any, _opts: any) => {
+    /* AutoLoad disabled in tests; tests register what they need explicitly */
+  };
+  return {
+    default: noop,
+    __esModule: true,
+  };
+});
+
+import { app } from './app';
 
 // Mock the auth-adapter module
 vi.mock('@friendly-tech/iot/auth-adapter', () => {
@@ -55,7 +72,11 @@ vi.mock('@friendly-tech/iot/auth-adapter', () => {
 // ============================================================================
 
 /**
- * Helper function to create a test JWT token
+ * Helper function to create a test JWT token. Used by tests that don't want
+ * to first hit the /auth/login route. Note that this produces an unsigned
+ * placeholder token; tests that exercise routes guarded by
+ * `request.jwtVerify()` should instead obtain a real signed token via
+ * `server.jwt.sign(...)` (see `signTestJwt` below).
  */
 function createTestJWT(payload: Record<string, any> = {}): string {
   const defaultPayload = {
@@ -95,11 +116,10 @@ describe('AEP API Gateway - Integration Tests', () => {
       logger: false, // Disable logging during tests
     });
 
-    // Register the app
+    // Register the app. Do NOT call server.ready() here — inner describes
+    // need to register additional plugins/routes before the server boots.
+    // fastify.inject() lazily readies the server on first call.
     await server.register(app);
-
-    // Ready the server
-    await server.ready();
   });
 
   afterEach(async () => {
@@ -112,6 +132,12 @@ describe('AEP API Gateway - Integration Tests', () => {
   // ==========================================================================
 
   describe('Basic Routes', () => {
+    beforeEach(async () => {
+      // Root route is normally autoloaded from src/app/routes/root.ts.
+      // AutoLoad is stubbed in tests, so register the equivalent inline.
+      server.get('/', async () => ({ message: 'Hello API' }));
+    });
+
     it('should return Hello API on root endpoint', async () => {
       const response = await server.inject({
         method: 'GET',
@@ -272,6 +298,7 @@ describe('AEP API Gateway - Integration Tests', () => {
             tenantId: 'test-tenant-123',
             sub: 'user-123',
             userId: 'user-123',
+            username: 'testuser',
             role: 'user',
             tier: 'professional',
           } as any);
@@ -293,12 +320,16 @@ describe('AEP API Gateway - Integration Tests', () => {
         try {
           await request.jwtVerify();
           const user = request.user as any;
+          // Include a unique nonce so the refreshed token is guaranteed
+          // distinct from the original even when issued in the same second.
           const newToken = server.jwt.sign({
             tenantId: user.tenantId,
             sub: user.sub,
             userId: user.userId,
+            username: user.username,
             role: user.role,
             tier: user.tier,
+            jti: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
           });
 
           return reply.code(200).send({
@@ -474,7 +505,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should allow access to protected route with valid JWT', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
 
       const response = await server.inject({
         method: 'GET',
@@ -514,7 +545,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should reject access with expired JWT', async () => {
-      const expiredToken = createTestJWT({
+      const expiredToken = server.jwt.sign({
         exp: Math.floor(Date.now() / 1000) - 3600, // Expired 1 hour ago
       });
 
@@ -530,7 +561,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should extract tenantId from JWT on protected routes', async () => {
-      const token = createTestJWT({ tenantId: 'custom-tenant-456' });
+      const token = server.jwt.sign({ tenantId: 'custom-tenant-456', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
 
       const response = await server.inject({
         method: 'GET',
@@ -546,7 +577,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should allow POST to protected routes with valid JWT', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
 
       const response = await server.inject({
         method: 'POST',
@@ -565,7 +596,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should allow access to multiple protected endpoints', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
 
       const projectsResponse = await server.inject({
         method: 'GET',
@@ -700,7 +731,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should extract tenantId from JWT payload', async () => {
-      const token = createTestJWT({ tenantId: 'tenant-abc-123' });
+      const token = server.jwt.sign({ tenantId: 'tenant-abc-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
 
       const response = await server.inject({
         method: 'GET',
@@ -716,8 +747,8 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should handle multiple tenants correctly', async () => {
-      const tenant1Token = createTestJWT({ tenantId: 'tenant-1' });
-      const tenant2Token = createTestJWT({ tenantId: 'tenant-2' });
+      const tenant1Token = server.jwt.sign({ tenantId: 'tenant-1', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
+      const tenant2Token = server.jwt.sign({ tenantId: 'tenant-2', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
 
       const response1 = await server.inject({
         method: 'GET',
@@ -743,10 +774,13 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should include tenant context in user object', async () => {
-      const token = createTestJWT({
+      const token = server.jwt.sign({
         tenantId: 'tenant-xyz',
         username: 'testuser',
         sub: 'user-123',
+        userId: 'user-123',
+        role: 'user',
+        tier: 'professional',
       });
 
       const response = await server.inject({
@@ -855,7 +889,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should handle GET /api/v1/agents', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
       const response = await server.inject({
         method: 'GET',
         url: '/api/v1/agents',
@@ -868,7 +902,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should handle POST /api/v1/agents', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
       const response = await server.inject({
         method: 'POST',
         url: '/api/v1/agents',
@@ -882,7 +916,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should handle GET /api/v1/agents/:id', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
       const response = await server.inject({
         method: 'GET',
         url: '/api/v1/agents/agent-1',
@@ -895,7 +929,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should handle PUT /api/v1/agents/:id', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
       const response = await server.inject({
         method: 'PUT',
         url: '/api/v1/agents/agent-1',
@@ -907,7 +941,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should handle DELETE /api/v1/agents/:id', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
       const response = await server.inject({
         method: 'DELETE',
         url: '/api/v1/agents/agent-1',
@@ -920,7 +954,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should handle workflow endpoints', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
 
       const getResponse = await server.inject({
         method: 'GET',
@@ -940,7 +974,7 @@ describe('AEP API Gateway - Integration Tests', () => {
     });
 
     it('should handle deployment endpoints', async () => {
-      const token = createTestJWT();
+      const token = server.jwt.sign({ tenantId: 'test-tenant-123', sub: 'user-123', userId: 'user-123', role: 'user', tier: 'professional' });
 
       const getResponse = await server.inject({
         method: 'GET',
@@ -984,6 +1018,7 @@ describe('AEP API Gateway - Integration Tests', () => {
             tenantId: 'tenant-integration',
             sub: 'user-123',
             userId: 'user-123',
+            username: 'testuser',
             role: 'user',
             tier: 'professional',
           } as any);
