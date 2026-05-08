@@ -423,6 +423,33 @@ export interface TemplateContext {
     description?: string;
     baseUrl?: string;
   }>;
+
+  /**
+   * The API identifier currently being generated (only populated in per-service contexts).
+   * Allows service templates to reference the correct API without hardcoding 'northbound'.
+   */
+  currentApiId?: ApiId;
+
+  /**
+   * Operations for the API currently being generated (shorthand for `operations[currentApiId]`).
+   * Populated in per-service contexts so templates can iterate with `{{#each currentApiOperations}}`.
+   */
+  currentApiOperations?: ServiceOperation[];
+
+  /**
+   * Metadata for the API currently being generated (shorthand for `apiMetadata[currentApiId]`).
+   */
+  currentApiMeta?: {
+    version: string;
+    title: string;
+    description?: string;
+    baseUrl?: string;
+  };
+
+  /**
+   * PascalCase class name for the current API's service class (e.g. `NorthboundService`).
+   */
+  currentServiceClassName?: string;
 }
 
 /**

@@ -144,23 +144,30 @@ export class SdkGenerator {
       }
 
       // Build template context
+      const serviceOps = this.buildServiceOperations(apiSpec.operations);
+      const apiMeta = {
+        version: apiSpec.info.version,
+        title: apiSpec.info.title,
+        description: apiSpec.info.description,
+        baseUrl: this.getBaseUrl(apiSpec),
+      };
       const context: TemplateContext = {
         packageName: this.options.packageName,
         packageVersion: this.options.packageVersion,
         types: [],
         operations: {
-          [apiId]: this.buildServiceOperations(apiSpec.operations),
+          [apiId]: serviceOps,
         } as Record<ApiId, ServiceOperation[]>,
         sharedEntities: [],
         generatedAt: new Date().toISOString(),
         apiMetadata: {
-          [apiId]: {
-            version: apiSpec.info.version,
-            title: apiSpec.info.title,
-            description: apiSpec.info.description,
-            baseUrl: this.getBaseUrl(apiSpec),
-          },
-        } as Record<ApiId, any>,
+          [apiId]: apiMeta,
+        } as Record<ApiId, typeof apiMeta>,
+        // Convenience fields so templates don't need to hardcode API IDs
+        currentApiId: apiId,
+        currentApiOperations: serviceOps,
+        currentApiMeta: apiMeta,
+        currentServiceClassName: this.generateClassName(apiId),
       };
 
       // Load and compile template
@@ -540,8 +547,10 @@ export class SdkGenerator {
    * @returns Method name in camelCase
    */
   private generateMethodName(operation: Operation): string {
-    // If operationId exists and is valid, use it
-    if (operation.operationId && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(operation.operationId)) {
+    // If operationId exists, convert it to camelCase regardless of special characters.
+    // Handles kebab-case (get-all-devices-v2 → getAllDevicesV2) and snake_case as well as
+    // already-valid identifiers (getDevice → getDevice).
+    if (operation.operationId) {
       return this.toCamelCase(operation.operationId);
     }
 

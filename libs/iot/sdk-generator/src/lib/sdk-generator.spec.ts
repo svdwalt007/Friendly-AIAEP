@@ -649,13 +649,14 @@ async function cleanupTempDir(dir: string): Promise<void> {
 async function createMockTemplates(templateDir: string): Promise<void> {
   await fs.mkdir(templateDir, { recursive: true });
 
-  // Service template
+  // Service template — uses currentServiceClassName and currentApiOperations so it works
+  // for any API (northbound, events, qoe) without hardcoding the API identifier.
   const serviceTemplate = `
 /**
- * Generated service for {{apiMetadata.northbound.title}}
+ * Generated service for {{currentApiMeta.title}}
  */
-export class NorthboundService {
-  {{#each operations.northbound}}
+export class {{currentServiceClassName}} {
+  {{#each currentApiOperations}}
   /**
    * {{summary}}
    */

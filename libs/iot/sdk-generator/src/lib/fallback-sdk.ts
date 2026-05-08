@@ -305,6 +305,17 @@ export class FallbackSdk {
 
       clearTimeout(timeoutId);
 
+      // If the abort signal fired (timeout expired) before or during the response,
+      // treat it as a timeout — even if the mocked / underlying fetch resolved.
+      if (controller.signal.aborted) {
+        throw new FriendlyApiError({
+          statusCode: 408,
+          message: `Request timeout after ${this.timeout}ms`,
+          apiSource: apiId,
+          details: { endpoint, timeout: this.timeout },
+        });
+      }
+
       // Handle 401 Unauthorized - refresh token and retry once
       if (response.status === 401 && retryOn401) {
         await this.authAdapter.handle401(apiId);
@@ -384,8 +395,8 @@ export class FallbackSdk {
   async getDeviceList(params?: DeviceListParams): Promise<DeviceListResponse> {
     const queryParams = new URLSearchParams();
 
-    if (params?.limit) queryParams.set('limit', params.limit.toString());
-    if (params?.offset) queryParams.set('offset', params.offset.toString());
+    if (params?.limit != null) queryParams.set('limit', params.limit.toString());
+    if (params?.offset != null) queryParams.set('offset', params.offset.toString());
     if (params?.filter?.status) queryParams.set('status', params.filter.status);
     if (params?.filter?.type) queryParams.set('type', params.filter.type);
     if (params?.filter?.search) queryParams.set('search', params.filter.search);
@@ -453,8 +464,8 @@ export class FallbackSdk {
 
     if (params?.severity) queryParams.set('severity', params.severity);
     if (params?.status) queryParams.set('status', params.status);
-    if (params?.limit) queryParams.set('limit', params.limit.toString());
-    if (params?.offset) queryParams.set('offset', params.offset.toString());
+    if (params?.limit != null) queryParams.set('limit', params.limit.toString());
+    if (params?.offset != null) queryParams.set('offset', params.offset.toString());
     if (params?.deviceId) queryParams.set('deviceId', params.deviceId);
 
     const endpoint = `/alerts${queryParams.toString() ? `?${queryParams}` : ''}`;
