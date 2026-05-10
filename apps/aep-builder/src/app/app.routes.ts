@@ -49,6 +49,14 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: 'projects/:id/workspace',
+        data: { breadcrumb: { label: 'Workspace', icon: 'edit_square' } },
+        loadComponent: () =>
+          import('./features/builder/builder-workspace.component').then(
+            (m) => m.BuilderWorkspaceComponent,
+          ),
+      },
+      {
         path: 'settings',
         data: { breadcrumb: { label: 'Settings', icon: 'settings' } },
         loadComponent: () =>

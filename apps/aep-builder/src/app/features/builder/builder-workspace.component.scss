@@ -1,0 +1,418 @@
+/* ------------------------------------------------------------------ */
+/*  Workspace container                                              */
+/* ------------------------------------------------------------------ */
+
+.builder-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--ft-surface-primary, #f5f5f5);
+  color: var(--ft-text-primary, #1a1a2e);
+
+  &.layout-ide-dense {
+    --ft-density-spacing-xs: 2px;
+    --ft-density-spacing-sm: 4px;
+    --ft-density-spacing-md: 8px;
+    --ft-density-font-base: 0.875rem;
+    --ft-font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  &.layout-agent-stage {
+    .workspace-body {
+      display: grid;
+      grid-template-columns: 200px 1fr 240px;
+      grid-template-rows: 1fr;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Loading state                                                    */
+/* ------------------------------------------------------------------ */
+
+.workspace-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 24px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Toolbar                                                          */
+/* ------------------------------------------------------------------ */
+
+.workspace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 16px;
+  background-color: var(--ft-surface-primary, #fff);
+  border-bottom: 1px solid var(--ft-border, #e0e0e0);
+  flex-shrink: 0;
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .layout-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 40px;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 4px;
+      background-color: var(--ft-accent, #ff5900);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+  }
+
+  .toolbar-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .zoom-level {
+      min-width: 48px;
+      text-align: center;
+      font-size: 0.75rem;
+      font-family: var(--ft-font-family-mono, monospace);
+      color: var(--ft-text-secondary, #666);
+    }
+  }
+
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    button.active {
+      background-color: var(--ft-accent-muted, rgba(255, 89, 0, 0.1));
+      color: var(--ft-accent, #ff5900);
+    }
+  }
+
+  .toolbar-divider {
+    height: 24px;
+    margin: 0 4px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Workspace body (3-pane layout)                                     */
+/* ------------------------------------------------------------------ */
+
+.workspace-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Component Palette (left)                                         */
+/* ------------------------------------------------------------------ */
+
+.component-palette {
+  width: 200px;
+  flex-shrink: 0;
+  padding: 16px;
+  background-color: var(--ft-surface-secondary, #fafafa);
+  border-right: 1px solid var(--ft-border, #e0e0e0);
+  overflow-y: auto;
+
+  h3 {
+    margin: 0 0 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ft-text-secondary, #666);
+  }
+
+  .palette-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background-color: var(--ft-surface-primary, #fff);
+    border: 1px solid var(--ft-border, #e0e0e0);
+    cursor: grab;
+    transition:
+      box-shadow 0.15s ease,
+      transform 0.1s ease;
+
+    &:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border-color: var(--ft-accent, #ff5900);
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    mat-icon {
+      color: var(--ft-text-secondary, #666);
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    span {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Canvas area (center)                                             */
+/* ------------------------------------------------------------------ */
+
+.canvas-area {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+  background-color: var(--ft-surface-primary, #fff);
+
+  .canvas-grid {
+    display: grid;
+    gap: 8px;
+    min-height: 100%;
+    background-image:
+      linear-gradient(to right, var(--ft-border, #e8e8e8) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--ft-border, #e8e8e8) 1px, transparent 1px);
+    background-size: var(--cell-size, 80px) var(--cell-size, 80px);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Canvas widget                                                      */
+/* ------------------------------------------------------------------ */
+
+.canvas-widget {
+  position: relative;
+  background-color: var(--ft-surface-primary, #fff);
+  border: 2px solid var(--ft-border, #e0e0e0);
+  border-radius: 8px;
+  padding: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--ft-accent, #ff5900);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  &.selected {
+    border-color: var(--ft-accent, #ff5900);
+    box-shadow: 0 0 0 2px rgba(255, 89, 0, 0.2);
+  }
+
+  &.preview {
+    cursor: default;
+    border-color: transparent;
+
+    &:hover {
+      border-color: transparent;
+      box-shadow: none;
+    }
+  }
+
+  .widget-text {
+    margin: 0;
+    font-size: var(--ft-density-font-base, 1rem);
+    line-height: 1.5;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Resize handles                                                     */
+/* ------------------------------------------------------------------ */
+
+.resize-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  .handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: var(--ft-accent, #ff5900);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    pointer-events: auto;
+    cursor: pointer;
+
+    &.handle-nw {
+      top: -6px;
+      left: -6px;
+      cursor: nw-resize;
+    }
+    &.handle-ne {
+      top: -6px;
+      right: -6px;
+      cursor: ne-resize;
+    }
+    &.handle-sw {
+      bottom: -6px;
+      left: -6px;
+      cursor: sw-resize;
+    }
+    &.handle-se {
+      bottom: -6px;
+      right: -6px;
+      cursor: se-resize;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Property Inspector (right)                                         */
+/* ------------------------------------------------------------------ */
+
+.property-inspector {
+  width: 280px;
+  flex-shrink: 0;
+  padding: 16px;
+  background-color: var(--ft-surface-secondary, #fafafa);
+  border-left: 1px solid var(--ft-border, #e0e0e0);
+  overflow-y: auto;
+
+  h3 {
+    margin: 0 0 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ft-text-secondary, #666);
+  }
+
+  .inspector-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .inspector-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--ft-text-secondary, #666);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    input {
+      padding: 8px 12px;
+      border: 1px solid var(--ft-border, #e0e0e0);
+      border-radius: 4px;
+      font-size: 0.875rem;
+      background-color: var(--ft-surface-primary, #fff);
+      color: var(--ft-text-primary, #1a1a2e);
+
+      &:focus {
+        outline: none;
+        border-color: var(--ft-accent, #ff5900);
+      }
+    }
+
+    .field-value {
+      font-size: 0.875rem;
+      color: var(--ft-text-primary, #1a1a2e);
+    }
+  }
+
+  .inspector-actions {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--ft-border, #e0e0e0);
+
+    button {
+      width: 100%;
+    }
+  }
+
+  .inspector-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--ft-text-secondary, #666);
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      margin-bottom: 8px;
+      color: var(--ft-text-muted, #999);
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  A3 Agent-stage panels                                            */
+/* ------------------------------------------------------------------ */
+
+.agent-stage-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: var(--ft-surface-secondary, #fafafa);
+  border-top: 1px solid var(--ft-border, #e0e0e0);
+  height: 200px;
+  flex-shrink: 0;
+
+  .panel-stream,
+  .panel-plan,
+  .panel-inspect {
+    padding: 12px;
+    background-color: var(--ft-surface-primary, #fff);
+    border-radius: 8px;
+    border: 1px solid var(--ft-border, #e0e0e0);
+    overflow-y: auto;
+
+    h4 {
+      margin: 0 0 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--ft-text-secondary, #666);
+    }
+
+    .placeholder {
+      margin: 0;
+      font-size: 0.875rem;
+      color: var(--ft-text-muted, #999);
+      font-style: italic;
+    }
+  }
+}

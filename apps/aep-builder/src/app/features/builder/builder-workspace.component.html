@@ -1,0 +1,253 @@
+<!-- Builder Workspace — A1/A2/A3 layout variants with canvas, palette, inspector -->
+
+@if (loading()) {
+  <div class="workspace-loading">
+    <mat-progress-bar
+      mode="indeterminate"
+      aria-label="Loading workspace"
+    ></mat-progress-bar>
+  </div>
+} @else {
+  <div class="builder-workspace" [class]="layoutClass()">
+    <!-- Top toolbar -->
+    <header class="workspace-toolbar">
+      <div class="toolbar-left">
+        <span class="layout-badge">{{ layout() }}</span>
+        <h2>{{ project()?.name ?? 'Untitled Project' }}</h2>
+      </div>
+
+      <div class="toolbar-center">
+        <button mat-icon-button (click)="zoomOut()" matTooltip="Zoom out">
+          <mat-icon>zoom_out</mat-icon>
+        </button>
+        <span class="zoom-level">{{ cellPx() }}px</span>
+        <button mat-icon-button (click)="zoomIn()" matTooltip="Zoom in">
+          <mat-icon>zoom_in</mat-icon>
+        </button>
+      </div>
+
+      <div class="toolbar-right">
+        <button
+          mat-stroked-button
+          [class.active]="!previewMode()"
+          (click)="previewMode.set(false)"
+        >
+          <mat-icon>edit</mat-icon>
+          Edit
+        </button>
+        <button
+          mat-stroked-button
+          [class.active]="previewMode()"
+          (click)="togglePreview()"
+        >
+          <mat-icon>visibility</mat-icon>
+          Preview
+        </button>
+        <mat-divider vertical class="toolbar-divider"></mat-divider>
+        <button
+          mat-icon-button
+          (click)="inspectorOpen.update((v) => !v)"
+          [matTooltip]="inspectorOpen() ? 'Hide inspector' : 'Show inspector'"
+        >
+          <mat-icon>{{
+            inspectorOpen() ? 'chevron_right' : 'chevron_left'
+          }}</mat-icon>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main workspace area -->
+    <div class="workspace-body">
+      <!-- Left: Component Palette -->
+      @if (!previewMode()) {
+        <aside
+          class="component-palette"
+          cdkDropList
+          [cdkDropListData]="paletteItems()"
+        >
+          <h3>Components</h3>
+          @for (item of paletteItems(); track item.kind) {
+            <div
+              class="palette-item"
+              cdkDrag
+              [cdkDragData]="item"
+              cdkDragBoundary=".workspace-body"
+              [matTooltip]="'Drag to canvas'"
+            >
+              <mat-icon>{{ item.icon }}</mat-icon>
+              <span>{{ item.label }}</span>
+            </div>
+          }
+        </aside>
+      }
+
+      <!-- Center: Canvas Grid -->
+      <main
+        class="canvas-area"
+        cdkDropList
+        [cdkDropListData]="widgets()"
+        (cdkDropListDropped)="onPaletteDrop($event)"
+      >
+        <div
+          class="canvas-grid"
+          [style.grid-template-columns]="gridTemplateCols()"
+          [style.grid-template-rows]="gridTemplateRows()"
+          (click)="deselectWidget($event)"
+        >
+          @for (w of widgets(); track trackById($index, w)) {
+            <div
+              class="canvas-widget"
+              [class.selected]="selectedWidget()?.id === w.id"
+              [class.preview]="previewMode()"
+              [style.grid-area]="getWidgetGridArea(w)"
+              cdkDrag
+              [cdkDragData]="w"
+              [cdkDragDisabled]="previewMode()"
+              (click)="selectWidget(w); $event.stopPropagation()"
+            >
+              @switch (w.kind) {
+                @case ('stat-card') {
+                  <friendly-stat-card
+                    [label]="w.props['label'] | string"
+                    [value]="w.props['value'] | number"
+                    [unit]="w.props['unit'] | string"
+                    [delta]="w.props['delta'] | number"
+                    [seed]="w.props['seed'] | number"
+                  ></friendly-stat-card>
+                }
+                @case ('spark') {
+                  <friendly-spark
+                    [seed]="w.props['seed'] | number"
+                  ></friendly-spark>
+                }
+                @case ('stream-chunk') {
+                  <friendly-stream-chunk
+                    [kind]="w.props['kind']"
+                    [payload]="w.props['payload']"
+                  ></friendly-stream-chunk>
+                }
+                @case ('text') {
+                  <p class="widget-text">{{ w.props['content'] }}</p>
+                }
+              }
+
+              <!-- Resize handles (edit mode only) -->
+              @if (!previewMode() && selectedWidget()?.id === w.id) {
+                <div class="resize-handles">
+                  <div
+                    class="handle handle-nw"
+                    (mousedown)="updateWidgetSize(w, 'w', -1)"
+                  ></div>
+                  <div
+                    class="handle handle-ne"
+                    (mousedown)="updateWidgetSize(w, 'w', 1)"
+                  ></div>
+                  <div
+                    class="handle handle-sw"
+                    (mousedown)="updateWidgetSize(w, 'h', -1)"
+                  ></div>
+                  <div
+                    class="handle handle-se"
+                    (mousedown)="updateWidgetSize(w, 'h', 1)"
+                  ></div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </main>
+
+      <!-- Right: Property Inspector -->
+      @if (inspectorOpen() && !previewMode()) {
+        <aside class="property-inspector">
+          <h3>Properties</h3>
+          @if (selectedWidget(); as sw) {
+            <div class="inspector-form">
+              <div class="inspector-field">
+                <label>Kind</label>
+                <span class="field-value">{{ sw.kind }}</span>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              @for (prop of sw.props | keyvalue; track prop.key) {
+                <div class="inspector-field">
+                  <label>{{ prop.key }}</label>
+                  @if (isStringProp(prop.value)) {
+                    <input
+                      matInput
+                      [value]="prop.value"
+                      (change)="
+                        updateWidgetProp(
+                          sw,
+                          prop.key,
+                          $any($event).target.value
+                        )
+                      "
+                    />
+                  } @else if (isNumberProp(prop.value)) {
+                    <input
+                      matInput
+                      type="number"
+                      [value]="prop.value"
+                      (change)="
+                        updateWidgetProp(
+                          sw,
+                          prop.key,
+                          +$any($event).target.value
+                        )
+                      "
+                    />
+                  } @else {
+                    <code>{{ prop.value | json }}</code>
+                  }
+                </div>
+              }
+
+              <mat-divider></mat-divider>
+
+              <div class="inspector-actions">
+                <button
+                  mat-stroked-button
+                  color="warn"
+                  (click)="deleteWidget(sw)"
+                >
+                  <mat-icon>delete</mat-icon>
+                  Delete Widget
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="inspector-empty">
+              <mat-icon>touch_app</mat-icon>
+              <p>Select a widget to edit its properties</p>
+            </div>
+          }
+        </aside>
+      }
+    </div>
+
+    <!-- A3 Agent-stage panels (only when layout === 'A3') -->
+    @if (isA3()) {
+      <div class="agent-stage-panels">
+        <div class="panel-stream">
+          <h4>Stream</h4>
+          @for (msg of agentStream.messages(); track $index) {
+            <friendly-stream-chunk
+              kind="status"
+              [payload]="{ content: msg.content }"
+            ></friendly-stream-chunk>
+          }
+        </div>
+        <div class="panel-plan">
+          <h4>Plan</h4>
+          <p class="placeholder">Agent execution plan will appear here</p>
+        </div>
+        <div class="panel-inspect">
+          <h4>Inspect</h4>
+          <p class="placeholder">Tool call inspection will appear here</p>
+        </div>
+      </div>
+    }
+  </div>
+}
