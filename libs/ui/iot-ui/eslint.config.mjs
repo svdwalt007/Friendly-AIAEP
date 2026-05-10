@@ -41,6 +41,28 @@ export default [
     },
   },
   {
+    // AEP v2 dynamic agentic UX primitives use the public "friendly-*" prefix.
+    files: ['**/lib/primitives/**/*.ts'],
+    rules: {
+      '@angular-eslint/component-selector': [
+        'error',
+        {
+          type: 'element',
+          prefix: 'friendly',
+          style: 'kebab-case',
+        },
+      ],
+      '@angular-eslint/directive-selector': [
+        'error',
+        {
+          type: 'attribute',
+          prefix: 'friendly',
+          style: 'camelCase',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.html'],
     // Override or add rules here
     rules: {},

@@ -151,6 +151,92 @@
   --ft-input-padding: var(--ft-spacing-md);
 }
 
+
+/* ========================================
+ * AEP v2 — DYNAMIC AGENTIC UX EXTENSIONS
+ * ----------------------------------------
+ * Optional accent palette, density variants, and grid overlay.
+ * Existing tokens are extended only — no new brand colours are introduced.
+ * ======================================== */
+
+:root {
+  /* Default accent surface tracks the primary brand accent (orange). */
+  --ft-accent-current: var(--ft-accent);
+
+  /* Density-aware spacing & font sizing.
+   * Defaults match the comfortable density to preserve legacy layouts. */
+  --ft-density-spacing-xs: var(--ft-spacing-xs);
+  --ft-density-spacing-sm: var(--ft-spacing-sm);
+  --ft-density-spacing-md: var(--ft-spacing-md);
+  --ft-density-spacing-lg: var(--ft-spacing-lg);
+  --ft-density-font-base: var(--ft-font-size-base);
+  --ft-density-font-sm: var(--ft-font-size-sm);
+  --ft-density-line-height: var(--ft-line-height-normal);
+
+  /* 12-column grid overlay (debug aid; off by default). */
+  --ft-grid-columns: 12;
+  --ft-grid-gutter: var(--ft-spacing-md);
+  --ft-grid-overlay-color: rgba(255, 89, 0, 0.08);
+  --ft-grid-overlay-line-color: rgba(255, 89, 0, 0.18);
+}
+
+/* ----- Accent variants ----- */
+[data-accent='orange'] {
+  --ft-accent-current: var(--ft-accent);
+}
+
+[data-accent='azure'] {
+  --ft-accent-current: var(--ft-info);
+}
+
+[data-accent='viridian'] {
+  --ft-accent-current: var(--ft-success);
+}
+
+/* ----- Density variants ----- */
+[data-density='comfortable'] {
+  --ft-density-spacing-xs: var(--ft-spacing-xs);
+  --ft-density-spacing-sm: var(--ft-spacing-sm);
+  --ft-density-spacing-md: var(--ft-spacing-md);
+  --ft-density-spacing-lg: var(--ft-spacing-lg);
+  --ft-density-font-base: var(--ft-font-size-base);
+  --ft-density-font-sm: var(--ft-font-size-sm);
+  --ft-density-line-height: var(--ft-line-height-normal);
+}
+
+[data-density='compact'] {
+  --ft-density-spacing-xs: 2px;
+  --ft-density-spacing-sm: 4px;
+  --ft-density-spacing-md: 8px;
+  --ft-density-spacing-lg: 12px;
+  --ft-density-font-base: var(--ft-font-size-sm);
+  --ft-density-font-sm: var(--ft-font-size-xs);
+  --ft-density-line-height: var(--ft-line-height-tight);
+}
+
+/* ----- 12-col grid overlay (toggle via [data-show-grid]) ----- */
+[data-show-grid] {
+  position: relative;
+}
+
+[data-show-grid]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--ft-z-tooltip);
+  background-image:
+    linear-gradient(
+      to right,
+      var(--ft-grid-overlay-line-color) 0,
+      var(--ft-grid-overlay-line-color) 1px,
+      transparent 1px,
+      transparent calc(100% / var(--ft-grid-columns))
+    );
+  background-size: calc(100% / var(--ft-grid-columns)) 100%;
+  background-color: var(--ft-grid-overlay-color);
+}
+
 /* ========================================
  * DARK MODE OVERRIDES
  * ======================================== */
