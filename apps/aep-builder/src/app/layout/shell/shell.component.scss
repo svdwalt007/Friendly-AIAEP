@@ -1,8 +1,14 @@
+/**
+ * Shell Component Styles — editorial chrome for authenticated AEP v2 screens.
+ * Extends Phase 1 tokens; no new brand colours are introduced.
+ */
+
 .shell-container {
   height: 100vh;
   width: 100vw;
 }
 
+/* ----- Left Rail ---- */
 .shell-sidenav {
   width: 240px;
   background-color: var(--ft-primary);
@@ -63,6 +69,23 @@
   overflow: hidden;
 }
 
+.sidenav-tenant {
+  padding: var(--ft-spacing-sm) var(--ft-spacing-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+
+  &__label {
+    font-size: var(--ft-font-size-xs);
+    font-weight: var(--ft-font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 .sidenav-footer {
   margin-top: auto;
   padding: var(--ft-spacing-sm);
@@ -75,18 +98,52 @@
   }
 }
 
+/* ----- Top Bar ---- */
 .shell-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-density-spacing-sm, 8px);
   background-color: var(--ft-surface-primary);
   color: var(--ft-text-primary);
   border-bottom: 1px solid var(--ft-border-color);
   height: 64px;
   box-shadow: var(--ft-shadow-xs);
+  padding-inline: var(--ft-density-spacing-md, 16px);
+
+  &__breadcrumb {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
 }
 
 .toolbar-spacer {
   flex: 1 1 auto;
 }
 
+.toolbar-project {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-density-spacing-xs, 4px);
+  padding: var(--ft-density-spacing-xs, 4px) var(--ft-density-spacing-sm, 8px);
+  border-radius: var(--ft-radius-sm);
+  background-color: var(--ft-surface-secondary);
+  font-size: var(--ft-density-font-sm, 0.875rem);
+  color: var(--ft-text-secondary);
+  white-space: nowrap;
+
+  &__icon {
+    font-size: 1em;
+    width: 1em;
+    height: 1em;
+    line-height: 1;
+  }
+
+  &__name {
+    font-weight: var(--ft-font-weight-medium);
+  }
+}
+
+/* ----- Content ---- */
 .shell-content {
   display: flex;
   flex-direction: column;
@@ -116,11 +173,13 @@
   }
 }
 
+/* ----- Responsive ---- */
 @media (max-width: 960px) {
   .shell-sidenav {
     width: 64px;
 
-    .brand-text {
+    .brand-text,
+    .sidenav-tenant {
       display: none;
     }
 

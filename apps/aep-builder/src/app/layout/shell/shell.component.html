@@ -1,9 +1,8 @@
 <mat-sidenav-container class="shell-container">
-  <!-- Sidenav -->
   <mat-sidenav
     mode="side"
     [opened]="true"
-    [class.collapsed]="sidenavCollapsed()"
+    [class.collapsed]="shellState.railCollapsed()"
     class="shell-sidenav"
   >
     <!-- Brand -->
@@ -12,12 +11,21 @@
         src="assets/logo-icon.svg"
         alt="Friendly"
         class="brand-icon"
-        onerror="this.style.display='none'"
+        onerror="this.style.display = 'none'"
       />
-      @if (!sidenavCollapsed()) {
+      @if (!shellState.railCollapsed()) {
         <span class="brand-text">Friendly AEP</span>
       }
     </div>
+
+    <!-- Tenant badge (when resolved) -->
+    @if (shellState.hasTenant() && !shellState.railCollapsed()) {
+      <div class="sidenav-tenant">
+        <span class="sidenav-tenant__label">{{
+          shellState.tenantLabel()
+        }}</span>
+      </div>
+    }
 
     <!-- Navigation -->
     <mat-nav-list>
@@ -26,11 +34,11 @@
           mat-list-item
           [routerLink]="item.route"
           routerLinkActive="active-link"
-          [matTooltip]="sidenavCollapsed() ? item.label : ''"
+          [matTooltip]="shellState.railCollapsed() ? item.label : ''"
           matTooltipPosition="right"
         >
           <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          @if (!sidenavCollapsed()) {
+          @if (!shellState.railCollapsed()) {
             <span matListItemTitle>{{ item.label }}</span>
           }
         </a>
@@ -39,25 +47,59 @@
 
     <!-- Collapse toggle -->
     <div class="sidenav-footer">
-      <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidebar">
-        <mat-icon>{{ sidenavCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+      <button
+        mat-icon-button
+        (click)="toggleSidenav()"
+        [attr.aria-label]="
+          shellState.railCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'
+        "
+      >
+        <mat-icon>{{
+          shellState.railCollapsed() ? 'chevron_right' : 'chevron_left'
+        }}</mat-icon>
       </button>
     </div>
   </mat-sidenav>
 
-  <!-- Main content -->
   <mat-sidenav-content class="shell-content">
-    <!-- Toolbar -->
+    <!-- Top bar -->
     <mat-toolbar class="shell-toolbar">
+      <!-- Breadcrumb trail -->
+      <app-shell-breadcrumb
+        class="shell-toolbar__breadcrumb"
+      ></app-shell-breadcrumb>
+
       <span class="toolbar-spacer"></span>
 
+      <!-- Project context chip -->
+      @if (shellState.hasProject()) {
+        <div class="toolbar-project">
+          <mat-icon class="toolbar-project__icon" aria-hidden="true"
+            >folder</mat-icon
+          >
+          <span class="toolbar-project__name">{{
+            shellState.projectLabel()
+          }}</span>
+        </div>
+      }
+
       <!-- Theme toggle -->
-      <button mat-icon-button (click)="themeService.toggle()" [matTooltip]="themeService.isDark() ? 'Light mode' : 'Dark mode'">
-        <mat-icon>{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      <button
+        mat-icon-button
+        (click)="themeService.toggle()"
+        [matTooltip]="themeService.isDark() ? 'Light mode' : 'Dark mode'"
+      >
+        <mat-icon>{{
+          themeService.isDark() ? 'light_mode' : 'dark_mode'
+        }}</mat-icon>
       </button>
 
       <!-- User menu -->
-      <button mat-icon-button [matMenuTriggerFor]="userMenu" aria-label="User menu">
+      <button
+        mat-icon-button
+        [matMenuTriggerFor]="userMenu"
+        aria-label="User menu"
+      >
         <mat-icon>account_circle</mat-icon>
       </button>
       <mat-menu #userMenu="matMenu">
@@ -85,3 +127,6 @@
     </div>
   </mat-sidenav-content>
 </mat-sidenav-container>
+
+<!-- Dev-only theme tweaks panel -->
+<app-shell-theme-tweaks></app-shell-theme-tweaks>

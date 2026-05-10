@@ -18,7 +18,9 @@ describe('FriendlyStatCard', () => {
   let fixture: ComponentFixture<FriendlyStatCard>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [FriendlyStatCard] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [FriendlyStatCard],
+    }).compileComponents();
     fixture = TestBed.createComponent(FriendlyStatCard);
     fixture.componentRef.setInput('label', 'Active devices');
     fixture.componentRef.setInput('value', 1234);
@@ -27,18 +29,26 @@ describe('FriendlyStatCard', () => {
 
   it('renders label and value', () => {
     const card = getCard(fixture);
-    expect(card.querySelector('.friendly-stat-card__label')?.textContent).toContain('Active devices');
-    expect(card.querySelector('.friendly-stat-card__amount')?.textContent).toContain('1234');
+    expect(
+      card.querySelector('.friendly-stat-card__label')?.textContent,
+    ).toContain('Active devices');
+    expect(
+      card.querySelector('.friendly-stat-card__amount')?.textContent,
+    ).toContain('1234');
   });
 
   it('omits delta block when delta is null', () => {
-    expect(getCard(fixture).querySelector('.friendly-stat-card__delta')).toBeNull();
+    expect(
+      getCard(fixture).querySelector('.friendly-stat-card__delta'),
+    ).toBeNull();
   });
 
   it('renders unit when provided', async () => {
     fixture.componentRef.setInput('unit', 'ms');
     await fixture.whenStable();
-    expect(getCard(fixture).querySelector('.friendly-stat-card__unit')?.textContent).toContain('ms');
+    expect(
+      getCard(fixture).querySelector('.friendly-stat-card__unit')?.textContent,
+    ).toContain('ms');
   });
 
   it('derives trend "up" from positive delta and renders +sign', async () => {
@@ -48,9 +58,19 @@ describe('FriendlyStatCard', () => {
     const card = getCard(fixture);
     expect(card.getAttribute('data-trend')).toBe('up');
     const delta = card.querySelector('.friendly-stat-card__delta');
-    expect(delta?.classList.contains('friendly-stat-card__delta--up')).toBe(true);
-    expect(delta?.querySelector('.friendly-stat-card__delta-value')?.textContent?.trim()).toBe('+12');
-    expect(delta?.querySelector('.friendly-stat-card__delta-icon')?.textContent?.trim()).toBe('▲');
+    expect(delta?.classList.contains('friendly-stat-card__delta--up')).toBe(
+      true,
+    );
+    expect(
+      delta
+        ?.querySelector('.friendly-stat-card__delta-value')
+        ?.textContent?.trim(),
+    ).toBe('+12');
+    expect(
+      delta
+        ?.querySelector('.friendly-stat-card__delta-icon')
+        ?.textContent?.trim(),
+    ).toBe('▲');
   });
 
   it('derives trend "down" from negative delta', async () => {
@@ -59,7 +79,11 @@ describe('FriendlyStatCard', () => {
     const card = getCard(fixture);
     expect(card.getAttribute('data-trend')).toBe('down');
     expect(card.querySelector('.friendly-stat-card__delta--down')).toBeTruthy();
-    expect(card.querySelector('.friendly-stat-card__delta-value')?.textContent?.trim()).toBe('-3');
+    expect(
+      card
+        .querySelector('.friendly-stat-card__delta-value')
+        ?.textContent?.trim(),
+    ).toBe('-3');
   });
 
   it('derives trend "flat" from zero delta', async () => {
@@ -109,6 +133,8 @@ describe('FriendlyStatCard', () => {
   it('forwards an aria-label when provided', async () => {
     fixture.componentRef.setInput('ariaLabel', 'Active devices KPI');
     await fixture.whenStable();
-    expect(getCard(fixture).getAttribute('aria-label')).toBe('Active devices KPI');
+    expect(getCard(fixture).getAttribute('aria-label')).toBe(
+      'Active devices KPI',
+    );
   });
 });

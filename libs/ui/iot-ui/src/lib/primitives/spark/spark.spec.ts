@@ -14,8 +14,12 @@ function getSvg(fixture: ComponentFixture<FriendlySpark>): SVGSVGElement {
   return svg as SVGSVGElement;
 }
 
-function getPolyline(fixture: ComponentFixture<FriendlySpark>): SVGPolylineElement {
-  const line = fixture.nativeElement.querySelector('polyline.friendly-spark__line');
+function getPolyline(
+  fixture: ComponentFixture<FriendlySpark>,
+): SVGPolylineElement {
+  const line = fixture.nativeElement.querySelector(
+    'polyline.friendly-spark__line',
+  );
   expect(line).toBeTruthy();
   return line as SVGPolylineElement;
 }
@@ -24,7 +28,9 @@ describe('FriendlySpark', () => {
   let fixture: ComponentFixture<FriendlySpark>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [FriendlySpark] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [FriendlySpark],
+    }).compileComponents();
     fixture = TestBed.createComponent(FriendlySpark);
     await fixture.whenStable();
   });

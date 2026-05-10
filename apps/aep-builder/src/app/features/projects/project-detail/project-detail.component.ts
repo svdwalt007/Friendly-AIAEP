@@ -7,7 +7,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ProjectService, Project } from '../../../core/services/project.service';
+import {
+  ProjectService,
+  Project,
+} from '../../../core/services/project.service';
+import { ShellStateService } from '@friendly-tech/ui/iot-ui';
 
 @Component({
   selector: 'app-project-detail',
@@ -27,6 +31,7 @@ import { ProjectService, Project } from '../../../core/services/project.service'
 })
 export class ProjectDetailComponent implements OnInit {
   private projectService = inject(ProjectService);
+  private shellState = inject(ShellStateService);
 
   id = input.required<string>();
   project = signal<Project | null>(null);
@@ -37,6 +42,17 @@ export class ProjectDetailComponent implements OnInit {
       next: (project) => {
         this.project.set(project);
         this.loading.set(false);
+        // Bind shell state to current project context
+        this.shellState.setProject({
+          id: project.id,
+          name: project.name,
+          tenantId: project.id, // Best effort; backend does not expose tenantId on Project yet
+        });
+        this.shellState.pushBreadcrumb({
+          label: project.name,
+          route: null,
+          icon: null,
+        });
       },
       error: () => this.loading.set(false),
     });

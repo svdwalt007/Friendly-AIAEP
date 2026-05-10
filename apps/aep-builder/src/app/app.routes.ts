@@ -6,7 +6,9 @@ export const appRoutes: Route[] = [
     path: 'login',
     canActivate: [loginGuard],
     loadComponent: () =>
-      import('./features/auth/login/login.component').then((m) => m.LoginComponent),
+      import('./features/auth/login/login.component').then(
+        (m) => m.LoginComponent,
+      ),
   },
   {
     path: '',
@@ -16,28 +18,43 @@ export const appRoutes: Route[] = [
     children: [
       {
         path: 'dashboard',
+        data: { breadcrumb: { label: 'Dashboard', icon: 'dashboard' } },
         loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+          import('./features/dashboard/dashboard.component').then(
+            (m) => m.DashboardComponent,
+          ),
       },
       {
         path: 'projects',
+        data: { breadcrumb: { label: 'Projects', icon: 'folder' } },
         loadComponent: () =>
-          import('./features/projects/project-list/project-list.component').then((m) => m.ProjectListComponent),
+          import('./features/projects/project-list/project-list.component').then(
+            (m) => m.ProjectListComponent,
+          ),
       },
       {
         path: 'projects/:id',
+        data: { breadcrumb: { label: 'Project Detail' } },
         loadComponent: () =>
-          import('./features/projects/project-detail/project-detail.component').then((m) => m.ProjectDetailComponent),
+          import('./features/projects/project-detail/project-detail.component').then(
+            (m) => m.ProjectDetailComponent,
+          ),
       },
       {
         path: 'projects/:id/builder',
+        data: { breadcrumb: { label: 'Builder', icon: 'build' } },
         loadComponent: () =>
-          import('./features/builder/builder.component').then((m) => m.BuilderComponent),
+          import('./features/builder/builder.component').then(
+            (m) => m.BuilderComponent,
+          ),
       },
       {
         path: 'settings',
+        data: { breadcrumb: { label: 'Settings', icon: 'settings' } },
         loadComponent: () =>
-          import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+          import('./features/settings/settings.component').then(
+            (m) => m.SettingsComponent,
+          ),
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
