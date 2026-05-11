@@ -1,0 +1,26 @@
+{
+  "name": "llm-providers",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/core/llm-providers/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/core/llm-providers",
+        "main": "libs/core/llm-providers/src/index.ts",
+        "tsConfig": "libs/core/llm-providers/tsconfig.lib.json",
+        "assets": ["libs/core/llm-providers/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{projectRoot}/coverage"],
+      "options": {
+        "config": "libs/core/llm-providers/vitest.config.mts"
+      }
+    }
+  }
+}

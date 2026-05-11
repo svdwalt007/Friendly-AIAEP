@@ -1,0 +1,189 @@
+name: Reusable Test Workflow
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '20'
+      test-type:
+        description: 'Type of tests to run (unit, integration, e2e)'
+        required: false
+        type: string
+        default: 'unit'
+      coverage:
+        description: 'Enable coverage reporting'
+        required: false
+        type: boolean
+        default: true
+      parallel-tasks:
+        description: 'Number of parallel tasks'
+        required: false
+        type: number
+        default: 3
+    outputs:
+      test-result:
+        description: 'Test execution result'
+        value: ${{ jobs.test.outputs.result }}
+      coverage-percentage:
+        description: 'Code coverage percentage'
+        value: ${{ jobs.test.outputs.coverage }}
+    secrets:
+      NX_CLOUD_ACCESS_TOKEN:
+        required: false
+      CODECOV_TOKEN:
+        required: false
+      DATABASE_URL:
+        required: false
+
+env:
+  NODE_VERSION: ${{ inputs.node-version }}
+  PNPM_VERSION: '10'
+  TEST_TYPE: ${{ inputs.test-type }}
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      result: ${{ steps.test.outputs.result }}
+      coverage: ${{ steps.coverage.outputs.percentage }}
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: friendly
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: friendly_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U friendly"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://friendly:test_password@localhost:5432/friendly_test' }}
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      NODE_ENV: test
+      CI: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-test-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-test-
+            ${{ runner.os }}-pnpm-
+
+      - name: Cache Nx
+        uses: actions/cache@v4
+        with:
+          path: |
+            .nx/cache
+            node_modules/.cache/nx
+          key: ${{ runner.os }}-nx-test-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('nx.json', 'apps/**/project.json', 'libs/**/project.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nx-test-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nx-test-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive appropriate SHAs for base and head for `nx affected` commands
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Run database migrations
+        if: inputs.test-type == 'integration' || inputs.test-type == 'e2e'
+        run: |
+          cd libs/data/prisma-schema
+          pnpm exec prisma migrate deploy
+          pnpm exec prisma db seed
+
+      - name: Run tests
+        id: test
+        run: |
+          if [[ "${{ inputs.coverage }}" == "true" ]]; then
+            pnpm nx affected -t test --parallel=${{ inputs.parallel-tasks }} --coverage --codeCoverage
+          else
+            pnpm nx affected -t test --parallel=${{ inputs.parallel-tasks }}
+          fi
+          echo "result=success" >> $GITHUB_OUTPUT
+        env:
+          NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
+      - name: Calculate coverage percentage
+        id: coverage
+        if: inputs.coverage
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+            echo "percentage=${COVERAGE}" >> $GITHUB_OUTPUT
+          else
+            echo "percentage=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload coverage to Codecov
+        if: inputs.coverage && secrets.CODECOV_TOKEN
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/**/coverage-final.json
+          flags: ${{ inputs.test-type }}
+          name: codecov-${{ inputs.test-type }}
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ inputs.test-type }}
+          path: |
+            coverage/
+            test-results/
+            junit.xml
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## Test Results (${{ inputs.test-type }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node Version**: ${{ env.NODE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Result**: ${{ steps.test.outputs.result }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ inputs.coverage }}" == "true" ]]; then
+            echo "- **Coverage**: ${{ steps.coverage.outputs.percentage }}%" >> $GITHUB_STEP_SUMMARY
+          fi

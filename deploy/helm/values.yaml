@@ -1,0 +1,71 @@
+environment: staging
+
+image:
+  registry: ghcr.io/svdwalt007/friendly-aiaep
+  pullPolicy: IfNotPresent
+  tag: latest
+
+replicaCount: 1
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 250m
+
+apiGateway:
+  port: 3001
+  replicaCount: 1
+
+builder:
+  port: 80
+  replicaCount: 1
+
+previewHost:
+  port: 3002
+  replicaCount: 1
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/websocket-services: "friendly-aep-api-gateway"
+  hosts:
+    - host: friendly-aep.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: builder
+        - path: /api
+          pathType: Prefix
+          service: api-gateway
+        - path: /preview
+          pathType: Prefix
+          service: preview-host
+  tls: []
+
+postgresql:
+  enabled: true
+  auth:
+    username: friendly
+    database: friendly_aep
+    existingSecret: friendly-aep-db-secret
+
+redis:
+  enabled: true
+  auth:
+    existingSecret: friendly-aep-redis-secret
+
+influxdb:
+  enabled: true
+
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: ""
+  persistence:
+    enabled: true
+    size: 5Gi

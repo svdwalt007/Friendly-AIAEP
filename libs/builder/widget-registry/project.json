@@ -1,0 +1,19 @@
+{
+  "name": "widget-registry",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/builder/widget-registry/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/builder/widget-registry",
+        "main": "libs/builder/widget-registry/src/index.ts",
+        "tsConfig": "libs/builder/widget-registry/tsconfig.lib.json",
+        "assets": ["libs/builder/widget-registry/*.md"]
+      }
+    }
+  }
+}

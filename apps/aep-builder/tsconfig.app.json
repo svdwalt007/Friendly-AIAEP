@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "lib": ["ES2022", "DOM"],
+    "types": [],
+    "preserveSymlinks": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/*.stories.ts"],
+  "angularCompilerOptions": {
+    "strictStandalone": false
+  }
+}

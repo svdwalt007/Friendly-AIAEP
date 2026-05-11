@@ -1,0 +1,807 @@
+
+docker compose -f docker/docker-compose.dev.yml up -d
+[+] up 7/7
+ ! Image grafana/loki:3.3.2                            Interrupted                 2.3s
+ ! Image prometheuscommunity/postgres-exporter:v0.17.0 Interrupted                 2.3s
+ ! Image oliver006/redis_exporter:v1.68.0              Interrupted                 2.3s
+ ! Image prom/node-exporter:v1.9.0                     Interrupted                 2.3s
+ ! Image grafana/promtail:3.3.2                        Interrupted                 2.3s
+ ✘ Image jaegertracing/all-in-one:1.62                 Error failed to re...       2.3s
+ ! Image prom/prometheus:v3.2.1                        Interrupted                 2.3s
+Error response from daemon: failed to resolve reference "docker.io/jaegertracing/all-in-one:1.62": docker.io/jaegertracing/all-in-one:1.62: not found
+
+
+--------------
+
+
+pnpm nx build aep-builder --configuration=development
+> nx run aep-builder:build:development
+
+
+Application bundle generation failed. [24.103 seconds] - 2026-04-15T11:58:49.831Z
+
+▲ [WARNING] Duplicate member "diffs" in class body [duplicate-class-member]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:251:4:
+      251 │     diffs = this._diffs.asReadonly();
+          ╵     ~~~~~
+
+  The original member "diffs" is here:
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:239:8:
+      239 │     set diffs(value) {
+          ╵         ~~~~~
+
+
+▲ [WARNING] Duplicate member "viewMode" in class body [duplicate-class-member]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:252:4:
+      252 │     viewMode = this._viewMode.asReadonly();
+          ╵     ~~~~~~~~
+
+  The original member "viewMode" is here:
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:242:8:
+      242 │     set viewMode(value) {
+          ╵         ~~~~~~~~
+
+
+▲ [WARNING] Duplicate member "components" in class body [duplicate-class-member]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:108:4:
+      108 │     components = this._components.asReadonly();
+          ╵     ~~~~~~~~~~
+
+  The original member "components" is here:
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:100:8:
+      100 │     set components(value) {
+          ╵         ~~~~~~~~~~
+
+
+▲ [WARNING] Deprecation [plugin angular-sass]
+
+    apps/aep-builder/src/app/features/builder/builder.component.scss:1:8:
+      1 │ @import '../../../styles/design-tokens';
+        ╵         ^
+
+
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+
+
+▲ [WARNING] Deprecation [plugin angular-sass]
+
+    apps/aep-builder/src/app/features/builder/builder.component.scss:2:8:
+      2 │ @import '../../../styles/mixins';
+        ╵         ^
+
+
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+
+
+▲ [WARNING] Deprecation [plugin angular-sass]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.scss:1:8:
+      1 │ @import '../../../../styles/design-tokens';
+        ╵         ^
+
+
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+
+
+▲ [WARNING] Deprecation [plugin angular-sass]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.scss:2:8:
+      2 │ @import '../../../../styles/mixins';
+        ╵         ^
+
+
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+
+
+▲ [WARNING] Deprecation [plugin angular-sass]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.scss:1:8:
+      1 │ @import '../../../../styles/design-tokens';
+        ╵         ^
+
+
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+
+
+▲ [WARNING] Deprecation [plugin angular-sass]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.scss:2:8:
+      2 │ @import '../../../../styles/mixins';
+        ╵         ^
+
+
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+
+
+▲ [WARNING] Deprecation [plugin angular-sass]
+
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.scss:1:8:
+      1 │ @import '../../../../styles/design-tokens';
+        ╵         ^
+
+
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+
+
+▲ [WARNING] Deprecation [plugin angular-sass]
+
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.scss:2:8:
+      2 │ @import '../../../../styles/mixins';
+        ╵         ^
+
+
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+
+
+✘ [ERROR] Declarations may only be used within style rules.
+    ╷
+325 │     animation-duration: 0.01ms !important;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ╵
+  apps/aep-builder/src/styles/mixins.scss 325:5                                          reduced-motion()
+  apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.scss 169:1  root stylesheet [plugin angular-sass]
+
+
+✘ [ERROR] Declarations may only be used within style rules.
+    ╷
+325 │     animation-duration: 0.01ms !important;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ╵
+  apps/aep-builder/src/styles/mixins.scss 325:5                                                      reduced-motion()
+  apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.scss 281:1  root stylesheet [plugin angular-sass]
+
+
+✘ [ERROR] Declarations may only be used within style rules.
+    ╷
+325 │     animation-duration: 0.01ms !important;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ╵
+  apps/aep-builder/src/styles/mixins.scss 325:5                           reduced-motion()
+  apps/aep-builder/src/app/features/builder/builder.component.scss 342:1  root stylesheet [plugin angular-sass]
+
+
+✘ [ERROR] Declarations may only be used within style rules.
+    ╷
+325 │     animation-duration: 0.01ms !important;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ╵
+  apps/aep-builder/src/styles/mixins.scss 325:5                                                      reduced-motion()
+  apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.scss 272:1  root stylesheet [plugin angular-sass]
+
+
+✘ [ERROR] NG5002: Unsupported expression in a two-way binding [plugin angular-compiler]
+
+    apps/aep-builder/src/app/features/builder/builder.component.html:121:10:
+      121 │           [(selectedIndex)]="activeView()"
+          ╵           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component BuilderComponent.
+
+    apps/aep-builder/src/app/features/builder/builder.component.ts:40:15:
+      40 │   templateUrl: './builder.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/features/builder/builder.component.html:166:13:
+      166 │         @if (activeView() === 0) {
+          ╵              ~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component BuilderComponent.
+
+    apps/aep-builder/src/app/features/builder/builder.component.ts:40:15:
+      40 │   templateUrl: './builder.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/features/builder/builder.component.html:175:13:
+      175 │         @if (activeView() === 1) {
+          ╵              ~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component BuilderComponent.
+
+    apps/aep-builder/src/app/features/builder/builder.component.ts:40:15:
+      40 │   templateUrl: './builder.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap. [plugin angular-compiler][0m
+
+    apps/aep-builder/src/app/features/builder/builder.component.html:183:13:
+      183 │         @if (activeView() === 2) {
+          ╵              ~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component BuilderComponent.
+
+    apps/aep-builder/src/app/features/builder/builder.component.ts:40:15:
+      40 │   templateUrl: './builder.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2349: This expression is not callable.
+  No constituent of type 'DiffViewMode' is callable. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:40:22:
+      40 │         [matTooltip]="viewMode() === 'split' ? 'Switch to unified ...
+         ╵                       ~~~~~~~~
+
+  Error occurs in the template of component CodeDiffViewerComponent.
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2349: This expression is not callable.
+  No constituent of type 'DiffViewMode' is callable. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:41:27:
+      41 │         [attr.aria-label]="viewMode() === 'split' ? 'Switch to uni...
+         ╵                            ~~~~~~~~
+
+  Error occurs in the template of component CodeDiffViewerComponent.
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ ;31m[ERROR] TS2349: This expression is not callable.
+  No constituent of type 'DiffViewMode' is callable. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:43:21:
+      43 │         <mat-icon>{{ viewMode() === 'split' ? 'view_agenda' : 'vie...
+         ╵                      ~~~~~~~~
+
+  Error occurs in the template of component CodeDiffViewerComponent.
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2349: This expression is not callable.
+  Type 'FileDiff[]' has no call signatures. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:50:18:
+      50 │     @for (diff of diffs(); track diff.fileName) {
+         ╵                   ~~~~~
+
+  Error occurs in the template of component CodeDiffViewerComponent.
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2349: This expression is not callable.
+  No constituent of type 'DiffViewMode' is callable. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:90:17:
+      90 │             @if (viewMode() === 'unified') {
+         ╵                  ~~~~~~~~
+
+  Error occurs in the template of component CodeDiffViewerComponent.
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2307: Cannot find module '@storybook/angular' or its corresponding type declarations. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.stories.ts:1:36:
+      1 │ import type { Meta, StoryObj } from '@storybook/angular';
+        ╵                                     ~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2300: Duplicate identifier 'diffs'. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:54:11:
+      54 │   readonly diffs = this._diffs.asReadonly();
+         ╵            ~~~~~
+
+
+✘ [ERROR] TS2687: All declarations of 'diffs' must have identical modifiers. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:54:11:
+      54 │   readonly diffs = this._diffs.asReadonly();
+         ╵            ~~~~~
+
+
+✘ [ERROR] TS2717: Subsequent property declarations must have the same type.  Property 'diffs' must be of type 'FileDiff[]', but here has type 'Signal<FileDiff[]>'. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:54:11:
+      54 │   readonly diffs = this._diffs.asReadonly();
+         ╵            ~~~~~
+
+  'diffs' was also declared here.
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:38:15:
+      38 │   @Input() set diffs(value: FileDiff[]) {
+         ╵                ~~~~~
+
+
+✘ [ERROR] TS2300: Duplicate identifier 'viewMode'. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:55:11:
+      55 │   readonly viewMode = this._viewMode.asReadonly();
+         ╵            ~~~~~~~~
+
+
+✘ [ERROR] TS2687: All declarations of 'viewMode' must have identical modifiers. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:55:11:
+      55 │   readonly viewMode = this._viewMode.asReadonly();
+         ╵            ~~~~~~~~
+
+
+✘ [ERROR] TS2717: Subsequent property declarations must have the same type.  Property 'viewMode' must be of type 'DiffViewMode', but here has type 'Signal<DiffViewMode>'. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:55:11:
+      55 │   readonly viewMode = this._viewMode.asReadonly();
+         ╵            ~~~~~~~~
+
+  'viewMode' was also declared here.
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:42:15:
+      42 │   @Input() set viewMode(value: DiffViewMode) {
+         ╵                ~~~~~~~~
+
+
+✘ [ERROR] TS4111: Property 'default' comes from an index signature, so it must be accessed with ['default']. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:140:54:
+      140 │     return iconMap[language.toLowerCase()] || iconMap.default;
+          ╵                                                       ~~~~~~~
+
+
+✘ [ERROR] TS2341: Property 'searchQuery' is private and only accessible within class 'ComponentPickerComponent'. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.html:10:17:
+      10 │         [value]="searchQuery()"
+         ╵                  ~~~~~~~~~~~
+
+  Error occurs in the template of component ComponentPickerComponent.
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:45:15:
+      45 │   templateUrl: './component-picker.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2307: Cannot find module '@storybook/angular' or its corresponding type declarations. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:1:36:
+      1 │ import type { Meta, StoryObj } from '@storybook/angular';
+        ╵                                     ~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS6133: 'ComponentTemplate' is declared but its value is never read. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:2:35:
+      2 │ ...mponentPickerComponent, ComponentTemplate } from './component-pi...
+        ╵                            ~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS7006: Parameter 'story' implicitly has an 'any' type. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:22:5:
+      22 │     (story) => ({
+         ╵      ~~~~~
+
+
+✘ [ERROR] TS6133: 'canvasElement' is declared but its value is never read. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:72:15:
+      72 │   play: async ({ canvasElement }) => {
+         ╵                ~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS7031: Binding element 'canvasElement' implicitly has an 'any' type. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:72:17:
+      72 │   play: async ({ canvasElement }) => {
+         ╵                  ~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2300: Duplicate identifier 'components'. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:60:11:
+      60 │   readonly components = this._components.asReadonly();
+         ╵            ~~~~~~~~~~
+
+
+✘ [ERROR] TS2687: All declarations of 'components' must have identical modifiers. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:60:11:
+      60 │   readonly components = this._components.asReadonly();
+         ╵            ~~~~~~~~~~
+
+
+✘ [ERROR] TS2717: Subsequent property declarations must have the same type.  Property 'components' must be of type 'ComponentTemplate[]', but here has type 'Signal<ComponentTemplate[]>'. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:60:11:
+      60 │   readonly components = this._components.asReadonly();
+         ╵            ~~~~~~~~~~
+
+  'components' was also declared here.
+
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:49:15:
+      49 │   @Input() set components(value: ComponentTemplate[]) {
+         ╵                ~~~~~~~~~~
+
+
+✘ [ERROR] TS2341: Property 'splitPosition' is private and only accessible within class 'SplitPaneComponent'. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.html:23:26:
+      23 │     [attr.aria-valuenow]="splitPosition()"
+         ╵                           ~~~~~~~~~~~~~
+
+  Error occurs in the template of component SplitPaneComponent.
+
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.ts:21:15:
+      21 │   templateUrl: './split-pane.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS2307: Cannot find module '@storybook/angular' or its corresponding type declarations. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.stories.ts:1:36:
+      1 │ import type { Meta, StoryObj } from '@storybook/angular';
+        ╵                                     ~~~~~~~~~~~~~~~~~~~~
+
+
+✘ [ERROR] TS7006: Parameter 'args' implicitly has an 'any' type. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.stories.ts:43:11:
+      43 │   render: (args) => ({
+         ╵            ~~~~
+
+
+✘ [ERROR] TS7006: Parameter 'args' implicitly has an 'any' type. [plugin angular-compiler]
+
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.stories.ts:112:11:
+      112 │   render: (args) => ({
+          ╵            ~~~~
+
+
+
+——————————————————————————————————————————————————————————————————————————————————————
+
+ NX   Ran target build for project aep-builder (1m)
+
+   ✖  1/1 failed
+   ✔  0/1 succeeded [0 read from cache]
+
+
+
+-----------
+ pnpm nx serve aep-builder --configuration=test
+
+> nx run aep-builder:serve:test
+
+
+
+❯ Building...
+✔ Building...
+Application bundle generation failed. [14.895 seconds] - 2026-04-15T11:59:02.498Z
+
+▲ [WARNING] Duplicate member "diffs" in class body [duplicate-class-member]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:255:4:
+      255 │     diffs = this._diffs.asReadonly();
+          ╵     ~~~~~
+  The original member "diffs" is here:
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:243:8:
+      243 │     set diffs(value) {
+          ╵         ~~~~~
+▲ [WARNING] Duplicate member "viewMode" in class body [duplicate-class-member]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:256:4:
+      256 │     viewMode = this._viewMode.asReadonly();
+          ╵     ~~~~~~~~
+  The original member "viewMode" is here:
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:246:8:
+      246 │     set viewMode(value) {
+          ╵         ~~~~~~~~
+▲ [WARNING] Duplicate member "components" in class body [duplicate-class-member]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:116:4:
+      116 │     components = this._components.asReadonly();
+          ╵     ~~~~~~~~~~
+  The original member "components" is here:
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:108:8:
+      108 │     set components(value) {
+          ╵         ~~~~~~~~~~
+▲ [WARNING] Deprecation [plugin angular-sass]
+    apps/aep-builder/src/app/features/builder/builder.component.scss:1:8:
+      1 │ @import '../../../styles/design-tokens';
+        ╵         ^
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+▲ [WARNING] Deprecation [plugin angular-sass]
+    apps/aep-builder/src/app/features/builder/builder.component.scss:2:8:
+      2 │ @import '../../../styles/mixins';
+        ╵         ^
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+▲ [WARNING] Deprecation [plugin angular-sass]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.scss:1:8:
+      1 │ @import '../../../../styles/design-tokens';
+        ╵         ^
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+▲ [WARNING] Deprecation [plugin angular-sass]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.scss:2:8:
+      2 │ @import '../../../../styles/mixins';
+        ╵         ^
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+▲ [WARNING] Deprecation [plugin angular-sass]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.scss:1:8:
+      1 │ @import '../../../../styles/design-tokens';
+        ╵         ^
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+▲ [WARNING] Deprecation [plugin angular-sass]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.scss:2:8:
+      2 │ @import '../../../../styles/mixins';
+        ╵         ^
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+▲ [WARNING] Deprecation [plugin angular-sass]
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.scss:1:8:
+      1 │ @import '../../../../styles/design-tokens';
+        ╵         ^
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+▲ [WARNING] Deprecation [plugin angular-sass]
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.scss:2:8:
+      2 │ @import '../../../../styles/mixins';
+        ╵         ^
+  Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+  More info and automated migrator: https://sass-lang.com/d/import
+
+✘ [ERROR] Declarations may only be used within style rules.
+    ╷
+325 │     animation-duration: 0.01ms !important;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ╵
+  apps/aep-builder/src/styles/mixins.scss 325:5                           reduced-motion()
+  apps/aep-builder/src/app/features/builder/builder.component.scss 342:1  root stylesheet [plugin angular-sass]
+✘ [ERROR] Declarations may only be used within style rules.
+    ╷
+325 │     animation-duration: 0.01ms !important;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ╵
+  apps/aep-builder/src/styles/mixins.scss 325:5                                                      reduced-motion()
+  apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.scss 281:1  root stylesheet [plugin angular-sass]
+✘ [ERROR] Declarations may only be used within style rules.
+    ╷
+325 │     animation-duration: 0.01ms !important;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ╵
+  apps/aep-builder/src/styles/mixins.scss 325:5                                                      reduced-motion()
+  apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.scss 272:1  root stylesheet [plugin angular-sass]
+✘ [ERROR] Declarations may only be used within style rules.
+    ╷
+325 │     animation-duration: 0.01ms !important;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ╵
+  apps/aep-builder/src/styles/mixins.scss 325:5                                          reduced-motion()
+  apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.scss 169:1  root stylesheet [plugin angular-sass]
+✘ [ERROR] NG5002: Unsupported expression in a two-way binding [plugin angular-compiler]
+    apps/aep-builder/src/app/features/builder/builder.component.html:121:10:
+      121 │           [(selectedIndex)]="activeView()"
+          ╵           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  Error occurs in the template of component BuilderComponent.
+    apps/aep-builder/src/app/features/builder/builder.component.ts:40:15:
+      40 │   templateUrl: './builder.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap. [plugin angular-compiler]
+    apps/aep-builder/src/app/features/builder/builder.component.html:166:13:
+      166 │         @if (activeView() === 0) {
+          ╵              ~~~~~~~~~~~~~~~~~~
+  Error occurs in the template of component BuilderComponent.
+    apps/aep-builder/src/app/features/builder/builder.component.ts:40:15:
+      40 │   templateUrl: './builder.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap. [plugin angular-compiler]
+    apps/aep-builder/src/app/features/builder/builder.component.html:175:13:
+      175 │         @if (activeView() === 1) {
+          ╵              ~~~~~~~~~~~~~~~~~~
+  Error occurs in the template of component BuilderComponent.
+    apps/aep-builder/src/app/features/builder/builder.component.ts:40:15:
+      40 │   templateUrl: './builder.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2367: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap. [plugin angular-compiler][0m
+    apps/aep-builder/src/app/features/builder/builder.component.html:183:13:
+      183 │         @if (activeView() === 2) {
+          ╵              ~~~~~~~~~~~~~~~~~~
+  Error occurs in the template of component BuilderComponent.
+    apps/aep-builder/src/app/features/builder/builder.component.ts:40:15:
+      40 │   templateUrl: './builder.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2349: This expression is not callable.
+  No constituent of type 'DiffViewMode' is callable. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:40:22:
+      40 │         [matTooltip]="viewMode() === 'split' ? 'Switch to unified ...
+         ╵                       ~~~~~~~~
+  Error occurs in the template of component CodeDiffViewerComponent.
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2349: This expression is not callable.
+  No constituent of type 'DiffViewMode' is callable. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:41:27:
+      41 │         [attr.aria-label]="viewMode() === 'split' ? 'Switch to uni...
+         ╵                            ~~~~~~~~
+  Error occurs in the template of component CodeDiffViewerComponent.
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ ;31m[ERROR] TS2349: This expression is not callable.
+  No constituent of type 'DiffViewMode' is callable. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:43:21:
+      43 │         <mat-icon>{{ viewMode() === 'split' ? 'view_agenda' : 'vie...
+         ╵                      ~~~~~~~~
+  Error occurs in the template of component CodeDiffViewerComponent.
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2349: This expression is not callable.
+  Type 'FileDiff[]' has no call signatures. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:50:18:
+      50 │     @for (diff of diffs(); track diff.fileName) {
+         ╵                   ~~~~~
+  Error occurs in the template of component CodeDiffViewerComponent.
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2349: This expression is not callable.
+  No constituent of type 'DiffViewMode' is callable. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.html:90:17:
+      90 │             @if (viewMode() === 'unified') {
+         ╵                  ~~~~~~~~
+  Error occurs in the template of component CodeDiffViewerComponent.
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:34:15:
+      34 │   templateUrl: './code-diff-viewer.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2307: Cannot find module '@storybook/angular' or its corresponding type declarations. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.stories.ts:1:36:
+      1 │ import type { Meta, StoryObj } from '@storybook/angular';
+        ╵                                     ~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2300: Duplicate identifier 'diffs'. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:54:11:
+      54 │   readonly diffs = this._diffs.asReadonly();
+         ╵            ~~~~~
+✘ [ERROR] TS2687: All declarations of 'diffs' must have identical modifiers. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:54:11:
+      54 │   readonly diffs = this._diffs.asReadonly();
+         ╵            ~~~~~
+✘ [ERROR] TS2717: Subsequent property declarations must have the same type.  Property 'diffs' must be of type 'FileDiff[]', but here has type 'Signal<FileDiff[]>'. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:54:11:
+      54 │   readonly diffs = this._diffs.asReadonly();
+         ╵            ~~~~~
+  'diffs' was also declared here.
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:38:15:
+      38 │   @Input() set diffs(value: FileDiff[]) {
+         ╵                ~~~~~
+✘ [ERROR] TS2300: Duplicate identifier 'viewMode'. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:55:11:
+      55 │   readonly viewMode = this._viewMode.asReadonly();
+         ╵            ~~~~~~~~
+✘ [ERROR] TS2687: All declarations of 'viewMode' must have identical modifiers. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:55:11:
+      55 │   readonly viewMode = this._viewMode.asReadonly();
+         ╵            ~~~~~~~~
+✘ [ERROR] TS2717: Subsequent property declarations must have the same type.  Property 'viewMode' must be of type 'DiffViewMode', but here has type 'Signal<DiffViewMode>'. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:55:11:
+      55 │   readonly viewMode = this._viewMode.asReadonly();
+         ╵            ~~~~~~~~
+  'viewMode' was also declared here.
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:42:15:
+      42 │   @Input() set viewMode(value: DiffViewMode) {
+         ╵                ~~~~~~~~
+✘ [ERROR] TS4111: Property 'default' comes from an index signature, so it must be accessed with ['default']. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/code-diff-viewer/code-diff-viewer.component.ts:140:54:
+      140 │     return iconMap[language.toLowerCase()] || iconMap.default;
+          ╵                                                       ~~~~~~~
+✘ [
+ERROR] TS2341: Property 'searchQuery' is private and only accessible within class 'ComponentPickerComponent'. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.html:10:17:
+      10 │         [value]="searchQuery()"
+         ╵                  ~~~~~~~~~~~
+  Error occurs in the template of component ComponentPickerComponent.
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:45:15:
+      45 │   templateUrl: './component-picker.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2307: Cannot find module '@storybook/angular' or its corresponding type declarations. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:1:36:
+      1 │ import type { Meta, StoryObj } from '@storybook/angular';
+        ╵                                     ~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS6133: 'ComponentTemplate' is declared but its value is never read. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:2:35:
+      2 │ ...mponentPickerComponent, ComponentTemplate } from './component-pi...
+        ╵                            ~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS7006: Parameter 'story' implicitly has an 'any' type. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:22:5:
+      22 │     (story) => ({
+         ╵      ~~~~~
+✘ [ERROR] TS6133: 'canvasElement' is declared but its value is never read. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:72:15:
+      72 │   play: async ({ canvasElement }) => {
+         ╵                ~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS7031: Binding element 'canvasElement' implicitly has an 'any' type. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.stories.ts:72:17:
+      72 │   play: async ({ canvasElement }) => {
+         ╵                  ~~~~~~~~~~~~~
+✘ [ERROR] TS2300: Duplicate identifier 'components'. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:60:11:
+      60 │   readonly components = this._components.asReadonly();
+         ╵            ~~~~~~~~~~
+✘ [ERROR] TS2687: All declarations of 'components' must have identical modifiers. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:60:11:
+      60 │   readonly components = this._components.asReadonly();
+         ╵            ~~~~~~~~~~
+✘ [ERROR] TS2717: Subsequent property declarations must have the same type.  Property 'components' must be of type 'ComponentTemplate[]', but here has type 'Signal<ComponentTemplate[]>'. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:60:11:
+      60 │   readonly components = this._components.asReadonly();
+         ╵            ~~~~~~~~~~
+  'components' was also declared here.
+    apps/aep-builder/src/app/shared/components/component-picker/component-picker.component.ts:49:15:
+      49 │   @Input() set components(value: ComponentTemplate[]) {
+         ╵                ~~~~~~~~~~
+✘ [ERROR] TS2341: Property 'splitPosition' is private and only accessible within class 'SplitPaneComponent'. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.html:23:26:
+      23 │     [attr.aria-valuenow]="splitPosition()"
+         ╵                           ~~~~~~~~~~~~~
+  Error occurs in the template of component SplitPaneComponent.
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.ts:21:15:
+      21 │   templateUrl: './split-pane.component.html',
+         ╵                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS2307: Cannot find module '@storybook/angular' or its corresponding type declarations. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.stories.ts:1:36:
+      1 │ import type { Meta, StoryObj } from '@storybook/angular';
+        ╵                                     ~~~~~~~~~~~~~~~~~~~~
+✘ [ERROR] TS7006: Parameter 'args' implicitly has an 'any' type. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.stories.ts:43:11:
+      43 │   render: (args) => ({
+         ╵            ~~~~
+✘ [ERROR] TS7006: Parameter 'args' implicitly has an 'any' type. [plugin angular-compiler]
+    apps/aep-builder/src/app/shared/components/split-pane/split-pane.component.stories.ts:112:11:
+      112 │   render: (args) => ({
+          ╵            ~~~~
+
+Watch mode enabled. Watching for file changes...
+-----------

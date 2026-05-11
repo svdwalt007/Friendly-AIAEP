@@ -1,0 +1,420 @@
+// Prisma Schema for Friendly AI AEP Tool
+// Database: PostgreSQL
+// Generator: Prisma Client
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum Tier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum DeploymentMode {
+  CLOUD_HOSTED
+  ON_PREMISE
+  HYBRID
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  DEVELOPER
+  VIEWER
+}
+
+enum DataSourceType {
+  REST_API
+  GRAPHQL
+  WEBSOCKET
+  DATABASE
+  IOT_PLATFORM
+  MQTT
+  CUSTOM
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  UNPUBLISHED
+  FAILED
+}
+
+enum EnvironmentType {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+}
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+model Tenant {
+  id                   String         @id @default(cuid())
+  name                 String
+  subdomain            String         @unique
+  tier                 Tier           @default(FREE)
+  deploymentMode       DeploymentMode @default(CLOUD_HOSTED)
+  maxProjects          Int            @default(5)
+  maxUsers             Int            @default(10)
+  llmProviderConfig    Json? // LLM provider settings
+  encryptedCredentials Json? // Encrypted API keys and secrets
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  // Relations
+  users               User[]
+  projects            Project[]
+  billingSubscription BillingSubscription?
+  billingEvents       BillingEvent[]
+  billingInvoices     BillingInvoice[]
+  auditEvents         AuditEvent[]
+
+  @@index([subdomain])
+  @@index([tier])
+  @@index([deploymentMode])
+}
+
+model User {
+  id          String    @id @default(cuid())
+  tenantId    String
+  email       String
+  name        String
+  role        UserRole  @default(VIEWER)
+  avatarUrl   String?
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projects        Project[]
+  auditEvents     AuditEvent[]
+  previewSessions PreviewSession[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([email])
+  @@index([role])
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  tenantId      String
+  ownerId       String
+  name          String
+  description   String?
+  status        ProjectStatus @default(DRAFT)
+  repositoryUrl String?
+  defaultBranch String        @default("main")
+  metadata      Json? // Additional project metadata
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner             User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  pages             Page[]
+  dataSources       DataSource[]
+  appVersions       AppVersion[]
+  deploymentTargets DeploymentTarget[]
+  gitIntegration    GitIntegration?
+  auditEvents       AuditEvent[]
+  previewSessions   PreviewSession[]
+
+  @@index([tenantId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Page {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  route       String
+  title       String?
+  description String?
+  layout      Json // Page layout configuration
+  metadata    Json? // SEO and other metadata
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  project Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  widgets Widget[]
+
+  @@unique([projectId, route])
+  @@index([projectId])
+  @@index([isPublished])
+}
+
+model Widget {
+  id           String   @id @default(cuid())
+  pageId       String
+  type         String // Widget type identifier
+  name         String
+  config       Json // Widget configuration
+  position     Json // Position and size on page
+  dataBindings Json? // Data source bindings
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([type])
+}
+
+model DataSource {
+  id              String         @id @default(cuid())
+  projectId       String
+  name            String
+  type            DataSourceType
+  config          Json // Connection and configuration details
+  authConfig      Json? // Authentication configuration
+  transformConfig Json? // Data transformation rules
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([type])
+  @@index([isActive])
+}
+
+model AppVersion {
+  id               String        @id @default(cuid())
+  projectId        String
+  version          String
+  publishStatus    PublishStatus @default(DRAFT)
+  buildArtifactUrl String?
+  sourceCodeHash   String?
+  publishedBy      String?
+  publishedAt      DateTime?
+  releaseNotes     String?
+  metadata         Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations
+  project           Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deploymentTargets DeploymentTarget[]
+
+  @@unique([projectId, version])
+  @@index([projectId])
+  @@index([publishStatus])
+  @@index([publishedAt])
+}
+
+model DeploymentTarget {
+  id              String          @id @default(cuid())
+  projectId       String
+  appVersionId    String?
+  name            String
+  environmentType EnvironmentType
+  url             String?
+  config          Json // Deployment configuration
+  status          String // Deployment status
+  lastDeployedAt  DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  appVersion AppVersion? @relation(fields: [appVersionId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([appVersionId])
+  @@index([environmentType])
+  @@index([status])
+}
+
+model GitIntegration {
+  id            String    @id @default(cuid())
+  projectId     String    @unique
+  provider      String // github, gitlab, bitbucket, etc.
+  repositoryUrl String
+  branch        String
+  accessToken   String // Encrypted
+  webhookSecret String? // Encrypted
+  autoSync      Boolean   @default(false)
+  lastSyncAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([provider])
+}
+
+model BillingPlan {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  tier         Tier     @unique
+  price        Decimal  @db.Decimal(10, 2)
+  currency     String   @default("USD")
+  billingCycle String // monthly, yearly
+  maxProjects  Int
+  maxUsers     Int
+  features     Json // Plan features
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  subscriptions BillingSubscription[]
+
+  @@index([tier])
+  @@index([isActive])
+}
+
+model BillingSubscription {
+  id                   String    @id @default(cuid())
+  tenantId             String    @unique
+  billingPlanId        String
+  status               String // active, cancelled, suspended, past_due
+  startDate            DateTime
+  endDate              DateTime?
+  autoRenew            Boolean   @default(true)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Relations
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  billingPlan BillingPlan @relation(fields: [billingPlanId], references: [id])
+
+  @@index([tenantId])
+  @@index([billingPlanId])
+  @@index([status])
+  @@index([endDate])
+}
+
+model BillingEvent {
+  id          String   @id @default(cuid())
+  tenantId    String
+  eventType   String // usage, charge, credit, refund
+  description String
+  amount      Decimal  @db.Decimal(10, 2)
+  currency    String   @default("USD")
+  metadata    Json?
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([eventType])
+  @@index([occurredAt])
+}
+
+model BillingInvoice {
+  id              String    @id @default(cuid())
+  tenantId        String
+  invoiceNumber   String    @unique
+  status          String // draft, open, paid, void, uncollectible
+  subtotal        Decimal   @db.Decimal(10, 2)
+  tax             Decimal   @db.Decimal(10, 2)
+  total           Decimal   @db.Decimal(10, 2)
+  currency        String    @default("USD")
+  dueDate         DateTime
+  paidAt          DateTime?
+  stripeInvoiceId String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([invoiceNumber])
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String?
+  projectId  String?
+  eventType  String // create, update, delete, access, etc.
+  entityType String // project, page, widget, datasource, etc.
+  entityId   String?
+  action     String
+  details    Json? // Event details and metadata
+  ipAddress  String?
+  userAgent  String?
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  // Relations
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([projectId])
+  @@index([eventType])
+  @@index([entityType])
+  @@index([occurredAt])
+}
+
+model PreviewSession {
+  id           String   @id @default(cuid())
+  projectId    String
+  userId       String
+  tenantId     String
+  sessionToken String   @unique
+  mode         String   @default("mock") // mock, live, disconnected-sim
+  status       String   @default("starting") // starting, running, stopping, stopped, error
+  config       Json // Preview configuration (port, containerIds, etc.)
+  expiresAt    DateTime
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([sessionToken])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@index([status])
+}

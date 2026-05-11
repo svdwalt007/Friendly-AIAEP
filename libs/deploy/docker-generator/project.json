@@ -1,0 +1,19 @@
+{
+  "name": "docker-generator",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/deploy/docker-generator/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/deploy/docker-generator",
+        "main": "libs/deploy/docker-generator/src/index.ts",
+        "tsConfig": "libs/deploy/docker-generator/tsconfig.lib.json",
+        "assets": ["libs/deploy/docker-generator/*.md"]
+      }
+    }
+  }
+}

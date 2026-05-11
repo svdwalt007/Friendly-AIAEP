@@ -1,0 +1,295 @@
+# ========================================
+# Nx Monorepo
+# ========================================
+.nx/polygraph
+.nx/cache
+.nx/workspace-data
+.nx/installation
+
+# ========================================
+# Claude Code
+# ========================================
+.claude/worktrees
+.claude/settings.local.json
+
+# ========================================
+# Dependencies
+# ========================================
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ========================================
+# Framework Specific
+# ========================================
+
+# Angular
+.angular/
+dist/
+tmp/
+*.ngfactory.ts
+*.ngsummary.json
+*.metadata.json
+
+# Next.js
+.next/
+out/
+
+# React
+.cache/
+
+# ========================================
+# Testing & Coverage
+# ========================================
+coverage/
+.nyc_output/
+vitest.config.*.timestamp*
+__screenshots__/
+.vitest/
+test-results/
+playwright-report/
+*.spec.js.snap
+*.spec.ts.snap
+
+# ========================================
+# Build Outputs
+# ========================================
+dist/
+build/
+out/
+tmp/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# ========================================
+# Environment & Secrets
+# ========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.key
+*.pem
+*.p12
+secrets/
+.secrets
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================================
+# IDE & Editors
+# ========================================
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains (IntelliJ, WebStorm, etc.)
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Vim
+*.swp
+*.swo
+*~
+.vim/
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# ========================================
+# Operating System
+# ========================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+.directory
+.Trash-*
+.nfs*
+
+# ========================================
+# Logs
+# ========================================
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ========================================
+# Docker & Kubernetes
+# ========================================
+.docker/
+docker-compose.override.yml
+*.dockerfile.backup
+k8s-secrets/
+helm-values.local.yaml
+
+# ========================================
+# CI/CD
+# ========================================
+.github/workflows/*.local.yml
+.gitlab-ci.local.yml
+
+# ========================================
+# Cloud & Infrastructure
+# ========================================
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# AWS
+.aws/
+.elasticbeanstalk/
+
+# ========================================
+# Application Specific
+# ========================================
+
+# Prisma
+prisma/migrations/migration_lock.toml
+prisma/*.db
+prisma/*.db-journal
+
+# Swagger/OpenAPI
+.spec-hashes.json
+swagger-ui/
+
+# MinIO/S3
+minio-data/
+
+# Redis
+dump.rdb
+
+# InfluxDB
+influxdb-data/
+
+# Grafana
+grafana-data/
+
+# ========================================
+# Generated Files
+# ========================================
+project-graph.html
+static/
+*.generated.ts
+*.generated.js
+
+# ========================================
+# Temporary & Cache
+# ========================================
+.cache/
+.eslintcache
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.vite/
+
+# ========================================
+# Backups & Archives
+# ========================================
+*.backup
+*.bak
+*.old
+*.orig
+*.tmp
+*.temp
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# ========================================
+# Documentation Build
+# ========================================
+docs/_build/
+docs/.docusaurus/
+site/
+
+# ========================================
+# Misc
+# ========================================
+.vscode-test
+.nx-migrate-successful
+.husky/_/
+*.pid
+*.seed
+*.pid.lock
+.lock-wscript
+lib-cov
+.grunt
+bower_components
+.lock-wscript
+build/Release
+.npm
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.node_repl_history
+.yarn-integrity
+.env.test
+.env.production
+.vercel
+.turbo
+.contentlayer

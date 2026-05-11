@@ -1,0 +1,95 @@
+# Dockerfile for IoT API Proxy (Fastify 5.x + FriendlyAuthAdapter)
+# Built for {{projectName}} version {{version}}
+# Tier: {{tier}} | Deployment Mode: {{deploymentMode}}
+
+# Stage 1: Build TypeScript Application
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm@8.15.0
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+COPY apps/aep-api-gateway/package.json ./apps/aep-api-gateway/
+COPY libs/iot/auth-adapter/package.json ./libs/iot/auth-adapter/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build TypeScript application
+RUN pnpm nx build aep-api-gateway --configuration=production
+
+# Stage 2: Production Runtime
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install pnpm for production
+RUN npm install -g pnpm@8.15.0
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy built application from builder
+COPY --from=builder /app/dist/apps/aep-api-gateway ./dist
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs \
+    && adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G nodejs -g nodejs nodejs
+
+# Set ownership
+RUN chown -R nodejs:nodejs /app
+
+# Create directory for JWT keys
+RUN mkdir -p /app/keys && chown nodejs:nodejs /app/keys
+
+# Environment variables (overridden by docker-compose)
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOST=0.0.0.0
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
+
+# Expose port
+EXPOSE 3000
+
+# Run as non-root user
+USER nodejs
+
+# Start application
+CMD ["node", "dist/main.js"]
+
+# Labels for metadata
+LABEL maintainer="Friendly Technologies" \
+      project="{{projectName}}" \
+      version="{{version}}" \
+      tier="{{tier}}" \
+      deployment-mode="{{deploymentMode}}" \
+      description="Fastify 5.x API Gateway with JWT Auth and Multi-Tenant Support"
+
+{{#if isDedicated}}
+# Dedicated Mode: Single-tenant optimization enabled
+ENV DEPLOYMENT_MODE=dedicated \
+    REQUIRE_TENANT_ID=false
+{{else}}
+# SaaS Mode: Multi-tenant filtering enabled
+ENV DEPLOYMENT_MODE=multi-tenant \
+    REQUIRE_TENANT_ID=true
+{{/if}}
+
+{{#if isEnterprise}}
+# Enterprise Tier: Additional features enabled
+ENV OLLAMA_ENABLED=true \
+    CUSTOM_WIDGETS_ENABLED=true \
+    MULTI_ENV_PROMOTION_ENABLED=true
+{{/if}}

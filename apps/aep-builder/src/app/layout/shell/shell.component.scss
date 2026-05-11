@@ -1,0 +1,205 @@
+/**
+ * Shell Component Styles — editorial chrome for authenticated AEP v2 screens.
+ * Extends Phase 1 tokens; no new brand colours are introduced.
+ */
+
+.shell-container {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ----- Left Rail ---- */
+.shell-sidenav {
+  width: 240px;
+  background-color: var(--ft-primary);
+  color: var(--ft-text-light);
+  border-right: none;
+  transition: width var(--ft-transition-base);
+  display: flex;
+  flex-direction: column;
+
+  &.collapsed {
+    width: 64px;
+  }
+
+  ::ng-deep .mat-mdc-list-item {
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: var(--ft-radius-sm);
+    margin: 2px 8px;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .mat-icon {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+
+  ::ng-deep .active-link {
+    background-color: var(--ft-accent) !important;
+    color: #fff !important;
+
+    .mat-icon {
+      color: #fff !important;
+    }
+  }
+}
+
+.sidenav-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-spacing-sm);
+  padding: var(--ft-spacing-md);
+  height: 64px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  font-size: var(--ft-font-size-lg);
+  font-weight: var(--ft-font-weight-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidenav-tenant {
+  padding: var(--ft-spacing-sm) var(--ft-spacing-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+
+  &__label {
+    font-size: var(--ft-font-size-xs);
+    font-weight: var(--ft-font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.sidenav-footer {
+  margin-top: auto;
+  padding: var(--ft-spacing-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  justify-content: center;
+
+  button {
+    color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+/* ----- Top Bar ---- */
+.shell-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-density-spacing-sm, 8px);
+  background-color: var(--ft-surface-primary);
+  color: var(--ft-text-primary);
+  border-bottom: 1px solid var(--ft-border-color);
+  height: 64px;
+  box-shadow: var(--ft-shadow-xs);
+  padding-inline: var(--ft-density-spacing-md, 16px);
+
+  &__breadcrumb {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.toolbar-project {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-density-spacing-xs, 4px);
+  padding: var(--ft-density-spacing-xs, 4px) var(--ft-density-spacing-sm, 8px);
+  border-radius: var(--ft-radius-sm);
+  background-color: var(--ft-surface-secondary);
+  font-size: var(--ft-density-font-sm, 0.875rem);
+  color: var(--ft-text-secondary);
+  white-space: nowrap;
+
+  &__icon {
+    font-size: 1em;
+    width: 1em;
+    height: 1em;
+    line-height: 1;
+  }
+
+  &__name {
+    font-weight: var(--ft-font-weight-medium);
+  }
+}
+
+/* ----- Content ---- */
+.shell-content {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--ft-surface-secondary);
+}
+
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ft-spacing-lg);
+}
+
+.user-menu-header {
+  padding: var(--ft-spacing-md);
+  display: flex;
+  flex-direction: column;
+
+  strong {
+    font-size: var(--ft-font-size-sm);
+  }
+
+  small {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-font-size-xs);
+    text-transform: capitalize;
+  }
+}
+
+/* ----- Responsive ---- */
+@media (max-width: 960px) {
+  .shell-sidenav {
+    width: 64px;
+
+    .brand-text,
+    .sidenav-tenant {
+      display: none;
+    }
+
+    ::ng-deep .mat-mdc-list-item .mdc-list-item__primary-text {
+      display: none;
+    }
+  }
+
+  .page-content {
+    padding: var(--ft-spacing-md);
+  }
+}
+
+@media (max-width: 600px) {
+  .shell-sidenav {
+    width: 0;
+    overflow: hidden;
+  }
+
+  .page-content {
+    padding: var(--ft-spacing-sm);
+  }
+}

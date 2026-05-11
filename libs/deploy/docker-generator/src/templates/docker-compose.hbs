@@ -1,0 +1,54 @@
+services:
+{{#each services}}
+  {{this.name}}:
+    image: {{this.image}}
+    container_name: {{../projectName}}-{{this.name}}
+    restart: always
+    {{#if this.environment}}
+    environment:
+      {{#each this.environment}}
+      {{@key}}: "{{this}}"
+      {{/each}}
+    {{/if}}
+    {{#if this.ports}}
+    ports:
+      {{#each this.ports}}
+      - '{{this}}'
+      {{/each}}
+    {{/if}}
+    {{#if this.volumes}}
+    volumes:
+      {{#each this.volumes}}
+      - {{this}}
+      {{/each}}
+    {{/if}}
+    {{#if this.healthcheck}}
+    healthcheck:
+      test: {{{json this.healthcheck.test}}}
+      interval: {{this.healthcheck.interval}}
+      timeout: {{this.healthcheck.timeout}}
+      retries: {{this.healthcheck.retries}}
+    {{/if}}
+    {{#if this.dependsOn}}
+    depends_on:
+      {{#each this.dependsOn}}
+      {{this}}:
+        condition: service_healthy
+      {{/each}}
+    {{/if}}
+    deploy:
+      resources:
+        limits:
+          memory: {{this.memoryLimit}}
+          cpus: '{{this.cpuLimit}}'
+
+{{/each}}
+volumes:
+{{#each volumes}}
+  {{this}}:
+    driver: local
+{{/each}}
+
+networks:
+  default:
+    name: {{projectName}}-network

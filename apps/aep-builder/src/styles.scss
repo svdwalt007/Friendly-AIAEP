@@ -1,0 +1,209 @@
+/**
+ * Friendly AEP Builder - Global Styles
+ *
+ * This file orchestrates all theme imports and global styles.
+ * Order matters - variables must be loaded first.
+ */
+
+/* ========================================
+ * THEME IMPORTS
+ * ======================================== */
+
+// 1. Load design tokens first (comprehensive design system)
+@use './styles/design-tokens.scss';
+
+// 2. Load variables (legacy support)
+@use './styles/variables.scss';
+
+// 3. Load Material theme (includes Material core and component styles)
+@use './styles/theme.scss';
+
+// 4. Load Friendly design utilities
+@use './styles/friendly-design.scss';
+
+// 5. Load animations and micro-interactions
+@use './styles/animations.scss';
+
+/* ========================================
+ * GLOBAL STYLES
+ * ======================================== */
+
+// Apply brand font family globally
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ft-font-family);
+  font-size: var(--ft-font-size-base);
+  line-height: var(--ft-line-height-normal);
+  color: var(--ft-text-primary);
+  background-color: var(--ft-surface-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Normalize headings
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  font-family: var(--ft-font-family);
+  font-weight: var(--ft-font-weight-semibold);
+  line-height: var(--ft-line-height-tight);
+  color: var(--ft-primary);
+}
+
+h1 {
+  font-size: var(--ft-font-size-4xl);
+  margin-bottom: var(--ft-spacing-lg);
+}
+
+h2 {
+  font-size: var(--ft-font-size-3xl);
+  margin-bottom: var(--ft-spacing-md);
+}
+
+h3 {
+  font-size: var(--ft-font-size-2xl);
+  margin-bottom: var(--ft-spacing-md);
+}
+
+h4 {
+  font-size: var(--ft-font-size-xl);
+  margin-bottom: var(--ft-spacing-sm);
+}
+
+h5 {
+  font-size: var(--ft-font-size-lg);
+  margin-bottom: var(--ft-spacing-sm);
+}
+
+h6 {
+  font-size: var(--ft-font-size-base);
+  margin-bottom: var(--ft-spacing-sm);
+}
+
+// Normalize links
+a {
+  color: var(--ft-accent);
+  text-decoration: none;
+  transition: color var(--ft-transition-fast);
+
+  &:hover {
+    color: #ff6b1a;
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ft-accent);
+    outline-offset: 2px;
+  }
+}
+
+// Code blocks
+code {
+  font-family: var(--ft-font-family-mono);
+  font-size: 0.9em;
+  background-color: var(--ft-surface-secondary);
+  padding: 2px 6px;
+  border-radius: var(--ft-radius-sm);
+  color: var(--ft-accent);
+}
+
+pre {
+  font-family: var(--ft-font-family-mono);
+  font-size: var(--ft-font-size-sm);
+  background-color: var(--ft-surface-secondary);
+  padding: var(--ft-spacing-md);
+  border-radius: var(--ft-radius-md);
+  overflow-x: auto;
+  border-left: 4px solid var(--ft-accent);
+
+  code {
+    background-color: transparent;
+    padding: 0;
+  }
+}
+
+// Scrollbar customization (Webkit browsers)
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--ft-surface-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--ft-secondary);
+  border-radius: var(--ft-radius-md);
+  border: 2px solid var(--ft-surface-secondary);
+
+  &:hover {
+    background-color: var(--ft-primary);
+  }
+}
+
+// Selection color
+::selection {
+  background-color: var(--ft-accent);
+  color: var(--ft-text-light);
+}
+
+::-moz-selection {
+  background-color: var(--ft-accent);
+  color: var(--ft-text-light);
+}
+
+/* ========================================
+ * RESPONSIVE CONTAINER
+ * ======================================== */
+
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--ft-spacing-lg);
+}
+
+.container-fluid {
+  width: 100%;
+  padding: 0 var(--ft-spacing-lg);
+}
+
+/* ========================================
+ * ACCESSIBILITY HELPERS
+ * ======================================== */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ========================================
+ * PRINT STYLES
+ * ======================================== */
+
+@media print {
+  body {
+    background-color: white;
+    color: black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+
+  pre, code {
+    border: 1px solid black;
+  }
+}

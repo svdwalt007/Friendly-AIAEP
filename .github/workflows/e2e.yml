@@ -1,0 +1,392 @@
+name: E2E Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: 'staging'
+      browser:
+        description: 'Browser to test'
+        required: false
+        type: choice
+        options:
+          - all
+          - chromium
+          - firefox
+          - webkit
+        default: 'all'
+  schedule:
+    - cron: '0 2 * * *' # Run daily at 2 AM UTC
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      - 'libs/**'
+      - '.github/workflows/e2e.yml'
+
+concurrency:
+  group: e2e-${{ github.ref }}-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10'
+  ENVIRONMENT: ${{ inputs.environment || 'staging' }}
+  BROWSER: ${{ inputs.browser || 'all' }}
+
+jobs:
+  setup:
+    name: Setup E2E Tests
+    runs-on: ubuntu-latest
+    outputs:
+      browsers: ${{ steps.set-browsers.outputs.browsers }}
+      base-url: ${{ steps.set-url.outputs.base-url }}
+    steps:
+      - name: Set browsers
+        id: set-browsers
+        run: |
+          if [[ "${{ env.BROWSER }}" == "all" ]]; then
+            echo "browsers=[\"chromium\", \"firefox\", \"webkit\"]" >> $GITHUB_OUTPUT
+          else
+            echo "browsers=[\"${{ env.BROWSER }}\"]" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set base URL
+        id: set-url
+        run: |
+          if [[ "${{ env.ENVIRONMENT }}" == "production" ]]; then
+            echo "base-url=https://friendly-aiaep.com" >> $GITHUB_OUTPUT
+          else
+            echo "base-url=https://staging.friendly-aiaep.com" >> $GITHUB_OUTPUT
+          fi
+
+  e2e-tests:
+    name: E2E Tests (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    needs: setup
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ${{ fromJson(needs.setup.outputs.browsers) }}
+        shard: [1, 2, 3, 4]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: friendly
+          POSTGRES_PASSWORD: e2e_password
+          POSTGRES_DB: friendly_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U friendly"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://friendly:e2e_password@localhost:5432/friendly_e2e
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      BASE_URL: ${{ needs.setup.outputs.base-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run database migrations
+        run: |
+          cd libs/data/prisma-schema
+          pnpm exec prisma migrate deploy
+          pnpm exec prisma db seed
+
+      - name: Wait for services to be ready
+        run: |
+          timeout 60 bash -c 'until pg_isready -h localhost -p 5432 -U friendly; do sleep 1; done'
+          timeout 60 bash -c 'until redis-cli -h localhost -p 6379 ping; do sleep 1; done'
+
+      - name: Run E2E tests (Shard ${{ matrix.shard }}/4)
+        run: |
+          pnpm nx run-many --target=e2e --all \
+            --parallel=1 \
+            --browser=${{ matrix.browser }} \
+            --base-url=${{ env.BASE_URL }} \
+            --shard=${{ matrix.shard }}/4
+        env:
+          CI: true
+          PWDEBUG: 0
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.browser }}-shard-${{ matrix.shard }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+
+      - name: Upload trace files
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-traces-${{ matrix.browser }}-shard-${{ matrix.shard }}
+          path: |
+            test-results/**/*.zip
+            test-results/**/trace*.zip
+          retention-days: 14
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots-${{ matrix.browser }}-shard-${{ matrix.shard }}
+          path: |
+            test-results/**/*.png
+            playwright-report/**/*.png
+          retention-days: 14
+
+      - name: Upload videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-videos-${{ matrix.browser }}-shard-${{ matrix.shard }}
+          path: |
+            test-results/**/*.webm
+          retention-days: 7
+
+  accessibility-tests:
+    name: Accessibility Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run accessibility tests with Axe
+        run: |
+          echo "Running accessibility tests..."
+          # Add your accessibility testing commands here
+          # Example: pnpm nx run-many --target=a11y --all
+        continue-on-error: true
+
+      - name: Upload accessibility results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-results
+          path: |
+            a11y-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  cross-browser-report:
+    name: Generate Cross-Browser Report
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          path: all-test-results/
+          pattern: e2e-results-*
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Merge Playwright reports
+        run: |
+          npx playwright merge-reports --reporter html ./all-test-results
+
+      - name: Upload merged report
+        uses: actions/upload-artifact@v4
+        with:
+          name: merged-e2e-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Deploy report to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./playwright-report
+          destination_dir: e2e-reports/${{ github.run_number }}
+
+  mobile-tests:
+    name: Mobile E2E Tests (${{ matrix.device }})
+    runs-on: ubuntu-latest
+    needs: setup
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        device:
+          - 'iPhone 14 Pro'
+          - 'Pixel 7'
+          - 'iPad Pro'
+          - 'Samsung Galaxy S23'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Run mobile tests
+        run: |
+          echo "Running mobile tests for ${{ matrix.device }}"
+          # Add your mobile testing commands here
+          # Example: pnpm nx run-many --target=e2e --all --device="${{ matrix.device }}"
+        env:
+          DEVICE: ${{ matrix.device }}
+          BASE_URL: ${{ needs.setup.outputs.base-url }}
+
+      - name: Upload mobile test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-e2e-results-${{ matrix.device }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+
+  e2e-summary:
+    name: E2E Test Summary
+    runs-on: ubuntu-latest
+    needs: [e2e-tests, accessibility-tests, mobile-tests]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## E2E Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Execution" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ env.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Browser Tests**: ${{ needs.e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Accessibility Tests**: ${{ needs.accessibility-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mobile Tests**: ${{ needs.mobile-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then
+            echo "### Failures Detected" >> $GITHUB_STEP_SUMMARY
+            echo "Check the uploaded artifacts for detailed results and traces." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Send notification
+        if: always() && secrets.SLACK_WEBHOOK_URL
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "E2E Tests ${{ needs.e2e-tests.result == 'success' && 'Passed' || 'Failed' }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*E2E Test Results ${{ needs.e2e-tests.result == 'success' && ':white_check_mark:' || ':x:' }}*\n*Environment:* ${{ env.ENVIRONMENT }}\n*Browser Tests:* ${{ needs.e2e-tests.result }}\n*Accessibility:* ${{ needs.accessibility-tests.result }}\n*Mobile Tests:* ${{ needs.mobile-tests.result }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

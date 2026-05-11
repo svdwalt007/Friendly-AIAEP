@@ -1,0 +1,16 @@
+{
+  "name": "sdk-generator",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "handlebars": "^4.7.9",
+    "tslib": "^2.3.0",
+    "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "openapi-types": "^12.1.3"
+  }
+}

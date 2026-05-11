@@ -1,0 +1,17 @@
+{
+  "name": "agent-runtime",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "tslib": "^2.3.0",
+    "@langchain/core": "^1.1.39",
+    "@langchain/langgraph-checkpoint-postgres": "^1.0.1",
+    "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0"
+  }
+}

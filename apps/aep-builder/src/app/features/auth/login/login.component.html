@@ -1,0 +1,80 @@
+<div class="login-wrapper">
+  <mat-card class="login-card">
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" class="login-progress"></mat-progress-bar>
+    }
+
+    <div class="login-header">
+      <div class="login-brand">
+        <mat-icon class="brand-icon">hub</mat-icon>
+        <h1>Friendly AEP</h1>
+      </div>
+      <p class="login-subtitle">AI-Powered IoT Application Builder</p>
+    </div>
+
+    <mat-card-content>
+      <form (ngSubmit)="onSubmit()" class="login-form">
+        @if (error(); as errorMsg) {
+          <div class="login-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorMsg }}</span>
+          </div>
+        }
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Username</mat-label>
+          <input
+            matInput
+            [(ngModel)]="username"
+            name="username"
+            placeholder="Enter your username"
+            autocomplete="username"
+            required
+          />
+          <mat-icon matPrefix>person</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input
+            matInput
+            [(ngModel)]="password"
+            name="password"
+            [type]="hidePassword() ? 'password' : 'text'"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            required
+          />
+          <mat-icon matPrefix>lock</mat-icon>
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            (click)="hidePassword.set(!hidePassword())"
+            [attr.aria-label]="hidePassword() ? 'Show password' : 'Hide password'"
+          >
+            <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <button
+          mat-raised-button
+          color="primary"
+          type="submit"
+          class="login-button full-width"
+          [disabled]="loading()"
+        >
+          @if (loading()) {
+            Signing in...
+          } @else {
+            Sign In
+          }
+        </button>
+      </form>
+    </mat-card-content>
+
+    <div class="login-footer">
+      <small>Demo credentials: <strong>demo</strong> / <strong>demo</strong></small>
+    </div>
+  </mat-card>
+</div>

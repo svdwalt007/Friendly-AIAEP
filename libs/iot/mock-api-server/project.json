@@ -1,0 +1,19 @@
+{
+  "name": "mock-api-server",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/iot/mock-api-server/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/iot/mock-api-server",
+        "main": "libs/iot/mock-api-server/src/index.ts",
+        "tsConfig": "libs/iot/mock-api-server/tsconfig.lib.json",
+        "assets": ["libs/iot/mock-api-server/*.md"]
+      }
+    }
+  }
+}

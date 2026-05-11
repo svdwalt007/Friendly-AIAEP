@@ -1,0 +1,19 @@
+{
+  "name": "iot-tool-functions",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/iot/iot-tool-functions/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/iot/iot-tool-functions",
+        "main": "libs/iot/iot-tool-functions/src/index.ts",
+        "tsConfig": "libs/iot/iot-tool-functions/tsconfig.lib.json",
+        "assets": ["libs/iot/iot-tool-functions/*.md"]
+      }
+    }
+  }
+}

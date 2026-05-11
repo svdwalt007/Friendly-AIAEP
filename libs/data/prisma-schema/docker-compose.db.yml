@@ -1,0 +1,69 @@
+version: '3.8'
+
+# Friendly AI AEP - Prisma Database Service
+# Standalone PostgreSQL database for Prisma schema development and testing
+# Compatible with the main docker-compose.dev.yml in docker/ folder
+
+services:
+  # PostgreSQL database for Prisma schema
+  postgres:
+    image: postgres:15-alpine
+    container_name: friendly-aep-prisma-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-friendly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-friendly_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-friendly_aep}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - prisma_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-friendly}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - prisma-network
+
+volumes:
+  prisma_postgres_data:
+    driver: local
+
+networks:
+  prisma-network:
+    name: friendly-aep-prisma-network
+    driver: bridge
+
+# Usage Instructions:
+#
+# 1. Environment Variables:
+#    Create a .env file in this directory or set the following variables:
+#    - DATABASE_URL=postgresql://friendly:friendly_dev_password@localhost:5432/friendly_aep
+#    - POSTGRES_USER=friendly
+#    - POSTGRES_PASSWORD=friendly_dev_password
+#    - POSTGRES_DB=friendly_aep
+#    - POSTGRES_PORT=5432
+#
+# 2. Start the database:
+#    docker-compose -f docker-compose.db.yml up -d
+#
+# 3. Stop the database:
+#    docker-compose -f docker-compose.db.yml down
+#
+# 4. Stop and remove volumes (clean slate):
+#    docker-compose -f docker-compose.db.yml down -v
+#
+# 5. View logs:
+#    docker-compose -f docker-compose.db.yml logs -f
+#
+# 6. Connect to PostgreSQL:
+#    docker-compose -f docker-compose.db.yml exec postgres psql -U friendly -d friendly_aep
+#
+# Compatibility Notes:
+# - Uses separate volume (prisma_postgres_data) to avoid conflicts with main dev environment
+# - Uses separate network (friendly-aep-prisma-network) for isolation
+# - Different container name (friendly-aep-prisma-postgres) to allow running alongside main stack
+# - Port can be customized via POSTGRES_PORT env var to avoid conflicts
+# - All credentials default to match the main docker-compose.dev.yml for consistency

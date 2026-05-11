@@ -1,0 +1,75 @@
+# Multi-stage Dockerfile for Angular 17+ Frontend
+# Built for {{projectName}} version {{version}}
+# Tier: {{tier}} | Deployment Mode: {{deploymentMode}}
+
+# Stage 1: Build Angular Application
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm@8.15.0
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+COPY apps/aep-builder/package.json ./apps/aep-builder/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build Angular app for production
+# Using AOT compilation, optimization, and budgets
+RUN pnpm nx build aep-builder --configuration=production \
+    --output-path=dist/apps/aep-builder \
+    --aot \
+    --build-optimizer \
+    --optimization
+
+# Stage 2: Nginx Production Server
+FROM nginx:1.25-alpine
+
+# Copy custom nginx configuration
+COPY --from=builder /app/dist/apps/aep-builder /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Create nginx user for security
+RUN addgroup -g 101 -S nginx \
+    && adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+
+# Set ownership
+RUN chown -R nginx:nginx /usr/share/nginx/html \
+    && chown -R nginx:nginx /var/cache/nginx \
+    && chown -R nginx:nginx /var/log/nginx \
+    && chown -R nginx:nginx /etc/nginx/conf.d
+
+# Create environment config injection script
+RUN echo '#!/bin/sh' > /docker-entrypoint.d/30-inject-env.sh && \
+    echo 'set -e' >> /docker-entrypoint.d/30-inject-env.sh && \
+    echo 'if [ -f /usr/share/nginx/html/assets/config.template.js ]; then' >> /docker-entrypoint.d/30-inject-env.sh && \
+    echo '  envsubst < /usr/share/nginx/html/assets/config.template.js > /usr/share/nginx/html/assets/config.js' >> /docker-entrypoint.d/30-inject-env.sh && \
+    echo 'fi' >> /docker-entrypoint.d/30-inject-env.sh && \
+    chmod +x /docker-entrypoint.d/30-inject-env.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+
+# Expose port 80
+EXPOSE 80
+
+# Run as non-root user
+USER nginx
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
+
+# Labels for metadata
+LABEL maintainer="Friendly Technologies" \
+      project="{{projectName}}" \
+      version="{{version}}" \
+      tier="{{tier}}" \
+      deployment-mode="{{deploymentMode}}" \
+      description="Angular 17+ Frontend for Friendly AI AEP Tool"

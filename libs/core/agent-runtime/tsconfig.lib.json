@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../../dist/out-tsc",
+    "declaration": true,
+    "types": ["node"],
+    "skipLibCheck": true,
+    "noEmitOnError": false,
+    "paths": {
+      "@friendly-tech/core/llm-providers": ["dist/libs/core/llm-providers/src/index.d.ts"],
+      "@friendly-tech/iot/iot-tool-functions": ["dist/libs/iot/iot-tool-functions/src/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "../../core/llm-providers/**/*",
+    "../../iot/iot-tool-functions/**/*",
+    "vite.config.ts",
+    "vite.config.mts",
+    "vitest.config.ts",
+    "vitest.config.mts",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.tsx",
+    "src/**/*.test.js",
+    "src/**/*.spec.js",
+    "src/**/*.test.jsx",
+    "src/**/*.spec.jsx"
+  ]
+}

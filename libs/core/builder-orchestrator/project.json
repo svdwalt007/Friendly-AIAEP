@@ -1,0 +1,19 @@
+{
+  "name": "builder-orchestrator",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/core/builder-orchestrator/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/core/builder-orchestrator",
+        "main": "libs/core/builder-orchestrator/src/index.ts",
+        "tsConfig": "libs/core/builder-orchestrator/tsconfig.lib.json",
+        "assets": ["libs/core/builder-orchestrator/*.md"]
+      }
+    }
+  }
+}

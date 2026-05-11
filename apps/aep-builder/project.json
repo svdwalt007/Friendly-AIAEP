@@ -1,0 +1,142 @@
+{
+  "name": "aep-builder",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "apps/aep-builder/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/aep-builder",
+        "browser": "apps/aep-builder/src/main.ts",
+        "tsConfig": "apps/aep-builder/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/aep-builder/public"
+          }
+        ],
+        "styles": ["apps/aep-builder/src/styles.scss"]
+      },
+      "configurations": {
+        "production": {
+          "fileReplacements": [
+            {
+              "replace": "apps/aep-builder/src/environments/environment.ts",
+              "with": "apps/aep-builder/src/environments/environment.prod.ts"
+            }
+          ],
+          "optimization": true,
+          "outputHashing": "all",
+          "sourceMap": false,
+          "namedChunks": false,
+          "extractLicenses": true,
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "16kb",
+              "maximumError": "32kb"
+            }
+          ]
+        },
+        "preprod": {
+          "fileReplacements": [
+            {
+              "replace": "apps/aep-builder/src/environments/environment.ts",
+              "with": "apps/aep-builder/src/environments/environment.preprod.ts"
+            }
+          ],
+          "optimization": true,
+          "outputHashing": "all",
+          "sourceMap": true,
+          "namedChunks": false,
+          "extractLicenses": true,
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "16kb",
+              "maximumError": "32kb"
+            }
+          ]
+        },
+        "test": {
+          "fileReplacements": [
+            {
+              "replace": "apps/aep-builder/src/environments/environment.ts",
+              "with": "apps/aep-builder/src/environments/environment.test.ts"
+            }
+          ],
+          "optimization": false,
+          "outputHashing": "none",
+          "sourceMap": true,
+          "namedChunks": true,
+          "extractLicenses": false,
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "1mb",
+              "maximumError": "2mb"
+            }
+          ]
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true,
+          "namedChunks": true,
+          "outputHashing": "none"
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "options": {
+        "port": 45000,
+        "host": "localhost"
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "aep-builder:build:production"
+        },
+        "preprod": {
+          "buildTarget": "aep-builder:build:preprod"
+        },
+        "test": {
+          "buildTarget": "aep-builder:build:test"
+        },
+        "development": {
+          "buildTarget": "aep-builder:build:development"
+        }
+      },
+      "defaultConfiguration": "development"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "aep-builder:build",
+        "staticFilePath": "dist/apps/aep-builder/browser",
+        "spa": true
+      }
+    }
+  }
+}

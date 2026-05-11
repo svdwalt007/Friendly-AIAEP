@@ -1,0 +1,27 @@
+{
+  "name": "preview-runtime",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/builder/preview-runtime/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/builder/preview-runtime",
+        "main": "libs/builder/preview-runtime/src/index.ts",
+        "tsConfig": "libs/builder/preview-runtime/tsconfig.lib.json",
+        "assets": ["libs/builder/preview-runtime/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/libs/builder/preview-runtime"],
+      "options": {
+        "passWithNoTests": true,
+        "reportsDirectory": "../../../coverage/libs/builder/preview-runtime"
+      }
+    }
+  }
+}

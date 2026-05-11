@@ -1,0 +1,70 @@
+@if (loading()) {
+  <div class="loading-state">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+} @else if (project(); as proj) {
+  <div class="project-detail">
+    <div class="detail-header">
+      <div>
+        <div class="breadcrumb">
+          <a routerLink="/projects">Projects</a>
+          <mat-icon>chevron_right</mat-icon>
+          <span>{{ proj.name }}</span>
+        </div>
+        <h2>{{ proj.name }}</h2>
+        <p class="ft-text-muted">{{ proj.description || 'No description' }}</p>
+      </div>
+      <div class="detail-actions">
+        <button mat-stroked-button [routerLink]="['/projects', proj.id, 'builder']">
+          <mat-icon>build</mat-icon>
+          Open Builder
+        </button>
+      </div>
+    </div>
+
+    <mat-tab-group>
+      <mat-tab label="Overview">
+        <div class="tab-content">
+          <div class="info-grid">
+            <mat-card class="info-card">
+              <h4>Status</h4>
+              <span class="ft-status-badge" [ngClass]="'status-' + proj.status">{{ proj.status }}</span>
+            </mat-card>
+            <mat-card class="info-card">
+              <h4>Deployment Mode</h4>
+              <span>{{ proj.deploymentMode || 'SaaS' }}</span>
+            </mat-card>
+            <mat-card class="info-card">
+              <h4>Data Sources</h4>
+              <span>{{ proj.dataSourceCount ?? 0 }}</span>
+            </mat-card>
+            <mat-card class="info-card">
+              <h4>Created</h4>
+              <span>{{ proj.createdAt | date: 'medium' }}</span>
+            </mat-card>
+          </div>
+        </div>
+      </mat-tab>
+      <mat-tab label="Pages">
+        <div class="tab-content">
+          <div class="ft-empty-state">
+            <mat-icon class="empty-icon">web</mat-icon>
+            <p class="empty-title">No pages yet</p>
+            <p class="empty-message">Open the builder to create pages with the AI agent</p>
+            <button mat-raised-button color="accent" [routerLink]="['/projects', proj.id, 'builder']">
+              Open Builder
+            </button>
+          </div>
+        </div>
+      </mat-tab>
+      <mat-tab label="Settings">
+        <div class="tab-content">
+          <mat-card class="settings-card">
+            <h4>Project Configuration</h4>
+            <p class="ft-text-muted">Project settings and configuration will be available here.</p>
+          </mat-card>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+}

@@ -1,0 +1,26 @@
+{
+  "name": "audit-service",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/core/audit-service/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/core/audit-service",
+        "main": "libs/core/audit-service/src/index.ts",
+        "tsConfig": "libs/core/audit-service/tsconfig.lib.json",
+        "assets": ["libs/core/audit-service/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{projectRoot}/coverage"],
+      "options": {
+        "config": "libs/core/audit-service/vitest.config.mts"
+      }
+    }
+  }
+}

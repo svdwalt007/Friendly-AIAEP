@@ -1,0 +1,19 @@
+{
+  "name": "environment-service",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/builder/environment-service/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/builder/environment-service",
+        "main": "libs/builder/environment-service/src/index.ts",
+        "tsConfig": "libs/builder/environment-service/tsconfig.lib.json",
+        "assets": ["libs/builder/environment-service/*.md"]
+      }
+    }
+  }
+}

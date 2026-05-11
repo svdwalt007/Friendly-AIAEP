@@ -1,0 +1,26 @@
+{
+  "name": "auth-adapter",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/iot/auth-adapter/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/iot/auth-adapter",
+        "main": "libs/iot/auth-adapter/src/index.ts",
+        "tsConfig": "libs/iot/auth-adapter/tsconfig.lib.json",
+        "assets": ["libs/iot/auth-adapter/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "../../../coverage/libs/iot/auth-adapter"
+      }
+    }
+  }
+}

@@ -1,0 +1,87 @@
+# Custom Telegraf Dockerfile with Third-Party API Ingestion
+# Built for {{projectName}} version {{version}}
+# Tier: {{tier}} | Deployment Mode: {{deploymentMode}}
+# Note: Only generated for Professional/Enterprise tiers with third-party ingestion
+
+FROM telegraf:1.29-alpine
+
+# Install additional tools for API ingestion
+RUN apk add --no-cache \
+    curl \
+    jq \
+    ca-certificates \
+    bash \
+    python3 \
+    py3-pip
+
+# Install Python dependencies for custom scripts
+RUN pip3 install --no-cache-dir \
+    requests \
+    pyyaml
+
+# Create directories for custom configurations
+RUN mkdir -p /etc/telegraf/telegraf.d \
+    && mkdir -p /usr/local/bin/telegraf-scripts
+
+# Copy custom Telegraf configuration
+COPY telegraf-config/telegraf.conf /etc/telegraf/telegraf.conf
+
+# Copy third-party ingestion scripts
+COPY telegraf-config/scripts/ /usr/local/bin/telegraf-scripts/
+RUN chmod +x /usr/local/bin/telegraf-scripts/*.sh
+
+# Create non-root user
+RUN addgroup -g 1001 -S telegraf \
+    && adduser -S -D -H -u 1001 -h /etc/telegraf -s /sbin/nologin -G telegraf -g telegraf telegraf
+
+# Set ownership
+RUN chown -R telegraf:telegraf /etc/telegraf \
+    && chown -R telegraf:telegraf /usr/local/bin/telegraf-scripts
+
+# Environment variables for third-party APIs
+ENV TELEGRAF_INTERVAL={{telegrafInterval}} \
+    TELEGRAF_FLUSH_INTERVAL={{telegrafFlushInterval}} \
+    INFLUXDB_URL=http://influxdb:8086 \
+    INFLUXDB_DB={{influxDbName}} \
+    INFLUXDB_USER={{influxUser}}
+
+{{#if hasThirdPartyIngestion}}
+# Third-Party API Configuration
+ENV THIRD_PARTY_API_ENABLED=true \
+    THIRD_PARTY_API_INTERVAL=60s
+{{/if}}
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD telegraf --test || exit 1
+
+# Run as non-root user
+USER telegraf
+
+# Start Telegraf
+CMD ["telegraf", "--config", "/etc/telegraf/telegraf.conf", "--config-directory", "/etc/telegraf/telegraf.d"]
+
+# Labels for metadata
+LABEL maintainer="Friendly Technologies" \
+      project="{{projectName}}" \
+      version="{{version}}" \
+      tier="{{tier}}" \
+      deployment-mode="{{deploymentMode}}" \
+      description="Telegraf with Third-Party API Ingestion for InfluxDB"
+
+# Telegraf Configuration Template (embedded as comment for reference)
+# This configuration supports:
+# - Friendly One-IoT DM API metrics collection
+# - Third-party REST API ingestion (Professional/Enterprise only)
+# - InfluxDB output with retention policies
+# - Custom aggregation and transformations
+#
+# Example custom input plugin:
+# [[inputs.http]]
+#   urls = ["${THIRD_PARTY_API_URL}"]
+#   method = "GET"
+#   headers = {"Authorization" = "Bearer ${THIRD_PARTY_API_TOKEN}"}
+#   data_format = "json"
+#   json_query = "data"
+#   tag_keys = ["device_id", "location"]
+#   interval = "${THIRD_PARTY_API_INTERVAL}"

@@ -1,0 +1,463 @@
+name: Performance Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: 'staging'
+      duration:
+        description: 'Load test duration (minutes)'
+        required: false
+        type: number
+        default: 5
+  schedule:
+    - cron: '0 4 * * *' # Daily at 4 AM UTC
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      - 'libs/**'
+
+concurrency:
+  group: performance-${{ github.ref }}-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10'
+  ENVIRONMENT: ${{ inputs.environment || 'staging' }}
+  DURATION: ${{ inputs.duration || 5 }}
+
+jobs:
+  lighthouse-ci:
+    name: Lighthouse CI Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+
+    strategy:
+      matrix:
+        url:
+          - '/'
+          - '/builder'
+          - '/api/health'
+          - '/api/docs'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build applications
+        run: pnpm nx run-many --target=build --all --parallel=3
+
+      - name: Start local server
+        run: |
+          pnpm nx run aep-builder:serve:production &
+          sleep 30
+        if: github.event_name == 'pull_request'
+
+      - name: Set base URL
+        id: set-url
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "base_url=http://localhost:4200" >> $GITHUB_OUTPUT
+          elif [[ "${{ env.ENVIRONMENT }}" == "production" ]]; then
+            echo "base_url=https://friendly-aiaep.com" >> $GITHUB_OUTPUT
+          else
+            echo "base_url=https://staging.friendly-aiaep.com" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            ${{ steps.set-url.outputs.base_url }}${{ matrix.url }}
+          runs: 3
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          budgetPath: .github/lighthouse/budget.json
+
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results-${{ matrix.url }}
+          path: .lighthouseci/
+          retention-days: 30
+
+      - name: Comment PR with Lighthouse results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('.lighthouseci/manifest.json'));
+
+            const comment = `
+            ## Lighthouse CI Results for ${{ matrix.url }}
+
+            Performance metrics:
+            - Performance Score: ${results[0].summary.performance * 100}
+            - Accessibility: ${results[0].summary.accessibility * 100}
+            - Best Practices: ${results[0].summary['best-practices'] * 100}
+            - SEO: ${results[0].summary.seo * 100}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  web-vitals:
+    name: Web Vitals Monitoring
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Measure Web Vitals
+        run: |
+          echo "Measuring Core Web Vitals..."
+          # Add your Web Vitals measurement script here
+          # Example: pnpm nx run aep-builder:measure-vitals
+
+      - name: Upload Web Vitals results
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-vitals-results
+          path: web-vitals-report/
+          retention-days: 30
+          if-no-files-found: ignore
+
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build for analysis
+        run: pnpm nx run-many --target=build --all --parallel=3 --configuration=production
+
+      - name: Analyze bundle size
+        run: |
+          echo "## Bundle Size Analysis" >> bundle-report.md
+          echo "" >> bundle-report.md
+
+          for app in apps/*/dist; do
+            if [ -d "$app" ]; then
+              echo "### $(basename $(dirname $app))" >> bundle-report.md
+              find "$app" -name "*.js" -type f -exec du -h {} \; | sort -h -r | head -20 >> bundle-report.md
+              echo "" >> bundle-report.md
+            fi
+          done
+
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: bundle-report.md
+          retention-days: 30
+
+      - name: Comment PR with bundle size
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('bundle-report.md', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+  load-testing:
+    name: Load Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request'
+
+    strategy:
+      matrix:
+        scenario:
+          - normal-load
+          - peak-load
+          - stress-test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Set target URL
+        id: set-url
+        run: |
+          if [[ "${{ env.ENVIRONMENT }}" == "production" ]]; then
+            echo "target_url=https://friendly-aiaep.com" >> $GITHUB_OUTPUT
+          else
+            echo "target_url=https://staging.friendly-aiaep.com" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run k6 load test (${{ matrix.scenario }})
+        run: |
+          k6 run --out json=k6-results.json \
+            --env TARGET_URL=${{ steps.set-url.outputs.target_url }} \
+            --env SCENARIO=${{ matrix.scenario }} \
+            --env DURATION=${{ env.DURATION }}m \
+            .github/performance/k6-tests.js
+
+      - name: Upload k6 results
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results-${{ matrix.scenario }}
+          path: k6-results.json
+          retention-days: 30
+
+      - name: Generate load test report
+        run: |
+          echo "## Load Test Results - ${{ matrix.scenario }}" >> $GITHUB_STEP_SUMMARY
+          k6 cloud summary k6-results.json >> $GITHUB_STEP_SUMMARY || true
+
+  artillery-test:
+    name: Artillery Load Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Artillery
+        run: npm install -g artillery@latest
+
+      - name: Set target URL
+        id: set-url
+        run: |
+          if [[ "${{ env.ENVIRONMENT }}" == "production" ]]; then
+            echo "target_url=https://friendly-aiaep.com" >> $GITHUB_OUTPUT
+          else
+            echo "target_url=https://staging.friendly-aiaep.com" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Artillery test
+        run: |
+          artillery run \
+            --target ${{ steps.set-url.outputs.target_url }} \
+            --output artillery-report.json \
+            .github/performance/artillery-config.yml
+
+      - name: Generate Artillery HTML report
+        run: artillery report artillery-report.json --output artillery-report.html
+
+      - name: Upload Artillery results
+        uses: actions/upload-artifact@v4
+        with:
+          name: artillery-results
+          path: |
+            artillery-report.json
+            artillery-report.html
+          retention-days: 30
+
+  api-performance:
+    name: API Performance Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set target URL
+        id: set-url
+        run: |
+          if [[ "${{ env.ENVIRONMENT }}" == "production" ]]; then
+            echo "target_url=https://friendly-aiaep.com" >> $GITHUB_OUTPUT
+          else
+            echo "target_url=https://staging.friendly-aiaep.com" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run API performance tests
+        run: |
+          echo "Running API performance tests against ${{ steps.set-url.outputs.target_url }}"
+          # Add your API performance testing commands here
+          # Example: newman run collection.json --env-var base_url=${{ steps.set-url.outputs.target_url }}
+
+      - name: Upload API performance results
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-performance-results
+          path: api-perf-results/
+          retention-days: 30
+          if-no-files-found: ignore
+
+  memory-profiling:
+    name: Memory Profiling
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run memory profiling
+        run: |
+          echo "Running memory profiling..."
+          # Add your memory profiling commands here
+          # Example: node --inspect --heap-prof apps/aep-api-gateway/src/main.ts
+
+      - name: Upload memory profiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-profiles
+          path: |
+            *.heapprofile
+            *.heapsnapshot
+          retention-days: 30
+          if-no-files-found: ignore
+
+  performance-summary:
+    name: Performance Test Summary
+    runs-on: ubuntu-latest
+    needs: [lighthouse-ci, web-vitals, bundle-analysis, load-testing, artillery-test, api-performance, memory-profiling]
+    if: always()
+
+    steps:
+      - name: Generate performance summary
+        run: |
+          echo "## Performance Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lighthouse CI | ${{ needs.lighthouse-ci.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web Vitals | ${{ needs.web-vitals.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bundle Analysis | ${{ needs.bundle-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Load Testing | ${{ needs.load-testing.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Artillery | ${{ needs.artillery-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Performance | ${{ needs.api-performance.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Memory Profiling | ${{ needs.memory-profiling.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Environment" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target**: ${{ env.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Duration**: ${{ env.DURATION }} minutes" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send Slack notification
+        if: always() && secrets.SLACK_WEBHOOK_URL
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Performance Tests Completed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Performance Test Results*\n*Environment:* ${{ env.ENVIRONMENT }}\n*Lighthouse:* ${{ needs.lighthouse-ci.result }}\n*Load Testing:* ${{ needs.load-testing.result }}\n*Bundle Analysis:* ${{ needs.bundle-analysis.result }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

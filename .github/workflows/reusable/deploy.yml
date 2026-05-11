@@ -1,0 +1,300 @@
+name: Reusable Deploy Workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Target environment (dev, test, staging, preprod, production)'
+        required: true
+        type: string
+      image-tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        type: string
+      deployment-strategy:
+        description: 'Deployment strategy (rolling, blue-green, canary)'
+        required: false
+        type: string
+        default: 'rolling'
+      replica-count:
+        description: 'Number of replicas'
+        required: false
+        type: number
+        default: 1
+      skip-smoke-tests:
+        description: 'Skip smoke tests after deployment'
+        required: false
+        type: boolean
+        default: false
+      auto-rollback:
+        description: 'Automatically rollback on failure'
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      deployment-url:
+        description: 'Deployed application URL'
+        value: ${{ jobs.deploy.outputs.url }}
+      deployment-status:
+        description: 'Deployment status'
+        value: ${{ jobs.deploy.outputs.status }}
+    secrets:
+      KUBE_CONFIG:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: false
+      TEAMS_WEBHOOK_URL:
+        required: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  ENVIRONMENT: ${{ inputs.environment }}
+  DEPLOYMENT_STRATEGY: ${{ inputs.deployment-strategy }}
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.set-url.outputs.url }}
+    outputs:
+      url: ${{ steps.set-url.outputs.url }}
+      status: ${{ steps.deploy.outputs.status }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set deployment URL
+        id: set-url
+        run: |
+          case "${{ env.ENVIRONMENT }}" in
+            production)
+              echo "url=https://friendly-aiaep.com" >> $GITHUB_OUTPUT
+              echo "namespace=friendly-production" >> $GITHUB_OUTPUT
+              ;;
+            preprod)
+              echo "url=https://preprod.friendly-aiaep.com" >> $GITHUB_OUTPUT
+              echo "namespace=friendly-preprod" >> $GITHUB_OUTPUT
+              ;;
+            staging)
+              echo "url=https://staging.friendly-aiaep.com" >> $GITHUB_OUTPUT
+              echo "namespace=friendly-staging" >> $GITHUB_OUTPUT
+              ;;
+            test)
+              echo "url=https://test.friendly-aiaep.com" >> $GITHUB_OUTPUT
+              echo "namespace=friendly-test" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "url=https://dev.friendly-aiaep.com" >> $GITHUB_OUTPUT
+              echo "namespace=friendly-dev" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Create deployment backup
+        id: backup
+        if: inputs.auto-rollback
+        run: |
+          BACKUP_NAME="backup-$(date +%s)"
+          echo "backup_name=${BACKUP_NAME}" >> $GITHUB_OUTPUT
+          kubectl get deployment friendly-aep -n ${{ steps.set-url.outputs.namespace }} -o yaml > /tmp/deployment-backup.yaml 2>/dev/null || true
+          if [ -f /tmp/deployment-backup.yaml ]; then
+            CURRENT_TAG=$(kubectl get deployment friendly-aep -n ${{ steps.set-url.outputs.namespace }} -o jsonpath='{.spec.template.spec.containers[0].image}' | cut -d':' -f2) || true
+            echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
+            echo "Backup created: ${BACKUP_NAME}"
+          else
+            echo "No existing deployment to backup"
+          fi
+
+      - name: Deploy with Blue-Green strategy
+        id: deploy-blue-green
+        if: inputs.deployment-strategy == 'blue-green'
+        run: |
+          echo "Deploying with Blue-Green strategy..."
+
+          # Deploy green version
+          helm upgrade --install friendly-aep-green ./deploy/helm \
+            --namespace ${{ steps.set-url.outputs.namespace }} \
+            --create-namespace \
+            --set image.tag=${{ inputs.image-tag }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set environment=${{ env.ENVIRONMENT }} \
+            --set nameOverride=friendly-aep-green \
+            --set replicaCount=${{ inputs.replica-count }} \
+            --wait \
+            --timeout 10m
+
+          kubectl rollout status deployment/friendly-aep-green -n ${{ steps.set-url.outputs.namespace }} --timeout=300s
+
+      - name: Deploy with Canary strategy
+        id: deploy-canary
+        if: inputs.deployment-strategy == 'canary'
+        run: |
+          echo "Deploying with Canary strategy..."
+
+          # Deploy canary with 10% traffic
+          helm upgrade --install friendly-aep-canary ./deploy/helm \
+            --namespace ${{ steps.set-url.outputs.namespace }} \
+            --create-namespace \
+            --set image.tag=${{ inputs.image-tag }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set environment=${{ env.ENVIRONMENT }} \
+            --set nameOverride=friendly-aep-canary \
+            --set replicaCount=1 \
+            --set canary.enabled=true \
+            --set canary.weight=10 \
+            --wait \
+            --timeout 5m
+
+          kubectl rollout status deployment/friendly-aep-canary -n ${{ steps.set-url.outputs.namespace }} --timeout=180s
+
+          echo "Canary deployed with 10% traffic"
+
+      - name: Deploy with Rolling Update
+        id: deploy-rolling
+        if: inputs.deployment-strategy == 'rolling'
+        run: |
+          helm upgrade --install friendly-aep ./deploy/helm \
+            --namespace ${{ steps.set-url.outputs.namespace }} \
+            --create-namespace \
+            --set image.tag=${{ inputs.image-tag }} \
+            --set image.registry=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set environment=${{ env.ENVIRONMENT }} \
+            --set replicaCount=${{ inputs.replica-count }} \
+            --wait \
+            --timeout 10m
+
+      - name: Verify deployment
+        id: verify
+        run: |
+          if [[ "${{ inputs.deployment-strategy }}" == "blue-green" ]]; then
+            kubectl rollout status deployment/friendly-aep-green -n ${{ steps.set-url.outputs.namespace }} --timeout=300s
+          elif [[ "${{ inputs.deployment-strategy }}" == "canary" ]]; then
+            kubectl rollout status deployment/friendly-aep-canary -n ${{ steps.set-url.outputs.namespace }} --timeout=180s
+          else
+            kubectl rollout status deployment/friendly-aep -n ${{ steps.set-url.outputs.namespace }} --timeout=300s
+          fi
+
+      - name: Run smoke tests
+        id: smoke-tests
+        if: ${{ !inputs.skip-smoke-tests }}
+        continue-on-error: true
+        run: |
+          echo "Running smoke tests against ${{ steps.set-url.outputs.url }}"
+          sleep 10
+
+          # Health check
+          for i in {1..5}; do
+            if curl -f "${{ steps.set-url.outputs.url }}/health"; then
+              echo "Health check passed"
+              echo "result=success" >> $GITHUB_OUTPUT
+              break
+            else
+              echo "Health check failed, attempt $i/5"
+              if [ $i -eq 5 ]; then
+                echo "result=failure" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+              sleep 10
+            fi
+          done
+
+      - name: Switch traffic (Blue-Green)
+        id: switch-traffic
+        if: inputs.deployment-strategy == 'blue-green' && steps.smoke-tests.outputs.result == 'success'
+        run: |
+          echo "Switching production traffic to green deployment..."
+          kubectl patch service friendly-aep -n ${{ steps.set-url.outputs.namespace }} -p '{"spec":{"selector":{"app":"friendly-aep-green"}}}'
+          sleep 30
+          echo "Traffic switched successfully"
+
+      - name: Promote canary (Canary)
+        id: promote-canary
+        if: inputs.deployment-strategy == 'canary' && steps.smoke-tests.outputs.result == 'success'
+        run: |
+          echo "Promoting canary to 100% traffic..."
+          helm upgrade friendly-aep-canary ./deploy/helm \
+            --namespace ${{ steps.set-url.outputs.namespace }} \
+            --set canary.weight=100 \
+            --wait
+
+      - name: Rollback on failure
+        if: failure() && inputs.auto-rollback && steps.backup.outputs.backup_name != ''
+        run: |
+          echo "Deployment failed, initiating rollback..."
+
+          if [[ "${{ inputs.deployment-strategy }}" == "blue-green" ]]; then
+            helm uninstall friendly-aep-green -n ${{ steps.set-url.outputs.namespace }} || true
+            echo "Green deployment removed, traffic remains on blue"
+          elif [[ "${{ inputs.deployment-strategy }}" == "canary" ]]; then
+            helm uninstall friendly-aep-canary -n ${{ steps.set-url.outputs.namespace }} || true
+            echo "Canary deployment removed"
+          elif [[ -f /tmp/deployment-backup.yaml ]]; then
+            kubectl apply -f /tmp/deployment-backup.yaml -n ${{ steps.set-url.outputs.namespace }} || true
+            kubectl rollout status deployment/friendly-aep -n ${{ steps.set-url.outputs.namespace }} --timeout=300s
+            echo "Rolled back to previous version"
+          fi
+
+          exit 1
+
+      - name: Cleanup old deployment (Blue-Green)
+        if: inputs.deployment-strategy == 'blue-green' && steps.switch-traffic.outcome == 'success'
+        run: |
+          echo "Removing old blue deployment..."
+          helm uninstall friendly-aep-blue -n ${{ steps.set-url.outputs.namespace }} || true
+
+      - name: Set deployment status
+        id: deploy
+        if: always()
+        run: |
+          if [[ "${{ steps.smoke-tests.outputs.result }}" == "success" ]] || [[ "${{ inputs.skip-smoke-tests }}" == "true" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate deployment summary
+        if: always()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ env.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Strategy**: ${{ inputs.deployment-strategy }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: ${{ inputs.image-tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Replicas**: ${{ inputs.replica-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ steps.set-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ steps.deploy.outputs.status }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ inputs.skip-smoke-tests }}" != "true" ]]; then
+            echo "- **Smoke Tests**: ${{ steps.smoke-tests.outputs.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Send Slack notification
+        if: always() && secrets.SLACK_WEBHOOK_URL
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "${{ env.ENVIRONMENT }} Deployment ${{ steps.deploy.outputs.status == 'success' && 'Succeeded' || 'Failed' }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*${{ env.ENVIRONMENT }} Deployment ${{ steps.deploy.outputs.status == 'success' && ':white_check_mark:' || ':x:' }}*\n*Strategy:* ${{ inputs.deployment-strategy }}\n*Image:* ${{ inputs.image-tag }}\n*URL:* ${{ steps.set-url.outputs.url }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

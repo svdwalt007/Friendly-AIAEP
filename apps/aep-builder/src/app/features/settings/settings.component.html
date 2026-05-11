@@ -1,0 +1,53 @@
+<div class="settings">
+  <h2>Settings</h2>
+
+  <mat-card class="settings-card">
+    <h3>Appearance</h3>
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">Dark Mode</span>
+        <span class="setting-desc ft-text-muted">Switch between light and dark themes</span>
+      </div>
+      <mat-slide-toggle
+        [checked]="themeService.isDark()"
+        (change)="themeService.toggle()"
+      ></mat-slide-toggle>
+    </div>
+  </mat-card>
+
+  <mat-card class="settings-card">
+    <h3>Account</h3>
+    @if (authService.user(); as user) {
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Username</span>
+          <span class="setting-desc ft-text-muted">{{ user.username }}</span>
+        </div>
+      </div>
+      <mat-divider></mat-divider>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Role</span>
+          <span class="setting-desc ft-text-muted">{{ user.role }}</span>
+        </div>
+      </div>
+      <mat-divider></mat-divider>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Tenant ID</span>
+          <span class="setting-desc ft-text-muted">{{ user.tenantId }}</span>
+        </div>
+      </div>
+    }
+  </mat-card>
+
+  <mat-card class="settings-card">
+    <h3>About</h3>
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-label">Friendly AEP Builder</span>
+        <span class="setting-desc ft-text-muted">Version 1.0.0 — AI-Powered IoT Application Builder</span>
+      </div>
+    </div>
+  </mat-card>
+</div>

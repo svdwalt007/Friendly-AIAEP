@@ -1,0 +1,34 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "NoProps API",
+    "version": "1.0.0",
+    "description": "API with schemas that have no properties"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/noprops/v1"
+    }
+  ],
+  "paths": {
+    "/ping": {
+      "get": {
+        "operationId": "ping",
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Alert": {
+        "type": "object",
+        "description": "Alert without properties (bare schema)"
+      }
+    }
+  }
+}

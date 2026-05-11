@@ -1,0 +1,727 @@
+openapi: 3.1.0
+info:
+  title: Friendly QoE API
+  version: 1.0.0
+  description: |
+    Quality of Experience (QoE) API for monitoring IoT device telemetry, connectivity status,
+    and fleet-wide key performance indicators (KPIs). This API provides real-time and historical
+    data to enable comprehensive device and fleet monitoring.
+  contact:
+    name: Friendly AI Support
+    email: support@friendlyai.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.friendlyai.com/v1
+    description: Production server
+  - url: https://api-staging.friendlyai.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Local development server
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /qoe/devices/{id}/telemetry:
+    get:
+      summary: Get device telemetry data
+      description: |
+        Retrieves telemetry data for a specific device within a given time range.
+        Supports filtering by specific metrics to reduce payload size.
+      operationId: getDeviceTelemetry
+      tags:
+        - Telemetry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique device identifier
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+$'
+            minLength: 1
+            maxLength: 128
+          example: device_12345_abc
+        - name: startTime
+          in: query
+          required: true
+          description: Start time for telemetry data (ISO 8601 format)
+          schema:
+            type: string
+            format: date-time
+          example: '2024-01-15T08:00:00Z'
+        - name: endTime
+          in: query
+          required: true
+          description: End time for telemetry data (ISO 8601 format)
+          schema:
+            type: string
+            format: date-time
+          example: '2024-01-15T09:00:00Z'
+        - name: metrics
+          in: query
+          required: false
+          description: Array of specific metrics to retrieve. If omitted, all metrics are returned.
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - signalStrength
+                - latency
+                - throughput
+                - packetLoss
+                - jitter
+                - errorRate
+          style: form
+          explode: true
+          example:
+            - signalStrength
+            - latency
+      responses:
+        '200':
+          description: Telemetry data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryData'
+              examples:
+                fullMetrics:
+                  summary: Full telemetry data with all metrics
+                  value:
+                    deviceId: device_12345_abc
+                    timestamp: '2024-01-15T08:30:00Z'
+                    metrics:
+                      signalStrength: -65.5
+                      latency: 45.2
+                      throughput: 125.8
+                      packetLoss: 0.12
+                      jitter: 2.5
+                      errorRate: 0.05
+                    metadata:
+                      location:
+                        latitude: 37.7749
+                        longitude: -122.4194
+                      firmwareVersion: '2.1.3'
+                      networkType: 5G
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /qoe/fleet/kpis:
+    get:
+      summary: Get fleet-wide KPIs
+      description: |
+        Retrieves aggregated key performance indicators across the entire device fleet.
+        Supports various time periods and aggregation methods for flexible reporting.
+      operationId: getFleetKPIs
+      tags:
+        - Fleet Analytics
+      parameters:
+        - name: period
+          in: query
+          required: true
+          description: Time period for KPI aggregation
+          schema:
+            type: string
+            enum:
+              - hour
+              - day
+              - week
+              - month
+          example: day
+        - name: aggregation
+          in: query
+          required: false
+          description: Aggregation method for KPI calculation
+          schema:
+            type: string
+            enum:
+              - avg
+              - min
+              - max
+              - p95
+              - p99
+            default: avg
+          example: avg
+        - name: startDate
+          in: query
+          required: false
+          description: Start date for historical KPIs (ISO 8601 format)
+          schema:
+            type: string
+            format: date-time
+          example: '2024-01-01T00:00:00Z'
+        - name: endDate
+          in: query
+          required: false
+          description: End date for historical KPIs (ISO 8601 format)
+          schema:
+            type: string
+            format: date-time
+          example: '2024-01-31T23:59:59Z'
+      responses:
+        '200':
+          description: Fleet KPIs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetKPIs'
+              examples:
+                dailyAverage:
+                  summary: Daily average KPIs
+                  value:
+                    period: day
+                    timestamp: '2024-01-15T00:00:00Z'
+                    aggregation: avg
+                    totalDevices: 15420
+                    activeDevices: 14852
+                    avgSignalStrength: -68.2
+                    avgLatency: 52.7
+                    avgThroughput: 118.5
+                    avgPacketLoss: 0.18
+                    uptimePercentage: 99.87
+                    deviceHealth:
+                      healthy: 14120
+                      degraded: 732
+                      critical: 568
+                    topIssues:
+                      - issue: High latency
+                        affectedDevices: 342
+                        severity: warning
+                      - issue: Signal degradation
+                        affectedDevices: 198
+                        severity: info
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /qoe/devices/{id}/connectivity:
+    get:
+      summary: Get device connectivity status
+      description: |
+        Retrieves the current connectivity status and connection quality metrics
+        for a specific device.
+      operationId: getDeviceConnectivity
+      tags:
+        - Connectivity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique device identifier
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]+$'
+            minLength: 1
+            maxLength: 128
+          example: device_12345_abc
+      responses:
+        '200':
+          description: Connectivity status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectivityStatus'
+              examples:
+                onlineDevice:
+                  summary: Device with good connectivity
+                  value:
+                    deviceId: device_12345_abc
+                    status: online
+                    lastSeen: '2024-01-15T08:30:15Z'
+                    connectionType: 5G
+                    signalQuality:
+                      rssi: -65.5
+                      rsrp: -85.2
+                      rsrq: -10.5
+                      snr: 15.8
+                    networkInfo:
+                      provider: Verizon
+                      band: n78
+                      cellId: AB12-CD34
+                      ipAddress: 10.42.15.128
+                    connectionDuration: 86400
+                    reconnectCount: 2
+                degradedDevice:
+                  summary: Device with degraded connectivity
+                  value:
+                    deviceId: device_67890_xyz
+                    status: degraded
+                    lastSeen: '2024-01-15T08:28:42Z'
+                    connectionType: 4G
+                    signalQuality:
+                      rssi: -95.2
+                      rsrp: -110.5
+                      rsrq: -15.8
+                      snr: 3.2
+                    networkInfo:
+                      provider: AT&T
+                      band: b4
+                      cellId: EF56-GH78
+                      ipAddress: 10.42.18.201
+                    connectionDuration: 3600
+                    reconnectCount: 15
+                    issues:
+                      - Poor signal strength
+                      - High reconnection rate
+                offlineDevice:
+                  summary: Offline device
+                  value:
+                    deviceId: device_99999_zzz
+                    status: offline
+                    lastSeen: '2024-01-14T22:15:30Z'
+                    connectionType: null
+                    signalQuality: null
+                    networkInfo: null
+                    connectionDuration: 0
+                    reconnectCount: 0
+                    issues:
+                      - Device not responding
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication. Obtain from the developer portal.
+
+  schemas:
+    TelemetryData:
+      type: object
+      required:
+        - deviceId
+        - timestamp
+        - metrics
+      properties:
+        deviceId:
+          type: string
+          description: Unique identifier for the device
+          example: device_12345_abc
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the telemetry data was collected
+          example: '2024-01-15T08:30:00Z'
+        metrics:
+          type: object
+          description: Telemetry metrics collected from the device
+          properties:
+            signalStrength:
+              type: number
+              format: float
+              description: Signal strength in dBm
+              minimum: -120
+              maximum: -20
+              example: -65.5
+            latency:
+              type: number
+              format: float
+              description: Network latency in milliseconds
+              minimum: 0
+              example: 45.2
+            throughput:
+              type: number
+              format: float
+              description: Data throughput in Mbps
+              minimum: 0
+              example: 125.8
+            packetLoss:
+              type: number
+              format: float
+              description: Packet loss percentage
+              minimum: 0
+              maximum: 100
+              example: 0.12
+            jitter:
+              type: number
+              format: float
+              description: Jitter in milliseconds
+              minimum: 0
+              example: 2.5
+            errorRate:
+              type: number
+              format: float
+              description: Error rate percentage
+              minimum: 0
+              maximum: 100
+              example: 0.05
+        metadata:
+          type: object
+          description: Additional metadata about the device and measurement
+          properties:
+            location:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                  format: double
+                  example: 37.7749
+                longitude:
+                  type: number
+                  format: double
+                  example: -122.4194
+            firmwareVersion:
+              type: string
+              example: '2.1.3'
+            networkType:
+              type: string
+              enum:
+                - 5G
+                - 4G
+                - LTE
+                - 3G
+                - WiFi
+              example: 5G
+
+    FleetKPIs:
+      type: object
+      required:
+        - period
+        - timestamp
+        - totalDevices
+        - activeDevices
+      properties:
+        period:
+          type: string
+          enum:
+            - hour
+            - day
+            - week
+            - month
+          description: Time period for the KPI aggregation
+          example: day
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp for the KPI data point
+          example: '2024-01-15T00:00:00Z'
+        aggregation:
+          type: string
+          enum:
+            - avg
+            - min
+            - max
+            - p95
+            - p99
+          description: Aggregation method used for calculations
+          default: avg
+          example: avg
+        totalDevices:
+          type: integer
+          description: Total number of registered devices
+          minimum: 0
+          example: 15420
+        activeDevices:
+          type: integer
+          description: Number of currently active devices
+          minimum: 0
+          example: 14852
+        avgSignalStrength:
+          type: number
+          format: float
+          description: Average signal strength across all devices (dBm)
+          example: -68.2
+        avgLatency:
+          type: number
+          format: float
+          description: Average network latency (ms)
+          minimum: 0
+          example: 52.7
+        avgThroughput:
+          type: number
+          format: float
+          description: Average data throughput (Mbps)
+          minimum: 0
+          example: 118.5
+        avgPacketLoss:
+          type: number
+          format: float
+          description: Average packet loss percentage
+          minimum: 0
+          maximum: 100
+          example: 0.18
+        uptimePercentage:
+          type: number
+          format: float
+          description: Fleet-wide uptime percentage
+          minimum: 0
+          maximum: 100
+          example: 99.87
+        deviceHealth:
+          type: object
+          description: Breakdown of device health status
+          properties:
+            healthy:
+              type: integer
+              description: Number of healthy devices
+              minimum: 0
+              example: 14120
+            degraded:
+              type: integer
+              description: Number of devices with degraded performance
+              minimum: 0
+              example: 732
+            critical:
+              type: integer
+              description: Number of devices in critical state
+              minimum: 0
+              example: 568
+        topIssues:
+          type: array
+          description: Most common issues affecting the fleet
+          items:
+            type: object
+            required:
+              - issue
+              - affectedDevices
+              - severity
+            properties:
+              issue:
+                type: string
+                description: Description of the issue
+                example: High latency
+              affectedDevices:
+                type: integer
+                description: Number of devices affected by this issue
+                minimum: 0
+                example: 342
+              severity:
+                type: string
+                enum:
+                  - info
+                  - warning
+                  - critical
+                description: Severity level of the issue
+                example: warning
+
+    ConnectivityStatus:
+      type: object
+      required:
+        - deviceId
+        - status
+        - lastSeen
+      properties:
+        deviceId:
+          type: string
+          description: Unique identifier for the device
+          example: device_12345_abc
+        status:
+          type: string
+          enum:
+            - online
+            - offline
+            - degraded
+          description: Current connectivity status of the device
+          example: online
+        lastSeen:
+          type: string
+          format: date-time
+          description: Timestamp when the device was last seen online
+          example: '2024-01-15T08:30:15Z'
+        connectionType:
+          type: string
+          nullable: true
+          enum:
+            - 5G
+            - 4G
+            - LTE
+            - 3G
+            - WiFi
+            - Ethernet
+          description: Type of network connection
+          example: 5G
+        signalQuality:
+          type: object
+          nullable: true
+          description: Detailed signal quality metrics
+          properties:
+            rssi:
+              type: number
+              format: float
+              description: Received Signal Strength Indicator (dBm)
+              example: -65.5
+            rsrp:
+              type: number
+              format: float
+              description: Reference Signal Received Power (dBm)
+              example: -85.2
+            rsrq:
+              type: number
+              format: float
+              description: Reference Signal Received Quality (dB)
+              example: -10.5
+            snr:
+              type: number
+              format: float
+              description: Signal-to-Noise Ratio (dB)
+              example: 15.8
+        networkInfo:
+          type: object
+          nullable: true
+          description: Network provider and configuration information
+          properties:
+            provider:
+              type: string
+              description: Network service provider name
+              example: Verizon
+            band:
+              type: string
+              description: Frequency band in use
+              example: n78
+            cellId:
+              type: string
+              description: Cell tower identifier
+              example: AB12-CD34
+            ipAddress:
+              type: string
+              format: ipv4
+              description: Device IP address
+              example: 10.42.15.128
+        connectionDuration:
+          type: integer
+          description: Duration of current connection in seconds
+          minimum: 0
+          example: 86400
+        reconnectCount:
+          type: integer
+          description: Number of reconnections in the last 24 hours
+          minimum: 0
+          example: 2
+        issues:
+          type: array
+          description: List of current connectivity issues
+          items:
+            type: string
+          example:
+            - Poor signal strength
+            - High reconnection rate
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: ValidationError
+        message:
+          type: string
+          description: Human-readable error message
+          example: Invalid device ID format
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred
+          example: '2024-01-15T08:30:00Z'
+        requestId:
+          type: string
+          description: Unique identifier for the request
+          example: req_abc123xyz789
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: ValidationError
+            message: Invalid query parameters
+            details:
+              startTime: Must be a valid ISO 8601 date-time
+            timestamp: '2024-01-15T08:30:00Z'
+            requestId: req_abc123xyz789
+
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: AuthenticationError
+            message: Invalid or missing API key
+            timestamp: '2024-01-15T08:30:00Z'
+            requestId: req_abc123xyz789
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: NotFoundError
+            message: Device not found
+            details:
+              deviceId: device_12345_abc
+            timestamp: '2024-01-15T08:30:00Z'
+            requestId: req_abc123xyz789
+
+    TooManyRequests:
+      description: Too many requests - rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: RateLimitError
+            message: Rate limit exceeded. Please try again later.
+            details:
+              retryAfter: 60
+            timestamp: '2024-01-15T08:30:00Z'
+            requestId: req_abc123xyz789
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: InternalServerError
+            message: An unexpected error occurred
+            timestamp: '2024-01-15T08:30:00Z'
+            requestId: req_abc123xyz789
+
+tags:
+  - name: Telemetry
+    description: Device telemetry data operations
+  - name: Fleet Analytics
+    description: Fleet-wide analytics and KPIs
+  - name: Connectivity
+    description: Device connectivity status operations

@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "AEP Development DB",
+      "Group": "Friendly AI AEP",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "aep_dev",
+      "Username": "postgres",
+      "Password": "postgres",
+      "SSLMode": "prefer",
+      "Comment": "Agent runtime PostgreSQL checkpointer database"
+    }
+  }
+}

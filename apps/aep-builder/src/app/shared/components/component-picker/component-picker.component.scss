@@ -1,0 +1,272 @@
+@use '../../../../styles/design-tokens';
+@use '../../../../styles/mixins' as *;
+
+.component-picker {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--ft-surface-primary);
+  overflow: hidden;
+}
+
+.picker-header {
+  padding: var(--ft-spacing-md);
+  border-bottom: 1px solid var(--ft-border-color);
+  flex-shrink: 0;
+
+  h3 {
+    margin: 0 0 var(--ft-spacing-sm);
+    @include heading-5;
+    color: var(--ft-text-primary);
+  }
+
+  .search-field {
+    width: 100%;
+
+    ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+  }
+}
+
+.category-filter {
+  display: flex;
+  gap: var(--ft-spacing-xs);
+  padding: var(--ft-spacing-sm) var(--ft-spacing-md);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--ft-border-color);
+  @include hide-scrollbar;
+  flex-shrink: 0;
+}
+
+.category-chip {
+  @include flex-inline;
+  gap: var(--ft-spacing-xs);
+  padding: var(--ft-spacing-xs) var(--ft-spacing-sm);
+  background-color: var(--ft-surface-secondary);
+  border: 1px solid var(--ft-border-color);
+  border-radius: var(--ft-radius-pill);
+  color: var(--ft-text-secondary);
+  @include body-2;
+  font-weight: var(--ft-font-weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  @include transition(background-color, border-color, color, transform);
+  @include focus-visible;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background-color: var(--ft-surface-tertiary);
+    border-color: var(--ft-border-strong);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.selected {
+    background-color: var(--ft-primary);
+    border-color: var(--ft-primary);
+    color: #fff;
+  }
+}
+
+.component-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ft-spacing-md);
+  @include custom-scrollbar();
+  @include grid-auto(280px, var(--ft-spacing-md));
+
+  @include breakpoint(lg) {
+    @include grid-auto(320px, var(--ft-spacing-md));
+  }
+}
+
+.component-card {
+  position: relative;
+  @include card;
+  cursor: pointer;
+  overflow: hidden;
+  @include transition(transform, box-shadow);
+  @include focus-visible;
+
+  &:hover {
+    @include elevation(3);
+    transform: translateY(-2px);
+
+    .card-overlay {
+      opacity: 1;
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+    @include elevation(1);
+  }
+
+  &:focus {
+    outline: 2px solid var(--ft-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.card-icon {
+  @include flex-center;
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(135deg, var(--ft-primary-light), var(--ft-accent-light));
+  margin: calc(-1 * var(--ft-card-padding));
+  margin-bottom: var(--ft-spacing-md);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--ft-primary);
+  }
+}
+
+.card-content {
+  position: relative;
+  z-index: 1;
+}
+
+.card-title {
+  margin: 0 0 var(--ft-spacing-xs);
+  @include heading-6;
+  color: var(--ft-text-primary);
+  @include text-truncate;
+}
+
+.card-description {
+  margin: 0 0 var(--ft-spacing-md);
+  @include body-2;
+  color: var(--ft-text-secondary);
+  @include text-clamp(2);
+  min-height: 2.4em;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-spacing-sm);
+}
+
+.card-category {
+  @include flex-inline;
+  gap: 4px;
+  @include caption;
+  color: var(--ft-text-disabled);
+  text-transform: capitalize;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.card-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.tag {
+  @include caption;
+  padding: 2px 6px;
+  background-color: var(--ft-surface-tertiary);
+  border-radius: var(--ft-radius-sm);
+  color: var(--ft-text-secondary);
+  text-transform: lowercase;
+}
+
+.card-overlay {
+  @include absolute-fill;
+  @include flex-column-center;
+  gap: var(--ft-spacing-xs);
+  background-color: var(--ft-surface-overlay);
+  opacity: 0;
+  @include transition(opacity);
+  z-index: 2;
+  pointer-events: none;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #fff;
+  }
+
+  span {
+    @include body-1;
+    font-weight: var(--ft-font-weight-semibold);
+    color: #fff;
+  }
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  @include flex-column-center;
+  padding: var(--ft-spacing-3xl);
+  color: var(--ft-text-secondary);
+
+  mat-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    opacity: 0.3;
+    margin-bottom: var(--ft-spacing-md);
+  }
+
+  p {
+    margin: 0 0 var(--ft-spacing-xs);
+    @include body-1;
+    font-weight: var(--ft-font-weight-medium);
+  }
+
+  small {
+    @include caption;
+    color: var(--ft-text-disabled);
+  }
+}
+
+// Staggered entrance animation
+.component-card {
+  animation: scale-in var(--ft-transition-base) var(--ft-ease-out);
+  animation-fill-mode: both;
+
+  @for $i from 1 through 20 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * 0.03}s;
+    }
+  }
+}
+
+// Responsive adjustments
+@include breakpoint-down(md) {
+  .component-grid {
+    @include grid-auto(240px, var(--ft-spacing-sm));
+  }
+
+  .card-icon {
+    height: 80px;
+
+    mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+    }
+  }
+}
+
+// Reduced motion support
+@include reduced-motion;

@@ -1,0 +1,179 @@
+<div class="diff-viewer">
+  <!-- Header with controls -->
+  <div class="diff-header">
+    <div class="diff-stats">
+      <span class="stat additions" [attr.aria-label]="stats().additions + ' additions'">
+        <mat-icon>add_circle</mat-icon>
+        +{{ stats().additions }}
+      </span>
+      <span class="stat deletions" [attr.aria-label]="stats().deletions + ' deletions'">
+        <mat-icon>remove_circle</mat-icon>
+        -{{ stats().deletions }}
+      </span>
+      <span class="stat total" [attr.aria-label]="stats().total + ' total changes'">
+        {{ stats().total }} changes
+      </span>
+    </div>
+
+    <div class="diff-controls">
+      @if (collapsible) {
+        <button
+          mat-icon-button
+          (click)="expandAll()"
+          matTooltip="Expand all files"
+          aria-label="Expand all files"
+        >
+          <mat-icon>unfold_more</mat-icon>
+        </button>
+        <button
+          mat-icon-button
+          (click)="collapseAll()"
+          matTooltip="Collapse all files"
+          aria-label="Collapse all files"
+        >
+          <mat-icon>unfold_less</mat-icon>
+        </button>
+      }
+      <button
+        mat-icon-button
+        (click)="toggleViewMode()"
+        [matTooltip]="viewModeSignal() === 'split' ? 'Switch to unified view' : 'Switch to split view'"
+        [attr.aria-label]="viewModeSignal() === 'split' ? 'Switch to unified view' : 'Switch to split view'"
+      >
+        <mat-icon>{{ viewModeSignal() === 'split' ? 'view_agenda' : 'view_column' }}</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- File diffs -->
+  <div class="diff-files" role="region" aria-label="Code differences">
+    @for (diff of diffsSignal(); track diff.fileName) {
+      <div class="diff-file" [class.collapsed]="collapsible && !isFileExpanded(diff.fileName)">
+        <!-- File header -->
+        <div
+          class="file-header"
+          [class.clickable]="collapsible"
+          (click)="collapsible && toggleFileExpansion(diff.fileName)"
+          [attr.role]="collapsible ? 'button' : null"
+          [attr.aria-expanded]="collapsible ? isFileExpanded(diff.fileName) : null"
+          [attr.aria-controls]="'diff-content-' + $index"
+          [tabindex]="collapsible ? 0 : -1"
+          (keydown.enter)="collapsible && toggleFileExpansion(diff.fileName)"
+          (keydown.space)="collapsible && toggleFileExpansion(diff.fileName); $event.preventDefault()"
+        >
+          <div class="file-info">
+            @if (collapsible) {
+              <mat-icon class="expand-icon">
+                {{ isFileExpanded(diff.fileName) ? 'expand_more' : 'chevron_right' }}
+              </mat-icon>
+            }
+            <mat-icon class="file-icon">{{ getFileIcon(diff.language) }}</mat-icon>
+            <span class="file-name">{{ diff.fileName }}</span>
+            <span class="file-language">{{ diff.language }}</span>
+          </div>
+
+          <div class="file-actions">
+            <button
+              mat-icon-button
+              (click)="copyToClipboard(diff.newContent || ''); $event.stopPropagation()"
+              matTooltip="Copy file contents"
+              aria-label="Copy file contents to clipboard"
+            >
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- File content -->
+        @if (!collapsible || isFileExpanded(diff.fileName)) {
+          <div class="file-content" [id]="'diff-content-' + $index">
+            @if (viewModeSignal() === 'unified') {
+              <!-- Unified view -->
+              <div class="diff-unified" role="table" aria-label="Unified diff view">
+                @for (line of diff.lines; track $index) {
+                  <div
+                    class="diff-line"
+                    [class.line-add]="line.type === 'add'"
+                    [class.line-remove]="line.type === 'remove'"
+                    [class.line-unchanged]="line.type === 'unchanged'"
+                    role="row"
+                  >
+                    @if (showLineNumbers) {
+                      <span class="line-number" role="rowheader">{{ line.lineNumber }}</span>
+                    }
+                    <span class="line-indicator" [attr.aria-label]="line.type" role="cell">
+                      @if (line.type === 'add') {
+                        +
+                      } @else if (line.type === 'remove') {
+                        -
+                      }
+                    </span>
+                    <code class="line-content" role="cell">{{ line.content }}</code>
+                  </div>
+                }
+              </div>
+            } @else {
+              <!-- Split view -->
+              <div class="diff-split" role="table" aria-label="Split diff view">
+                <div class="split-column old-column" role="columngroup" aria-label="Original code">
+                  @for (line of diff.lines; track $index) {
+                    @if (line.type === 'remove' || line.type === 'unchanged') {
+                      <div
+                        class="diff-line"
+                        [class.line-remove]="line.type === 'remove'"
+                        [class.line-unchanged]="line.type === 'unchanged'"
+                        role="row"
+                      >
+                        @if (showLineNumbers) {
+                          <span class="line-number" role="rowheader">{{ line.lineNumber }}</span>
+                        }
+                        <span class="line-indicator" role="cell">
+                          @if (line.type === 'remove') {
+                            -
+                          }
+                        </span>
+                        <code class="line-content" role="cell">{{ line.content }}</code>
+                      </div>
+                    } @else {
+                      <div class="diff-line line-empty" role="row" aria-hidden="true"></div>
+                    }
+                  }
+                </div>
+
+                <div class="split-column new-column" role="columngroup" aria-label="Modified code">
+                  @for (line of diff.lines; track $index) {
+                    @if (line.type === 'add' || line.type === 'unchanged') {
+                      <div
+                        class="diff-line"
+                        [class.line-add]="line.type === 'add'"
+                        [class.line-unchanged]="line.type === 'unchanged'"
+                        role="row"
+                      >
+                        @if (showLineNumbers) {
+                          <span class="line-number" role="rowheader">{{ line.lineNumber }}</span>
+                        }
+                        <span class="line-indicator" role="cell">
+                          @if (line.type === 'add') {
+                            +
+                          }
+                        </span>
+                        <code class="line-content" role="cell">{{ line.content }}</code>
+                      </div>
+                    } @else {
+                      <div class="diff-line line-empty" role="row" aria-hidden="true"></div>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @empty {
+      <div class="diff-empty" role="status">
+        <mat-icon>code_off</mat-icon>
+        <p>No code changes to display</p>
+      </div>
+    }
+  </div>
+</div>

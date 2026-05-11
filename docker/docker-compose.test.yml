@@ -1,0 +1,191 @@
+# Friendly AI AEP Test Environment
+# This docker-compose file sets up the test infrastructure for CI/CD pipelines
+
+services:
+  # PostgreSQL database for test data
+  postgres:
+    image: postgres:16-alpine
+    container_name: friendly-aep-test-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-friendly_test}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-friendly_test_password}
+      POSTGRES_DB: ${POSTGRES_DB:-friendly_aep_test}
+    ports:
+      - '46100:5432'
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-friendly_test}']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # InfluxDB for time-series test data
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: friendly-aep-test-influxdb
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_ADMIN_USER:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_ADMIN_PASSWORD:-friendly_influx_test}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-friendly_test}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-iot_data_test}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:-friendly-test-token-12345}
+    ports:
+      - '46101:8086'
+    volumes:
+      - influxdb_test_data:/var/lib/influxdb2
+    healthcheck:
+      test: ['CMD', 'influx', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: friendly-aep-test-redis
+    restart: unless-stopped
+    ports:
+      - '46102:6379'
+    volumes:
+      - redis_test_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-friendly_redis_test}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-friendly_redis_test}', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # MinIO for object storage testing
+  minio:
+    image: minio/minio:latest
+    container_name: friendly-aep-test-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-friendly_test}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-friendly_minio_test_secret}
+    ports:
+      - '46200:9000'
+      - '45003:9001'
+    volumes:
+      - minio_test_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # API Gateway for testing
+  aep-api-gateway:
+    build:
+      context: ..
+      dockerfile: apps/aep-api-gateway/Dockerfile
+      args:
+        NODE_ENV: test
+    container_name: friendly-aep-test-api-gateway
+    restart: unless-stopped
+    environment:
+      NODE_ENV: test
+      HOST: '0.0.0.0'
+      PORT: '3001'
+      DATABASE_URL: postgresql://${POSTGRES_USER:-friendly_test}:${POSTGRES_PASSWORD:-friendly_test_password}@postgres:5432/${POSTGRES_DB:-friendly_aep_test}
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-friendly_redis_test}
+      JWT_SECRET: ${JWT_SECRET:-test_jwt_secret_minimum_32_characters_long_here_for_testing}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-friendly-test-token-12345}
+      INFLUXDB_ORG: ${INFLUXDB_ORG:-friendly_test}
+      INFLUXDB_BUCKET: ${INFLUXDB_BUCKET:-iot_data_test}
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+    ports:
+      - '46000:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # Preview Host for testing
+  aep-preview-host:
+    build:
+      context: ..
+      dockerfile: apps/aep-preview-host/Dockerfile
+      args:
+        NODE_ENV: test
+    container_name: friendly-aep-test-preview-host
+    restart: unless-stopped
+    environment:
+      NODE_ENV: test
+      HOST: '0.0.0.0'
+      PORT: '3002'
+      LOG_LEVEL: info
+    ports:
+      - '46001:3002'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      aep-api-gateway:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+volumes:
+  postgres_test_data:
+    driver: local
+  influxdb_test_data:
+    driver: local
+  redis_test_data:
+    driver: local
+  minio_test_data:
+    driver: local
+
+networks:
+  default:
+    name: friendly-aep-test-network

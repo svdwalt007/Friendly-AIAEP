@@ -1,0 +1,83 @@
+# ============================================================================
+# Jaeger Distributed Tracing Configuration
+# ============================================================================
+# Jaeger is an open-source distributed tracing platform
+# Used for monitoring and troubleshooting microservices-based architectures
+# ============================================================================
+
+# Sampling configuration
+sampling:
+  # Default sampling strategy
+  default_strategy:
+    type: probabilistic
+    param: 1.0  # 1.0 = 100% sampling (all traces), 0.1 = 10% sampling
+
+  # Per-service sampling strategies
+  service_strategies:
+    - service: aep-api-gateway
+      type: probabilistic
+      param: 1.0  # Sample all API gateway requests in dev
+
+    - service: aep-builder
+      type: probabilistic
+      param: 1.0
+
+    - service: aep-preview-host
+      type: probabilistic
+      param: 1.0
+
+# Storage configuration (using in-memory for development)
+# For production, use Cassandra, Elasticsearch, or Kafka
+storage:
+  type: memory
+  memory:
+    max-traces: 10000
+
+# Query service configuration
+query:
+  base-path: /
+  log-level: info
+
+  # CORS configuration
+  additional-headers:
+    - Access-Control-Allow-Origin: "*"
+    - Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+    - Access-Control-Allow-Headers: Content-Type, Authorization
+
+# Collector configuration
+collector:
+  # Zipkin endpoint (for compatibility)
+  zipkin:
+    http-port: 9411
+
+  # OTLP endpoint (OpenTelemetry Protocol)
+  otlp:
+    enabled: true
+    http:
+      endpoint: 0.0.0.0:4318
+    grpc:
+      endpoint: 0.0.0.0:4317
+
+# Agent configuration
+agent:
+  # Compact thrift protocol
+  compact:
+    enabled: true
+    endpoint: 0.0.0.0:6831
+
+  # Binary thrift protocol
+  binary:
+    enabled: true
+    endpoint: 0.0.0.0:6832
+
+# UI configuration
+ui:
+  base-path: /
+  log-level: info
+
+# Metrics configuration
+metrics:
+  backend: prometheus
+  http:
+    route: /metrics
+    port: 8888

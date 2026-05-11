@@ -1,0 +1,615 @@
+/**
+ * Friendly Design System - Utility Classes
+ *
+ * Reusable utility classes matching Friendly portal design patterns.
+ * Includes brand-specific components, data-dense tables, and cards.
+ */
+
+@use './variables.scss' as vars;
+
+/* ========================================
+ * BACKGROUND COLOR UTILITIES
+ * ======================================== */
+
+.ft-navy-bg {
+  background-color: var(--ft-primary) !important;
+  color: var(--ft-text-light) !important;
+}
+
+.ft-orange-bg {
+  background-color: var(--ft-accent) !important;
+  color: var(--ft-text-light) !important;
+}
+
+.ft-charcoal-bg {
+  background-color: var(--ft-secondary) !important;
+  color: var(--ft-text-light) !important;
+}
+
+.ft-light-bg {
+  background-color: var(--ft-surface-primary) !important;
+  color: var(--ft-text-primary) !important;
+}
+
+.ft-gray-bg {
+  background-color: var(--ft-surface-secondary) !important;
+  color: var(--ft-text-primary) !important;
+}
+
+/* ========================================
+ * TEXT COLOR UTILITIES
+ * ======================================== */
+
+.ft-navy-text {
+  color: var(--ft-primary) !important;
+}
+
+.ft-orange-text {
+  color: var(--ft-accent) !important;
+}
+
+.ft-orange-accent {
+  color: var(--ft-accent) !important;
+  font-weight: var(--ft-font-weight-semibold);
+}
+
+.ft-charcoal-text {
+  color: var(--ft-secondary) !important;
+}
+
+.ft-text-muted {
+  color: var(--ft-text-secondary) !important;
+}
+
+.ft-text-disabled {
+  color: var(--ft-text-disabled) !important;
+}
+
+/* ========================================
+ * BORDER UTILITIES
+ * ======================================== */
+
+.ft-border {
+  border: 1px solid var(--ft-border-color) !important;
+}
+
+.ft-border-top {
+  border-top: 1px solid var(--ft-border-color) !important;
+}
+
+.ft-border-bottom {
+  border-bottom: 1px solid var(--ft-border-color) !important;
+}
+
+.ft-border-accent {
+  border-color: var(--ft-accent) !important;
+}
+
+.ft-border-thick {
+  border-width: 2px !important;
+}
+
+/* ========================================
+ * CARD COMPONENTS (Friendly Portal Style)
+ * ======================================== */
+
+.ft-card {
+  background-color: var(--ft-surface-primary);
+  border-radius: var(--ft-card-radius);
+  padding: var(--ft-card-padding);
+  box-shadow: var(--ft-card-shadow);
+  border: 1px solid var(--ft-border-color);
+  @include vars.ft-transition(box-shadow);
+
+  &:hover {
+    box-shadow: var(--ft-shadow-lg);
+  }
+}
+
+.ft-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--ft-spacing-md);
+  margin-bottom: var(--ft-spacing-md);
+  border-bottom: 2px solid var(--ft-border-color);
+
+  h2, h3 {
+    margin: 0;
+    color: var(--ft-primary);
+    font-weight: var(--ft-font-weight-semibold);
+  }
+}
+
+.ft-card-body {
+  padding: var(--ft-spacing-md) 0;
+}
+
+.ft-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ft-spacing-md);
+  padding-top: var(--ft-spacing-md);
+  margin-top: var(--ft-spacing-md);
+  border-top: 1px solid var(--ft-border-color);
+}
+
+.ft-card-compact {
+  padding: var(--ft-spacing-md);
+
+  .ft-card-header {
+    padding-bottom: var(--ft-spacing-sm);
+    margin-bottom: var(--ft-spacing-sm);
+  }
+}
+
+.ft-card-elevated {
+  box-shadow: var(--ft-shadow-xl);
+  border: none;
+}
+
+/* ========================================
+ * DATA-DENSE TABLE STYLES
+ * ======================================== */
+
+.ft-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--ft-font-family);
+  font-size: var(--ft-font-size-sm);
+  background-color: var(--ft-surface-primary);
+  border-radius: var(--ft-radius-md);
+  overflow: hidden;
+  box-shadow: var(--ft-shadow-sm);
+
+  thead {
+    tr {
+      background-color: var(--ft-table-header-bg);
+      color: var(--ft-table-header-text);
+    }
+
+    th {
+      padding: var(--ft-spacing-sm) var(--ft-spacing-md);
+      text-align: left;
+      font-weight: var(--ft-font-weight-semibold);
+      font-size: var(--ft-font-size-xs);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--ft-accent);
+      white-space: nowrap;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--ft-border-color);
+      @include vars.ft-transition(background-color);
+
+      &:hover {
+        background-color: var(--ft-table-row-hover);
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    td {
+      padding: var(--ft-spacing-sm) var(--ft-spacing-md);
+      color: var(--ft-text-primary);
+      vertical-align: middle;
+    }
+  }
+
+  // Striped rows variant
+  &.ft-striped {
+    tbody tr:nth-child(even) {
+      background-color: var(--ft-surface-secondary);
+    }
+  }
+
+  // Bordered variant
+  &.ft-bordered {
+    td, th {
+      border: 1px solid var(--ft-border-color);
+    }
+  }
+
+  // Compact variant
+  &.ft-compact {
+    thead th,
+    tbody td {
+      padding: 4px var(--ft-spacing-sm);
+      font-size: var(--ft-font-size-xs);
+    }
+  }
+}
+
+// Table action cells
+.ft-table-actions {
+  display: flex;
+  gap: var(--ft-spacing-sm);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+// Table status badges
+.ft-status-badge {
+  display: inline-block;
+  padding: 2px var(--ft-spacing-sm);
+  border-radius: var(--ft-radius-full);
+  font-size: var(--ft-font-size-xs);
+  font-weight: var(--ft-font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &.status-active {
+    background-color: var(--ft-success);
+    color: white;
+  }
+
+  &.status-pending {
+    background-color: var(--ft-warning);
+    color: white;
+  }
+
+  &.status-inactive {
+    background-color: var(--ft-text-disabled);
+    color: white;
+  }
+
+  &.status-error {
+    background-color: var(--ft-error);
+    color: white;
+  }
+}
+
+/* ========================================
+ * BUTTON UTILITIES
+ * ======================================== */
+
+.ft-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ft-spacing-sm);
+  padding: var(--ft-button-padding-y) var(--ft-button-padding-x);
+  border: none;
+  border-radius: var(--ft-button-radius);
+  font-family: var(--ft-font-family);
+  font-size: var(--ft-font-size-sm);
+  font-weight: var(--ft-font-weight-medium);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  @include vars.ft-transition(all);
+
+  &:hover {
+    @include vars.ft-elevation(2);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+.ft-btn-primary {
+  background-color: var(--ft-primary);
+  color: var(--ft-text-light);
+
+  &:hover {
+    background-color: #1a1f5c;
+  }
+}
+
+.ft-btn-accent {
+  background-color: var(--ft-accent);
+  color: var(--ft-text-light);
+
+  &:hover {
+    background-color: #ff6b1a;
+  }
+}
+
+.ft-btn-secondary {
+  background-color: var(--ft-secondary);
+  color: var(--ft-text-light);
+
+  &:hover {
+    background-color: #6a696b;
+  }
+}
+
+.ft-btn-outline {
+  background-color: transparent;
+  border: 2px solid var(--ft-primary);
+  color: var(--ft-primary);
+
+  &:hover {
+    background-color: var(--ft-primary);
+    color: var(--ft-text-light);
+  }
+}
+
+.ft-btn-sm {
+  padding: 4px var(--ft-spacing-md);
+  font-size: var(--ft-font-size-xs);
+}
+
+.ft-btn-lg {
+  padding: var(--ft-spacing-md) var(--ft-spacing-xl);
+  font-size: var(--ft-font-size-base);
+}
+
+/* ========================================
+ * FORM UTILITIES
+ * ======================================== */
+
+.ft-form-group {
+  margin-bottom: var(--ft-spacing-lg);
+}
+
+.ft-label {
+  display: block;
+  margin-bottom: var(--ft-spacing-sm);
+  font-size: var(--ft-font-size-sm);
+  font-weight: var(--ft-font-weight-medium);
+  color: var(--ft-text-primary);
+}
+
+.ft-input {
+  width: 100%;
+  padding: var(--ft-input-padding);
+  border: 1px solid var(--ft-input-border);
+  border-radius: var(--ft-input-radius);
+  font-family: var(--ft-font-family);
+  font-size: var(--ft-font-size-base);
+  color: var(--ft-text-primary);
+  background-color: var(--ft-surface-primary);
+  @include vars.ft-transition(border-color);
+
+  &:focus {
+    outline: none;
+    border-color: var(--ft-accent);
+    box-shadow: 0 0 0 3px rgba(255, 89, 0, 0.1);
+  }
+
+  &:disabled {
+    background-color: var(--ft-surface-secondary);
+    color: var(--ft-text-disabled);
+    cursor: not-allowed;
+  }
+
+  &.error {
+    border-color: var(--ft-error);
+  }
+}
+
+.ft-input-error {
+  display: block;
+  margin-top: var(--ft-spacing-xs);
+  font-size: var(--ft-font-size-xs);
+  color: var(--ft-error);
+}
+
+.ft-input-hint {
+  display: block;
+  margin-top: var(--ft-spacing-xs);
+  font-size: var(--ft-font-size-xs);
+  color: var(--ft-text-secondary);
+}
+
+/* ========================================
+ * SPACING UTILITIES
+ * ======================================== */
+
+.ft-mt-0 { margin-top: 0 !important; }
+.ft-mt-xs { margin-top: var(--ft-spacing-xs) !important; }
+.ft-mt-sm { margin-top: var(--ft-spacing-sm) !important; }
+.ft-mt-md { margin-top: var(--ft-spacing-md) !important; }
+.ft-mt-lg { margin-top: var(--ft-spacing-lg) !important; }
+.ft-mt-xl { margin-top: var(--ft-spacing-xl) !important; }
+
+.ft-mb-0 { margin-bottom: 0 !important; }
+.ft-mb-xs { margin-bottom: var(--ft-spacing-xs) !important; }
+.ft-mb-sm { margin-bottom: var(--ft-spacing-sm) !important; }
+.ft-mb-md { margin-bottom: var(--ft-spacing-md) !important; }
+.ft-mb-lg { margin-bottom: var(--ft-spacing-lg) !important; }
+.ft-mb-xl { margin-bottom: var(--ft-spacing-xl) !important; }
+
+.ft-p-0 { padding: 0 !important; }
+.ft-p-xs { padding: var(--ft-spacing-xs) !important; }
+.ft-p-sm { padding: var(--ft-spacing-sm) !important; }
+.ft-p-md { padding: var(--ft-spacing-md) !important; }
+.ft-p-lg { padding: var(--ft-spacing-lg) !important; }
+.ft-p-xl { padding: var(--ft-spacing-xl) !important; }
+
+/* ========================================
+ * LAYOUT UTILITIES
+ * ======================================== */
+
+.ft-flex {
+  display: flex !important;
+}
+
+.ft-flex-column {
+  flex-direction: column !important;
+}
+
+.ft-flex-wrap {
+  flex-wrap: wrap !important;
+}
+
+.ft-justify-start {
+  justify-content: flex-start !important;
+}
+
+.ft-justify-center {
+  justify-content: center !important;
+}
+
+.ft-justify-end {
+  justify-content: flex-end !important;
+}
+
+.ft-justify-between {
+  justify-content: space-between !important;
+}
+
+.ft-align-start {
+  align-items: flex-start !important;
+}
+
+.ft-align-center {
+  align-items: center !important;
+}
+
+.ft-align-end {
+  align-items: flex-end !important;
+}
+
+.ft-gap-xs { gap: var(--ft-spacing-xs) !important; }
+.ft-gap-sm { gap: var(--ft-spacing-sm) !important; }
+.ft-gap-md { gap: var(--ft-spacing-md) !important; }
+.ft-gap-lg { gap: var(--ft-spacing-lg) !important; }
+.ft-gap-xl { gap: var(--ft-spacing-xl) !important; }
+
+.ft-grid {
+  display: grid !important;
+}
+
+.ft-grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+
+.ft-grid-cols-3 {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+.ft-grid-cols-4 {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+/* ========================================
+ * ELEVATION UTILITIES
+ * ======================================== */
+
+.ft-elevation-0 { box-shadow: none !important; }
+.ft-elevation-1 { @include vars.ft-elevation(1); }
+.ft-elevation-2 { @include vars.ft-elevation(2); }
+.ft-elevation-3 { @include vars.ft-elevation(3); }
+.ft-elevation-4 { @include vars.ft-elevation(4); }
+.ft-elevation-5 { @include vars.ft-elevation(5); }
+
+/* ========================================
+ * PORTAL-SPECIFIC PATTERNS
+ * ======================================== */
+
+// Header bar (typical Friendly portal pattern)
+.ft-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--ft-spacing-md) var(--ft-spacing-xl);
+  background-color: var(--ft-primary);
+  color: var(--ft-text-light);
+  box-shadow: var(--ft-shadow-md);
+
+  h1 {
+    margin: 0;
+    font-size: var(--ft-font-size-xl);
+    font-weight: var(--ft-font-weight-semibold);
+  }
+}
+
+// Dashboard grid layout
+.ft-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--ft-spacing-lg);
+  padding: var(--ft-spacing-lg);
+}
+
+// Metric card
+.ft-metric-card {
+  @extend .ft-card;
+  text-align: center;
+
+  .metric-value {
+    font-size: var(--ft-font-size-3xl);
+    font-weight: var(--ft-font-weight-bold);
+    color: var(--ft-accent);
+    margin: var(--ft-spacing-sm) 0;
+  }
+
+  .metric-label {
+    font-size: var(--ft-font-size-sm);
+    color: var(--ft-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .metric-change {
+    font-size: var(--ft-font-size-xs);
+    margin-top: var(--ft-spacing-sm);
+
+    &.positive {
+      color: var(--ft-success);
+    }
+
+    &.negative {
+      color: var(--ft-error);
+    }
+  }
+}
+
+// Loading spinner
+.ft-spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--ft-surface-secondary);
+  border-top-color: var(--ft-accent);
+  border-radius: 50%;
+  animation: ft-spin 0.8s linear infinite;
+}
+
+@keyframes ft-spin {
+  to { transform: rotate(360deg); }
+}
+
+// Empty state
+.ft-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ft-spacing-3xl) var(--ft-spacing-lg);
+  text-align: center;
+  color: var(--ft-text-secondary);
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: var(--ft-spacing-lg);
+    opacity: 0.5;
+  }
+
+  .empty-title {
+    font-size: var(--ft-font-size-xl);
+    font-weight: var(--ft-font-weight-semibold);
+    color: var(--ft-text-primary);
+    margin-bottom: var(--ft-spacing-sm);
+  }
+
+  .empty-message {
+    font-size: var(--ft-font-size-base);
+    margin-bottom: var(--ft-spacing-lg);
+  }
+}

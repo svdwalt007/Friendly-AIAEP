@@ -1,0 +1,27 @@
+{
+  "name": "sdk-generator",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/iot/sdk-generator/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/iot/sdk-generator",
+        "main": "libs/iot/sdk-generator/src/index.ts",
+        "tsConfig": "libs/iot/sdk-generator/tsconfig.lib.json",
+        "assets": ["libs/iot/sdk-generator/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{projectRoot}/coverage"],
+      "options": {
+        "passWithNoTests": true,
+        "reportsDirectory": "coverage/libs/iot/sdk-generator"
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "agent-runtime",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/core/agent-runtime/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/core/agent-runtime",
+        "main": "libs/core/agent-runtime/src/index.ts",
+        "tsConfig": "libs/core/agent-runtime/tsconfig.lib.json",
+        "assets": ["libs/core/agent-runtime/*.md"],
+        "additionalEntryPoints": [],
+        "clean": true
+      }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/libs/core/agent-runtime"],
+      "options": {
+        "passWithNoTests": true,
+        "reportsDirectory": "../../../coverage/libs/core/agent-runtime"
+      }
+    }
+  }
+}
