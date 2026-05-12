@@ -1,0 +1,196 @@
+.billing-settings {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.section-heading {
+  margin-bottom: var(--ft-spacing-lg);
+}
+
+.settings-card {
+  padding: var(--ft-spacing-lg);
+  margin-bottom: var(--ft-spacing-lg);
+
+  h3 {
+    margin: 0 0 var(--ft-spacing-md);
+    font-size: var(--ft-font-size-md);
+    font-weight: var(--ft-font-weight-semibold);
+  }
+}
+
+// ─── Plan header ──────────────────────────────────────────────────────────────
+.plan-card {
+  background: linear-gradient(135deg, var(--ft-surface-primary) 60%, var(--ft-primary-light));
+}
+
+.plan-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-spacing-md);
+}
+
+.plan-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--ft-radius-xl);
+  background: var(--ft-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.plan-icon {
+  color: var(--ft-primary);
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+}
+
+.plan-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-spacing-xs);
+}
+
+.plan-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-spacing-sm);
+}
+
+.plan-name {
+  font-size: var(--ft-font-size-xl);
+  font-weight: var(--ft-font-weight-bold);
+  color: var(--ft-text-primary);
+}
+
+.plan-price {
+  font-size: var(--ft-font-size-sm);
+  color: var(--ft-text-secondary);
+}
+
+// ─── Tier badges ──────────────────────────────────────────────────────────────
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--ft-spacing-sm);
+  border-radius: var(--ft-radius-pill);
+  font-size: var(--ft-font-size-xs);
+  font-weight: var(--ft-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--ft-letter-spacing-wide);
+
+  &.badge-starter {
+    background: var(--ft-success-bg);
+    color: var(--ft-success-700);
+    border: 1px solid var(--ft-success-500);
+  }
+
+  &.badge-professional {
+    background: var(--ft-primary-light);
+    color: var(--ft-primary-700);
+    border: 1px solid var(--ft-primary-400);
+  }
+
+  &.badge-enterprise {
+    background: var(--ft-accent-light);
+    color: var(--ft-accent-700);
+    border: 1px solid var(--ft-accent-400);
+  }
+}
+
+// ─── Usage bars ──────────────────────────────────────────────────────────────
+.divider-spacing {
+  margin: var(--ft-spacing-md) 0;
+}
+
+.usage-section {
+  h3 {
+    margin: 0 0 var(--ft-spacing-md);
+  }
+}
+
+.usage-row {
+  margin-bottom: var(--ft-spacing-md);
+}
+
+.usage-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--ft-spacing-xs);
+}
+
+.usage-label {
+  font-size: var(--ft-font-size-sm);
+  font-weight: var(--ft-font-weight-medium);
+  color: var(--ft-text-primary);
+}
+
+.usage-count {
+  font-size: var(--ft-font-size-sm);
+  color: var(--ft-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-limit {
+  color: var(--ft-text-secondary);
+}
+
+.usage-bar-track {
+  width: 100%;
+  height: 8px;
+  background: var(--ft-surface-tertiary);
+  border-radius: var(--ft-radius-pill);
+  overflow: hidden;
+}
+
+.usage-bar-fill {
+  height: 100%;
+  background: var(--ft-primary);
+  border-radius: var(--ft-radius-pill);
+  transition: width var(--ft-transition-base) var(--ft-ease-out);
+
+  &.usage-bar-warning {
+    background: var(--ft-warning);
+  }
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+.billing-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-spacing-md);
+  flex-wrap: wrap;
+}
+
+.billing-note {
+  font-size: var(--ft-font-size-xs);
+  color: var(--ft-text-secondary);
+}
+
+// ─── Plan comparison ──────────────────────────────────────────────────────────
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--ft-spacing-md);
+}
+
+.plan-option {
+  padding: var(--ft-spacing-md);
+  border: 1px solid var(--ft-border-color);
+  border-radius: var(--ft-radius-lg);
+  transition: var(--ft-transition-all);
+
+  p {
+    margin: var(--ft-spacing-sm) 0 0;
+    font-size: var(--ft-font-size-xs);
+    color: var(--ft-text-secondary);
+  }
+
+  &.plan-option-active {
+    border-color: var(--ft-primary);
+    background: var(--ft-primary-light);
+  }
+}

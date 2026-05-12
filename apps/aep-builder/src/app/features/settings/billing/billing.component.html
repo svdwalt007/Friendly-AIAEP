@@ -1,0 +1,125 @@
+<div class="billing-settings" role="main" aria-label="Billing settings">
+  <h2 class="section-heading">Billing</h2>
+
+  <!-- Current plan card -->
+  <mat-card class="settings-card plan-card">
+    <div class="plan-header">
+      <div class="plan-icon-wrap">
+        <mat-icon class="plan-icon">{{ plan().icon }}</mat-icon>
+      </div>
+      <div class="plan-info">
+        <div class="plan-name-row">
+          <span class="plan-name">{{ plan().tier }}</span>
+          <span class="tier-badge" [class]="plan().badgeClass" role="img" [attr.aria-label]="plan().tier + ' plan'">
+            {{ plan().tier }}
+          </span>
+        </div>
+        <span class="plan-price">{{ plan().priceLabel }}</span>
+      </div>
+    </div>
+
+    <mat-divider class="divider-spacing"></mat-divider>
+
+    <!-- Usage stats -->
+    <div class="usage-section">
+      <h3>Usage this month</h3>
+
+      <div class="usage-row">
+        <div class="usage-meta">
+          <span class="usage-label">API calls</span>
+          <span class="usage-count" aria-label="API calls this month">
+            {{ formatNumber(apiCallsUsed()) }}
+            @if (!isUnlimited()) {
+              <span class="usage-limit"> / {{ formatNumber(plan().apiCallLimit) }}</span>
+            } @else {
+              <span class="usage-limit"> / Unlimited</span>
+            }
+          </span>
+        </div>
+        @if (!isUnlimited()) {
+          <div
+            class="usage-bar-track"
+            role="progressbar"
+            [attr.aria-valuenow]="apiCallPercent()"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            [attr.aria-label]="apiCallPercent() + '% of API call quota used'"
+          >
+            <div
+              class="usage-bar-fill"
+              [class.usage-bar-warning]="apiCallPercent() >= 80"
+              [style.width.%]="apiCallPercent()"
+            ></div>
+          </div>
+        }
+      </div>
+
+      <div class="usage-row">
+        <div class="usage-meta">
+          <span class="usage-label">Tokens used</span>
+          <span class="usage-count" aria-label="Tokens used this month">
+            {{ formatNumber(tokensUsed()) }}
+            @if (!isUnlimited()) {
+              <span class="usage-limit"> / {{ formatNumber(plan().tokenLimit) }}</span>
+            } @else {
+              <span class="usage-limit"> / Unlimited</span>
+            }
+          </span>
+        </div>
+        @if (!isUnlimited()) {
+          <div
+            class="usage-bar-track"
+            role="progressbar"
+            [attr.aria-valuenow]="tokenPercent()"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            [attr.aria-label]="tokenPercent() + '% of token quota used'"
+          >
+            <div
+              class="usage-bar-fill"
+              [class.usage-bar-warning]="tokenPercent() >= 80"
+              [style.width.%]="tokenPercent()"
+            ></div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <mat-divider class="divider-spacing"></mat-divider>
+
+    <!-- Manage billing CTA -->
+    <div class="billing-actions">
+      <button
+        mat-flat-button
+        color="primary"
+        href="#"
+        aria-label="Manage billing via Stripe customer portal (opens external portal)"
+        matTooltip="Stripe integration — coming soon"
+        [disabled]="true"
+      >
+        <mat-icon>credit_card</mat-icon>
+        Manage Billing
+      </button>
+      <span class="billing-note">Stripe customer portal — available in the next release.</span>
+    </div>
+  </mat-card>
+
+  <!-- Plan comparison nudge -->
+  <mat-card class="settings-card">
+    <h3>Available Plans</h3>
+    <div class="plan-grid">
+      <div class="plan-option" [class.plan-option-active]="currentTier() === 'Starter'">
+        <span class="tier-badge badge-starter">Starter</span>
+        <p>10K API calls/mo · 5M tokens · Free forever</p>
+      </div>
+      <div class="plan-option" [class.plan-option-active]="currentTier() === 'Professional'">
+        <span class="tier-badge badge-professional">Professional</span>
+        <p>250K API calls/mo · 50M tokens · USD 99/mo</p>
+      </div>
+      <div class="plan-option" [class.plan-option-active]="currentTier() === 'Enterprise'">
+        <span class="tier-badge badge-enterprise">Enterprise</span>
+        <p>Unlimited · Custom SLA · Contact sales</p>
+      </div>
+    </div>
+  </mat-card>
+</div>
