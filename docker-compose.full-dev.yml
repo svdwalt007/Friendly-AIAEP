@@ -485,7 +485,7 @@ services:
     environment:
       NODE_ENV: development
     healthcheck:
-      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1']
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1']
       interval: 30s
       timeout: 5s
       start_period: 15s
