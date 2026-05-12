@@ -350,9 +350,10 @@ services:
       - '--path.rootfs=/host'
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|run/user)($$|/)'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|run/user|Docker/host)($$|/)'
       - '--no-collector.netstat'
       - '--no-collector.softnet'
+      - '--no-collector.filesystem'
     ports:
       - '46301:9100'
     volumes:
@@ -376,8 +377,13 @@ services:
     restart: unless-stopped
     environment:
       DATA_SOURCE_NAME: 'postgresql://${POSTGRES_USER:-friendly}:${POSTGRES_PASSWORD:-friendly_dev_password}@postgres:5432/${POSTGRES_DB:-friendly_aep_dev}?sslmode=disable'
+      PG_EXPORTER_EXTEND_QUERY_PATH: '/etc/postgres_exporter/queries.yml'
+    command:
+      - '--config.file=/etc/postgres_exporter/postgres_exporter.yml'
     ports:
       - '46303:9187'
+    volumes:
+      - ./docker/postgres-exporter.yml:/etc/postgres_exporter/postgres_exporter.yml:ro
     depends_on:
       postgres:
         condition: service_healthy

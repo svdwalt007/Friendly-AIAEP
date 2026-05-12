@@ -1,0 +1,8 @@
+auth_modules:
+  default:
+    type: userpass
+    userpass:
+      username: ${POSTGRES_USER:-friendly}
+      password: ${POSTGRES_PASSWORD:-friendly_dev_password}
+    options:
+      sslmode: disable
