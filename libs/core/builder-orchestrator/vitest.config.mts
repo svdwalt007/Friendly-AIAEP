@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
+import { coverageThresholds } from '../../../tools/vitest/coverage-thresholds';
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -16,6 +17,7 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: '../../../coverage/libs/core/builder-orchestrator',
       provider: 'v8' as const,
+      ...coverageThresholds(),
     },
   },
 }));

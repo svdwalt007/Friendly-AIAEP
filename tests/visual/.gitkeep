@@ -1,0 +1,2 @@
+// Placeholder so the directory exists for `percy exec -- playwright test tests/visual/`.
+// Drop Playwright + Percy snapshot specs here, e.g. login.visual.spec.ts.

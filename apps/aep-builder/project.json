@@ -129,6 +129,37 @@
     "lint": {
       "executor": "@nx/eslint:lint"
     },
+    "test": {
+      "executor": "@nx/angular:unit-test",
+      "options": {}
+    },
+    "e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "pnpm exec playwright test --config={workspaceRoot}/playwright.config.ts --project=chromium"
+        ],
+        "cwd": "{workspaceRoot}",
+        "parallel": false
+      },
+      "configurations": {
+        "ci": {
+          "commands": [
+            "pnpm exec playwright test --config={workspaceRoot}/playwright.config.ts"
+          ]
+        }
+      }
+    },
+    "e2e-components": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "pnpm exec playwright test -c {workspaceRoot}/playwright-ct.config.ts"
+        ],
+        "cwd": "{workspaceRoot}",
+        "parallel": false
+      }
+    },
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
