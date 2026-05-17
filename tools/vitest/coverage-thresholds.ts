@@ -63,7 +63,21 @@ export const COVERAGE_TARGET = {
 
 export function coverageThresholds(): CoverageThresholdConfig {
   return {
-    thresholds: { ...COVERAGE_FLOOR },
+    // Per-project vitest thresholds are intentionally NOT enforced here.
+    // The gate that matters runs in CI via `tools/vitest/check-coverage.mjs`,
+    // which walks every `coverage-summary.json` and applies the floor to
+    // the PROJECT AVERAGE. Vitest's own threshold check is per-FILE, so
+    // a single low-coverage file (e.g. a route module with one untested
+    // 5xx branch) would redline an otherwise-healthy project. Keep the
+    // ratchet in one place — see COVERAGE_FLOOR above — and let CI
+    // enforce. Per-project overrides can still set their own thresholds
+    // in their vitest.config.mts if they have a reason to be stricter.
+    thresholds: {
+      lines: 0,
+      statements: 0,
+      functions: 0,
+      branches: 0,
+    },
     reporter: ['text', 'lcov', 'json', 'json-summary', 'html'],
     exclude: [
       '**/*.stories.{ts,tsx}',
