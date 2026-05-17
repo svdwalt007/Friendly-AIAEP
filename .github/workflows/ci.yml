@@ -90,8 +90,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+        # Version is read from package.json `packageManager` to avoid the
+        # ERR_PNPM_BAD_PM_VERSION conflict that fires when both are pinned.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -156,8 +156,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+        # Version is read from package.json `packageManager` to avoid the
+        # ERR_PNPM_BAD_PM_VERSION conflict that fires when both are pinned.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -213,8 +213,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+        # Version is read from package.json `packageManager` to avoid the
+        # ERR_PNPM_BAD_PM_VERSION conflict that fires when both are pinned.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -326,8 +326,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+        # Version is read from package.json `packageManager` to avoid the
+        # ERR_PNPM_BAD_PM_VERSION conflict that fires when both are pinned.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -445,8 +445,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+        # Version is read from package.json `packageManager` to avoid the
+        # ERR_PNPM_BAD_PM_VERSION conflict that fires when both are pinned.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -532,8 +532,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+        # Version is read from package.json `packageManager` to avoid the
+        # ERR_PNPM_BAD_PM_VERSION conflict that fires when both are pinned.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -617,6 +617,37 @@ jobs:
     if: github.event_name == 'pull_request'
     timeout-minutes: 20
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: friendly
+          POSTGRES_PASSWORD: friendly_visual_password
+          POSTGRES_DB: friendly_aep_visual
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U friendly"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://friendly:friendly_visual_password@localhost:5432/friendly_aep_visual
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      NODE_ENV: test
+      PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -625,8 +656,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+        # Version is read from package.json `packageManager` to avoid the
+        # ERR_PNPM_BAD_PM_VERSION conflict that fires when both are pinned.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -634,8 +665,19 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -643,11 +685,17 @@ jobs:
           name: build-artifacts-${{ github.sha }}
           path: dist/
 
-      - name: Run visual regression tests
-        run: |
-          echo "Visual regression testing would run here"
-          echo "Tools: Percy, Chromatic, or BackstopJS"
-        continue-on-error: true
+      - name: Run Percy visual regression
+        if: env.PERCY_TOKEN != ''
+        run: pnpm test:visual
+        env:
+          CI: true
+
+      - name: Run local visual snapshots (no Percy)
+        if: env.PERCY_TOKEN == ''
+        run: pnpm test:visual:local
+        env:
+          CI: true
 
       - name: Upload visual diff results
         if: always()
@@ -655,7 +703,8 @@ jobs:
         with:
           name: visual-regression-results
           path: |
-            visual-regression/
+            test-results/
+            playwright-report/
           retention-days: 7
           if-no-files-found: ignore
 

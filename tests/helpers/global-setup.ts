@@ -1,111 +1,19 @@
-import { chromium, FullConfig } from '@playwright/test';
-
 /**
- * Global Setup for Playwright Tests
+ * Playwright global setup — runs once before the entire test suite.
  *
- * This file runs once before all tests and:
- * - Sets up test database
- * - Creates test users
- * - Configures test environment
- * - Validates services are running
+ * Today this only logs the resolved base URL and ensures `test-results/` exists
+ * so JUnit/HTML reporters do not race on first write. Add seed data, auth
+ * priming, or DB resets here as the suite grows.
  */
+import { mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-async function globalSetup(config: FullConfig) {
-  console.log('Starting global setup...');
+export default async function globalSetup(): Promise<void> {
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:4200';
+  const apiURL = process.env.PLAYWRIGHT_API_URL ?? 'http://localhost:3000';
 
-  // Check if services are running
-  await checkServices();
+  mkdirSync(resolve('test-results'), { recursive: true });
 
-  // Setup test database
-  await setupTestDatabase();
-
-  // Create test users
-  await createTestUsers();
-
-  // Setup test data
-  await setupTestData();
-
-  console.log('Global setup completed successfully!');
+  // eslint-disable-next-line no-console
+  console.log(`[playwright] global-setup: baseURL=${baseURL} apiURL=${apiURL}`);
 }
-
-/**
- * Check if required services are running
- */
-async function checkServices() {
-  console.log('Checking services...');
-
-  const browser = await chromium.launch();
-  const context = await browser.newContext();
-  const page = await context.newPage();
-
-  try {
-    // Check frontend
-    await page.goto('http://localhost:4200', { timeout: 10000 });
-    console.log('Frontend service is running');
-
-    // Check API
-    const apiResponse = await page.goto('http://localhost:3000/health', { timeout: 10000 });
-    if (apiResponse?.ok()) {
-      console.log('API service is running');
-    } else {
-      throw new Error('API service health check failed');
-    }
-  } catch (error) {
-    console.error('Service check failed:', error);
-    throw new Error(
-      'Required services are not running. Please start the application before running tests.'
-    );
-  } finally {
-    await browser.close();
-  }
-}
-
-/**
- * Setup test database
- */
-async function setupTestDatabase() {
-  console.log('Setting up test database...');
-
-  // This would typically:
-  // - Create a test database
-  // - Run migrations
-  // - Seed initial data
-
-  // For now, we'll just log
-  console.log('Test database setup completed');
-}
-
-/**
- * Create test users
- */
-async function createTestUsers() {
-  console.log('Creating test users...');
-
-  // This would typically make API calls to create test users
-  // For now, we assume users exist or are created via seed data
-
-  const testUsers = [
-    { email: 'test.user@example.com', role: 'user' },
-    { email: 'admin@example.com', role: 'admin' },
-    { email: 'tenant1.user@example.com', role: 'user' },
-    { email: 'tenant2.user@example.com', role: 'user' },
-  ];
-
-  console.log(`Created ${testUsers.length} test users`);
-}
-
-/**
- * Setup test data
- */
-async function setupTestData() {
-  console.log('Setting up test data...');
-
-  // This would typically:
-  // - Create test projects
-  // - Create test templates
-  // - Setup test configurations
-
-  console.log('Test data setup completed');
-}
-
-export default globalSetup;

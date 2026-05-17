@@ -129,6 +129,52 @@
     "lint": {
       "executor": "@nx/eslint:lint"
     },
+    "test": {
+      "executor": "@nx/angular:unit-test",
+      "options": {
+        "setupFiles": ["apps/aep-builder/src/test-setup.ts"],
+        "exclude": ["**/environment.*.ts"],
+        "coverageExclude": [
+          "**/*.stories.ts",
+          "**/*.fixture.ts",
+          "**/index.ts",
+          "**/environment.*.ts",
+          "**/main.ts",
+          "**/*.config.{ts,mts}",
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.angular/**",
+          "**/libs/**"
+        ]
+      }
+    },
+    "e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "pnpm exec playwright test --config=playwright.config.ts --project=chromium"
+        ],
+        "cwd": "{workspaceRoot}",
+        "parallel": false
+      },
+      "configurations": {
+        "ci": {
+          "commands": [
+            "pnpm exec playwright test --config=playwright.config.ts"
+          ]
+        }
+      }
+    },
+    "e2e-components": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "pnpm exec playwright test -c playwright-ct.config.ts"
+        ],
+        "cwd": "{workspaceRoot}",
+        "parallel": false
+      }
+    },
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",

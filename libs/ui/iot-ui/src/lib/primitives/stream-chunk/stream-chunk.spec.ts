@@ -21,15 +21,15 @@ function getRoot(fixture: ComponentFixture<FriendlyStreamChunk>): HTMLElement {
 }
 
 const ALL_KINDS: StreamChunkKind[] = [
-  'text',
-  'thought',
+  'final',
+  'reasoning',
   'tool_call',
   'tool_result',
-  'code',
-  'image',
+  'code_block',
+  'file_write',
   'error',
-  'status',
-  'citation',
+  'progress',
+  'agent_handoff',
 ];
 
 describe('FriendlyStreamChunk', () => {
@@ -49,7 +49,7 @@ describe('FriendlyStreamChunk', () => {
       imports: [FriendlyStreamChunk],
     }).compileComponents();
     fixture = TestBed.createComponent(FriendlyStreamChunk);
-    fixture.componentRef.setInput('kind', 'text');
+    fixture.componentRef.setInput('kind', 'final');
     fixture.componentRef.setInput('payload', null);
     await fixture.whenStable();
   });
@@ -74,10 +74,10 @@ describe('FriendlyStreamChunk', () => {
     }
   });
 
-  it('text/thought/tool_call/tool_result render content as paragraph body', async () => {
+  it('final/reasoning/tool_call/tool_result render content as paragraph body', async () => {
     for (const kind of [
-      'text',
-      'thought',
+      'final',
+      'reasoning',
       'tool_call',
       'tool_result',
     ] as StreamChunkKind[]) {
@@ -89,8 +89,11 @@ describe('FriendlyStreamChunk', () => {
     }
   });
 
-  it('renders code chunks inside <pre><code> with language hint', async () => {
-    await setKind('code', { content: 'const x = 1;', language: 'typescript' });
+  it('renders code_block chunks inside <pre><code> with language hint', async () => {
+    await setKind('code_block', {
+      content: 'const x = 1;',
+      language: 'typescript',
+    });
     const code = getRoot(fixture).querySelector(
       'pre.friendly-stream-chunk__code code',
     );
@@ -99,8 +102,8 @@ describe('FriendlyStreamChunk', () => {
     expect(code?.getAttribute('data-language')).toBe('typescript');
   });
 
-  it('renders image chunks inside <figure><img> with alt + caption', async () => {
-    await setKind('image', {
+  it('renders file_write chunks inside <figure><img> with alt + caption', async () => {
+    await setKind('file_write', {
       src: 'https://example.test/x.png',
       alt: 'A diagram',
     });
@@ -115,30 +118,28 @@ describe('FriendlyStreamChunk', () => {
     ).toContain('A diagram');
   });
 
-  it('renders citation chunks with link when href present', async () => {
-    await setKind('citation', {
-      source: 'RFC 9457',
-      href: 'https://www.rfc-editor.org/rfc/rfc9457',
-      content: 'Problem details for HTTP APIs.',
+  it('renders agent_handoff chunks with link when href present', async () => {
+    await setKind('agent_handoff', {
+      source: 'planner-agent',
+      href: 'agent://planner',
+      content: 'Handing off to planner for task decomposition.',
     });
     const link = getRoot(fixture).querySelector(
       'a.friendly-stream-chunk__cite-link',
     );
     expect(link).toBeTruthy();
-    expect(link?.getAttribute('href')).toBe(
-      'https://www.rfc-editor.org/rfc/rfc9457',
-    );
-    expect(link?.textContent).toContain('RFC 9457');
+    expect(link?.getAttribute('href')).toBe('agent://planner');
+    expect(link?.textContent).toContain('planner-agent');
     expect(
       getRoot(fixture).querySelector('.friendly-stream-chunk__cite-quote')
         ?.textContent,
-    ).toContain('Problem details');
+    ).toContain('Handing off');
   });
 
-  it('renders citation chunks without link when href missing', async () => {
-    await setKind('citation', {
-      source: 'Internal memo',
-      content: 'See plan.',
+  it('renders agent_handoff chunks without link when href missing', async () => {
+    await setKind('agent_handoff', {
+      source: 'supervisor',
+      content: 'Routing to IoT domain agent.',
     });
     expect(
       getRoot(fixture).querySelector('a.friendly-stream-chunk__cite-link'),
@@ -146,7 +147,7 @@ describe('FriendlyStreamChunk', () => {
     expect(
       getRoot(fixture).querySelector('.friendly-stream-chunk__cite-source')
         ?.textContent,
-    ).toContain('Internal memo');
+    ).toContain('supervisor');
   });
 
   it('error chunks default to aria-live="assertive" and role="alert"', async () => {
@@ -156,20 +157,20 @@ describe('FriendlyStreamChunk', () => {
     expect(root.getAttribute('role')).toBe('alert');
   });
 
-  it('status chunks default to aria-live="polite" and role="status"', async () => {
-    await setKind('status', { content: 'ready' });
+  it('progress chunks default to aria-live="polite" and role="status"', async () => {
+    await setKind('progress', { content: 'ready' });
     const root = getRoot(fixture);
     expect(root.getAttribute('aria-live')).toBe('polite');
     expect(root.getAttribute('role')).toBe('status');
   });
 
   it('non-live kinds default to aria-live="off"', async () => {
-    await setKind('text', { content: 'static' });
+    await setKind('final', { content: 'static' });
     expect(getRoot(fixture).getAttribute('aria-live')).toBe('off');
   });
 
   it('honours explicit ariaLiveOverride regardless of kind', async () => {
-    await setKind('text', { content: 'static' });
+    await setKind('final', { content: 'static' });
     fixture.componentRef.setInput('ariaLiveOverride', 'assertive');
     await fixture.whenStable();
     expect(getRoot(fixture).getAttribute('aria-live')).toBe('assertive');
@@ -187,10 +188,28 @@ describe('FriendlyStreamChunk', () => {
       getRoot(fixture).querySelector('.friendly-stream-chunk__kind')
         ?.textContent,
     ).toContain('Tool result');
+
+    await setKind('code_block');
+    expect(
+      getRoot(fixture).querySelector('.friendly-stream-chunk__kind')
+        ?.textContent,
+    ).toContain('Code block');
+
+    await setKind('file_write');
+    expect(
+      getRoot(fixture).querySelector('.friendly-stream-chunk__kind')
+        ?.textContent,
+    ).toContain('File write');
+
+    await setKind('agent_handoff');
+    expect(
+      getRoot(fixture).querySelector('.friendly-stream-chunk__kind')
+        ?.textContent,
+    ).toContain('Agent handoff');
   });
 
   it('renders timestamp as <time> element when present', async () => {
-    await setKind('text', {
+    await setKind('final', {
       content: 'note',
       timestamp: '2026-05-10T00:00:00Z',
     });

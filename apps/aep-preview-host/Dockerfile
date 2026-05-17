@@ -45,6 +45,9 @@ COPY --chown=node:node libs/ libs/
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod=false
 
+# Generate Prisma client before building
+RUN pnpm nx run prisma-schema:prisma:generate
+
 # ------------------------------------------------------------------------------
 # Build Stage: Build the application
 # ------------------------------------------------------------------------------
@@ -52,15 +55,13 @@ FROM base AS build
 
 # Copy dependencies from deps stage
 COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=deps --chown=node:node /app/libs/data/prisma-schema/src /app/libs/data/prisma-schema/src
 
 # Copy source code
 COPY --chown=node:node . .
 
 # Build the application
 RUN pnpm nx build aep-preview-host --configuration=production
-
-# Prune for production deployment
-RUN pnpm nx run aep-preview-host:prune
 
 # ------------------------------------------------------------------------------
 # Production Stage: Minimal runtime image with Docker CLI
@@ -85,13 +86,9 @@ ENV NODE_ENV=production \
 # Set working directory
 WORKDIR /app
 
-# Copy built application from build stage
+# Copy built application AND node_modules from build stage
 COPY --from=build --chown=node:node /app/dist/apps/aep-preview-host ./
-
-# Enable corepack and install production dependencies with cache mount
-RUN corepack enable && corepack prepare pnpm@10 --activate && \
-    --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --prod
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
 
 # Security: Create docker group with specific GID for socket access
 # This GID should match the host's docker group GID

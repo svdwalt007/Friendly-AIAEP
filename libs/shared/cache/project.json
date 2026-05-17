@@ -14,6 +14,16 @@
         "tsConfig": "libs/shared/cache/tsconfig.lib.json",
         "assets": ["libs/shared/cache/*.md"]
       }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "../../../coverage/libs/shared/cache"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
     }
   }
 }

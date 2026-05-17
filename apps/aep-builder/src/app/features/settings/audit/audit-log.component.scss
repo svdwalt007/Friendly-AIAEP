@@ -1,0 +1,192 @@
+/**
+ * AuditLogComponent styles — B7 workspace surface.
+ * @license MIT
+ */
+
+.audit-log {
+  padding: var(--ft-spacing-md, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-spacing-md, 16px);
+  height: 100%;
+  overflow: auto;
+}
+
+.audit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-spacing-md, 16px);
+  flex-wrap: wrap;
+}
+
+.section-heading {
+  font-size: var(--ft-font-size-xl, 1.5rem);
+  font-weight: var(--ft-font-weight-semibold, 600);
+  color: var(--ft-text-primary);
+  margin: 0;
+}
+
+.audit-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-spacing-sm, 8px);
+}
+
+.filter-field {
+  width: 220px;
+}
+
+.table-card {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  flex: 1;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ft-font-size-sm, 0.875rem);
+
+  thead tr {
+    background: var(--ft-surface-secondary);
+    border-bottom: 2px solid var(--ft-border-color);
+  }
+
+  th,
+  td {
+    padding: 10px 14px;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    font-weight: var(--ft-font-weight-semibold, 600);
+    font-size: var(--ft-font-size-xs, 0.75rem);
+    color: var(--ft-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  th.sortable {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--ft-text-primary);
+    }
+  }
+
+  .audit-row {
+    border-bottom: 1px solid var(--ft-border-light, var(--ft-border-color));
+    transition: background 0.1s;
+
+    &:hover {
+      background: var(--ft-surface-hover, var(--ft-surface-secondary));
+    }
+  }
+}
+
+.sort-icon {
+  font-size: 14px;
+  vertical-align: middle;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+.col-timestamp {
+  white-space: nowrap;
+  color: var(--ft-text-secondary);
+  font-family: var(--ft-font-family-mono, monospace);
+  font-size: var(--ft-font-size-xs, 0.75rem);
+}
+
+.col-user {
+  font-weight: var(--ft-font-weight-medium, 500);
+}
+
+.action-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--ft-radius-pill, 9999px);
+  background: var(--ft-surface-tertiary, var(--ft-neutral-100, #f5f5f5));
+  font-size: var(--ft-font-size-xs, 0.75rem);
+  color: var(--ft-text-primary);
+  white-space: nowrap;
+}
+
+.resource-path {
+  font-family: var(--ft-font-family-mono, monospace);
+  font-size: var(--ft-font-size-xs, 0.75rem);
+  color: var(--ft-text-secondary);
+}
+
+.detail-tooltip {
+  margin-left: 4px;
+  cursor: help;
+  color: var(--ft-text-secondary);
+  vertical-align: middle;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--ft-radius-pill, 9999px);
+  font-size: var(--ft-font-size-xs, 0.75rem);
+  font-weight: var(--ft-font-weight-medium, 500);
+  text-transform: capitalize;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.status-success {
+  background: var(--ft-success-bg, #e8f5e9);
+  color: var(--ft-success-700, #388e3c);
+}
+
+.status-failure {
+  background: var(--ft-error-bg, #ffebee);
+  color: var(--ft-error-700, #d32f2f);
+}
+
+.status-pending {
+  background: var(--ft-warning-bg, #fff3e0);
+  color: var(--ft-warning-700, #f57c00);
+}
+
+.table-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--ft-border-color);
+  background: var(--ft-surface-secondary);
+}
+
+.event-count {
+  font-size: var(--ft-font-size-xs, 0.75rem);
+  color: var(--ft-text-secondary);
+}
+
+.no-events {
+  text-align: center;
+  padding: 32px;
+  color: var(--ft-text-secondary);
+}

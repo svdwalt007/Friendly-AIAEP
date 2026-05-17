@@ -1,0 +1,151 @@
+<div class="llm-settings" role="main" aria-label="LLM Settings">
+  <h2 class="section-heading">LLM Configuration</h2>
+
+  <form [formGroup]="form" (ngSubmit)="saveSettings()" novalidate>
+    <!-- Provider -->
+    <mat-card class="settings-card">
+      <h3>Provider</h3>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Provider</mat-label>
+        <mat-select formControlName="provider" (selectionChange)="onProviderChange()" aria-label="Select LLM provider">
+          @for (p of providers; track p.value) {
+            <mat-option [value]="p.value">
+              <mat-icon>{{ p.icon }}</mat-icon>
+              {{ p.label }}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Model</mat-label>
+        <mat-select formControlName="model" aria-label="Select model">
+          @for (m of availableModels(); track m) {
+            <mat-option [value]="m">{{ m }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </mat-card>
+
+    <!-- Authentication -->
+    <mat-card class="settings-card">
+      <h3>Authentication</h3>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>API Key</mat-label>
+        <input
+          matInput
+          type="password"
+          formControlName="apiKey"
+          placeholder="sk-..."
+          autocomplete="current-password"
+          aria-label="API key — treated as a password field"
+        />
+        <mat-icon matSuffix matTooltip="Stored securely in browser session">lock</mat-icon>
+      </mat-form-field>
+
+      @if (selectedProvider()?.value === 'ollama') {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Base URL</mat-label>
+          <input
+            matInput
+            formControlName="baseUrl"
+            placeholder="http://localhost:11434"
+            aria-label="Ollama base URL"
+          />
+        </mat-form-field>
+      }
+    </mat-card>
+
+    <!-- Inference parameters -->
+    <mat-card class="settings-card">
+      <h3>Inference Parameters</h3>
+
+      <div class="slider-group">
+        <label class="slider-label" [attr.for]="'temperature-slider'">
+          Temperature
+          <span class="slider-value" aria-live="polite">{{ temperatureDisplay() }}</span>
+        </label>
+        <mat-slider
+          min="0"
+          max="1"
+          step="0.01"
+          class="full-width"
+          aria-label="Temperature (0 = deterministic, 1 = creative)"
+        >
+          <input
+            matSliderThumb
+            formControlName="temperature"
+            id="temperature-slider"
+          />
+        </mat-slider>
+        <div class="slider-hints">
+          <span>Deterministic</span>
+          <span>Creative</span>
+        </div>
+      </div>
+
+      <mat-divider class="divider-spacing"></mat-divider>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Max tokens</mat-label>
+        <input
+          matInput
+          type="number"
+          formControlName="maxTokens"
+          min="1"
+          max="128000"
+          aria-label="Maximum tokens per response"
+        />
+        <mat-hint>Applies to each individual request</mat-hint>
+      </mat-form-field>
+    </mat-card>
+
+    <!-- Connection test -->
+    <mat-card class="settings-card">
+      <h3>Connection</h3>
+      <div class="connection-row">
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="isTesting() || form.invalid"
+          (click)="testConnection()"
+          aria-label="Test connection to LLM provider"
+        >
+          @if (isTesting()) {
+            <mat-progress-spinner diameter="18" mode="indeterminate" aria-hidden="true"></mat-progress-spinner>
+            Testing…
+          } @else {
+            <mat-icon>wifi_tethering</mat-icon>
+            Test Connection
+          }
+        </button>
+
+        @if (statusIcon()) {
+          <div
+            class="connection-status"
+            [class]="statusClass()"
+            role="status"
+            [attr.aria-label]="connectionStatus() === 'ok' ? 'Connection successful' : 'Connection failed'"
+          >
+            <mat-icon>{{ statusIcon() }}</mat-icon>
+            <span>{{ connectionStatus() === 'ok' ? 'Connected' : 'Connection failed' }}</span>
+          </div>
+        }
+      </div>
+    </mat-card>
+
+    <!-- Save -->
+    <div class="form-actions">
+      <button
+        mat-flat-button
+        color="primary"
+        type="submit"
+        [disabled]="form.invalid"
+        aria-label="Save LLM settings"
+      >
+        <mat-icon>save</mat-icon>
+        Save Settings
+      </button>
+    </div>
+  </form>
+</div>

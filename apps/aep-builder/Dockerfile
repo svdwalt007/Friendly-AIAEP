@@ -89,8 +89,13 @@ RUN mkdir -p /var/cache/nginx/client_temp \
              /var/cache/nginx/proxy_temp \
              /var/cache/nginx/fastcgi_temp \
              /var/cache/nginx/uwsgi_temp \
-             /var/cache/nginx/scgi_temp && \
-    chown -R nginx:nginx /var/cache/nginx
+             /var/cache/nginx/scgi_temp \
+             /tmp/nginx && \
+    chown -R nginx:nginx /var/cache/nginx /tmp/nginx
+
+# Fix nginx.conf to use /tmp for pid
+RUN sed -i 's|pid /run/nginx.pid|pid /tmp/nginx/nginx.pid|' /etc/nginx/nginx.conf || \
+    echo "pid /tmp/nginx/nginx.pid;" >> /etc/nginx/nginx.conf
 
 # Security: Set proper file permissions
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
@@ -101,7 +106,10 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
 RUN rm -rf /tmp/* /var/cache/apk/*
 
 # Security: Run as nginx user (nginx image default)
-USER nginx
+# Note: Using root temporarily for nginx master, then worker processes drop to nginx
+USER root
+
+CMD nginx -g 'daemon off;'
 
 # Expose HTTP port
 EXPOSE 80
@@ -111,7 +119,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
 
 # Start nginx in foreground
-CMD ["nginx", "-g", "daemon off;"]
+# CMD ["nginx", "-g", "daemon off;"]
 
 # ==============================================================================
 # Build Instructions:

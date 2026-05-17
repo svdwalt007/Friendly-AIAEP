@@ -145,9 +145,6 @@ docker-compose*.yml
 # ==============================================================================
 # Kubernetes and Deployment
 # ==============================================================================
-*.yaml
-*.yml
-!package.json
 helm/
 k8s/
 kubernetes/
@@ -259,4 +256,5 @@ ARCHITECTURE.md
 # ==============================================================================
 # Keep These Files (Negation Patterns)
 # ==============================================================================
-# None - all necessary files should be explicitly copied in Dockerfile
+!pnpm-workspace.yaml
+!pnpm-lock.yaml

@@ -57,6 +57,30 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: 'projects/:id/deploy',
+        data: { breadcrumb: { label: 'Deploy', icon: 'rocket_launch' } },
+        loadComponent: () =>
+          import('./features/deploy/deploy-pipeline.component').then(
+            (m) => m.DeployPipelineComponent,
+          ),
+      },
+      {
+        path: 'projects/:id/preview',
+        data: { breadcrumb: { label: 'Preview', icon: 'preview' } },
+        loadComponent: () =>
+          import('./features/preview/preview-session.component').then(
+            (m) => m.PreviewSessionComponent,
+          ),
+      },
+      {
+        path: 'projects/:id/review',
+        data: { breadcrumb: { label: 'Review', icon: 'rate_review' } },
+        loadComponent: () =>
+          import('./features/review/diff-review.component').then(
+            (m) => m.DiffReviewComponent,
+          ),
+      },
+      {
         path: 'settings',
         data: { breadcrumb: { label: 'Settings', icon: 'settings' } },
         loadComponent: () =>

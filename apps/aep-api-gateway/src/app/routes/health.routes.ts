@@ -1,5 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import Redis from 'ioredis';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface ServiceStatus {
   status: 'healthy' | 'degraded' | 'down';
@@ -30,10 +33,10 @@ async function checkRedis(): Promise<ServiceStatus> {
 async function checkDatabase(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
-    const dbUrl = process.env.DATABASE_URL;
-    if (!dbUrl) {
+    if (!process.env.DATABASE_URL) {
       return { status: 'down', error: 'DATABASE_URL not configured' };
     }
+    await prisma.$queryRaw`SELECT 1`;
     return { status: 'healthy', latencyMs: Date.now() - start };
   } catch (err) {
     return { status: 'down', latencyMs: Date.now() - start, error: (err as Error).message };
@@ -76,9 +79,30 @@ export default async function healthRoutes(fastify: FastifyInstance) {
               services: {
                 type: 'object',
                 properties: {
-                  database: { type: 'object' },
-                  redis: { type: 'object' },
-                  influxdb: { type: 'object' },
+                  database: {
+                    type: 'object',
+                    properties: {
+                      status: { type: 'string' },
+                      latencyMs: { type: 'number' },
+                      error: { type: 'string' },
+                    },
+                  },
+                  redis: {
+                    type: 'object',
+                    properties: {
+                      status: { type: 'string' },
+                      latencyMs: { type: 'number' },
+                      error: { type: 'string' },
+                    },
+                  },
+                  influxdb: {
+                    type: 'object',
+                    properties: {
+                      status: { type: 'string' },
+                      latencyMs: { type: 'number' },
+                      error: { type: 'string' },
+                    },
+                  },
                 },
               },
             },
@@ -93,9 +117,30 @@ export default async function healthRoutes(fastify: FastifyInstance) {
               services: {
                 type: 'object',
                 properties: {
-                  database: { type: 'object' },
-                  redis: { type: 'object' },
-                  influxdb: { type: 'object' },
+                  database: {
+                    type: 'object',
+                    properties: {
+                      status: { type: 'string' },
+                      latencyMs: { type: 'number' },
+                      error: { type: 'string' },
+                    },
+                  },
+                  redis: {
+                    type: 'object',
+                    properties: {
+                      status: { type: 'string' },
+                      latencyMs: { type: 'number' },
+                      error: { type: 'string' },
+                    },
+                  },
+                  influxdb: {
+                    type: 'object',
+                    properties: {
+                      status: { type: 'string' },
+                      latencyMs: { type: 'number' },
+                      error: { type: 'string' },
+                    },
+                  },
                 },
               },
             },

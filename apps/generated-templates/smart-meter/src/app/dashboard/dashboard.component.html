@@ -1,0 +1,84 @@
+<section class="page">
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">Smart Meter</h1>
+      <p class="page__subtitle">Energy monitoring — last 24 hours</p>
+    </div>
+    <div class="status" [class.status--off]="!connected()">
+      <span class="status__dot" aria-hidden="true"></span>
+      <span class="status__label">{{ connected() ? 'Connected' : 'Offline' }}</span>
+    </div>
+  </header>
+
+  <div class="kpi-grid">
+    @for (kpi of kpis; track kpi.label) {
+      <article class="kpi-card" [attr.aria-label]="kpi.label">
+        <div class="kpi-card__label">{{ kpi.label }}</div>
+        <div class="kpi-card__value">
+          <span class="kpi-card__amount">{{ kpi.value }}</span>
+          <span class="kpi-card__unit">{{ kpi.unit }}</span>
+        </div>
+        <div
+          class="kpi-card__delta"
+          [class.kpi-card__delta--up]="kpi.delta > 0"
+          [class.kpi-card__delta--down]="kpi.delta < 0"
+        >
+          {{ kpi.delta > 0 ? '▲' : '▼' }} {{ kpi.delta > 0 ? '+' : '' }}{{ kpi.delta }}%
+        </div>
+        <svg class="kpi-card__spark" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true">
+          <polyline
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            [attr.points]="spark(kpi.series)"
+          />
+        </svg>
+      </article>
+    }
+  </div>
+
+  <section class="panel">
+    <h2 class="panel__title">Usage — last 24 hours</h2>
+    <svg class="chart" viewBox="0 0 480 140" role="img" aria-label="Hourly energy usage chart">
+      <g class="chart__grid" stroke="var(--ft-border-color)" stroke-dasharray="2,4">
+        <line x1="0" y1="40" x2="480" y2="40" />
+        <line x1="0" y1="80" x2="480" y2="80" />
+        <line x1="0" y1="120" x2="480" y2="120" />
+      </g>
+      <path class="chart__area" [attr.d]="chartArea()" />
+      <polyline class="chart__line" fill="none" [attr.points]="chartPoints()" />
+    </svg>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel__title">Alerts</h2>
+    <table class="alerts">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Metric</th>
+          <th scope="col">Threshold</th>
+          <th scope="col">Value</th>
+          <th scope="col">Severity</th>
+          <th scope="col">Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (a of alerts; track a.id) {
+          <tr>
+            <td>{{ a.id }}</td>
+            <td>{{ a.metric }}</td>
+            <td>{{ a.threshold }}</td>
+            <td>{{ a.value }}</td>
+            <td>
+              <span class="badge" [attr.data-severity]="a.severity">{{ a.severity }}</span>
+            </td>
+            <td>{{ a.timestamp }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+</section>

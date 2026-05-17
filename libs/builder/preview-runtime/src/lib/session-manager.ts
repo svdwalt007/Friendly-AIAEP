@@ -437,7 +437,7 @@ export class SessionManager {
     });
 
     // Filter sessions with lastActivityAt older than threshold
-    const sessionsToExpire = activeSessions.filter((session) => {
+    const sessionsToExpire = activeSessions.filter((session: PreviewSession) => {
       const config = session.config as unknown as SessionConfig;
       const lastActivity = new Date(config.lastActivityAt);
       return lastActivity < inactivityThreshold;
@@ -448,7 +448,7 @@ export class SessionManager {
       await prisma.previewSession.updateMany({
         where: {
           id: {
-            in: sessionsToExpire.map((s) => s.id),
+            in: sessionsToExpire.map((s: PreviewSession) => s.id),
           },
         },
         data: {

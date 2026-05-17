@@ -1,0 +1,14 @@
+@use './styles/design-tokens.scss';
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--ft-font-family-base);
+  font-size: var(--ft-font-size-base);
+  color: var(--ft-text-primary);
+  background-color: var(--ft-surface-2);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }

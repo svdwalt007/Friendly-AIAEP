@@ -1,0 +1,63 @@
+services:
+  aep-api-gateway:
+    build:
+      context: .
+      dockerfile: apps/aep-api-gateway/Dockerfile
+    ports:
+      - "46000:46000"
+    environment:
+      - NODE_ENV=development
+      - PORT=46000
+      - AEP_API_GATEWAY_PORT=46000
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://friendly:friendly_dev_password@postgres:5432/friendly_aep_dev
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=dev-jwt-secret-change-me
+      - INFLUXDB_URL=http://host.docker.internal:46101
+    env_file: []
+    depends_on: []
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - friendly-aep-dev-network
+
+  aep-builder:
+    build:
+      context: .
+      dockerfile: apps/aep-builder/Dockerfile
+    ports:
+      - "4200:80"
+    environment:
+      - NODE_ENV=development
+      - API_GATEWAY_URL=http://aep-api-gateway:3001
+    depends_on:
+      - aep-api-gateway
+    networks:
+      - friendly-aep-dev-network
+
+  aep-preview-host:
+    build:
+      context: .
+      dockerfile: apps/aep-preview-host/Dockerfile
+    ports:
+      - "46001:46001"
+    environment:
+      - NODE_ENV=development
+      - PORT=46001
+      - HOST=0.0.0.0
+      - API_GATEWAY_URL=http://aep-api-gateway:3001
+      - MINIO_ENDPOINT=http://host.docker.internal:46200
+    depends_on:
+      - aep-api-gateway
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - friendly-aep-dev-network
+
+networks:
+  friendly-aep-dev-network:
+    external: true

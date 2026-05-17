@@ -1,0 +1,61 @@
+{
+  "name": "predmaint",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "pm",
+  "sourceRoot": "apps/generated-templates/predmaint/src",
+  "tags": ["scope:generated-template"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/generated-templates/predmaint",
+        "browser": "apps/generated-templates/predmaint/src/main.ts",
+        "index": "apps/generated-templates/predmaint/src/index.html",
+        "tsConfig": "apps/generated-templates/predmaint/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/generated-templates/predmaint/public"
+          }
+        ],
+        "styles": ["apps/generated-templates/predmaint/src/styles.scss"]
+      },
+      "configurations": {
+        "production": {
+          "optimization": true,
+          "outputHashing": "all",
+          "sourceMap": false,
+          "namedChunks": false,
+          "extractLicenses": true,
+          "budgets": [
+            { "type": "initial", "maximumWarning": "200kb", "maximumError": "250kb" },
+            { "type": "anyComponentStyle", "maximumWarning": "8kb", "maximumError": "16kb" }
+          ]
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true,
+          "namedChunks": true,
+          "outputHashing": "none"
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "options": { "port": 45012, "host": "localhost" },
+      "configurations": {
+        "production": { "buildTarget": "predmaint:build:production" },
+        "development": { "buildTarget": "predmaint:build:development" }
+      },
+      "defaultConfiguration": "development"
+    },
+    "test": { "executor": "@nx/vitest:test" },
+    "lint": { "executor": "@nx/eslint:lint" }
+  }
+}

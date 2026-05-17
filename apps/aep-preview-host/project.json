@@ -80,6 +80,13 @@
           "buildTarget": "aep-preview-host:build:production"
         }
       }
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "../../coverage/apps/aep-preview-host"
+      }
     }
   },
   "tags": []

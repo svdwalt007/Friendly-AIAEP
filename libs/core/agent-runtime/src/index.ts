@@ -1,5 +1,20 @@
 export const MODULE_NAME = 'agent-runtime';
 
+// Canonical AEP v2 LangGraph stream contract (9-kind taxonomy)
+export type {
+  StreamChunk as LangGraphStreamChunk,
+  StreamChunkKind as LangGraphStreamChunkKind,
+  StreamChunkPayload as LangGraphStreamChunkPayload,
+} from './lib/contracts';
+export { STREAM_CHUNK_KINDS } from './lib/contracts';
+
+// Deterministic dev-mode fixture loop
+export {
+  RUN_FIXTURE,
+  RUN_FIXTURE_CYCLE_MS,
+  RUN_FIXTURE_STEP_MS,
+} from './mocks/run.fixture';
+
 // Export all types
 export type {
   TaskStatus,

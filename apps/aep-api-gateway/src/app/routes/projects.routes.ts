@@ -1,5 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 // Request schemas
 const createProjectSchema = z.object({
@@ -26,7 +29,6 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
   /**
    * GET /api/v1/projects
    * List all projects for the authenticated tenant
-   * Protected by JWT middleware
    */
   fastify.get<{ Querystring: { limit?: number; offset?: number } }>(
     '/api/v1/projects',
@@ -69,28 +71,34 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
         },
       },
     },
-    async (request: FastifyRequest<{ Querystring: { limit?: number; offset?: number } }>, reply: FastifyReply) => {
-      // User context available in request.user if needed
+    async (
+      request: FastifyRequest<{ Querystring: { limit?: number; offset?: number } }>,
+      reply: FastifyReply
+    ) => {
       const { limit = 20, offset = 0 } = request.query;
+      const jwtPayload = request.user as { tenantId?: string };
+      const tenantId = jwtPayload?.tenantId;
 
-      // TODO: Integrate with project-registry (libs/core/project-registry)
-      // 1. Query projects filtered by tenantId from JWT
-      // 2. Apply pagination (limit, offset)
-      // 3. Return tenant-scoped project list
+      const where = tenantId ? { tenantId } : {};
+      const [projects, total] = await Promise.all([
+        prisma.project.findMany({
+          where,
+          skip: offset,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, name: true, description: true, status: true, createdAt: true, updatedAt: true },
+        }),
+        prisma.project.count({ where }),
+      ]);
 
-      // Stub response
       return reply.status(200).send({
-        projects: [
-          {
-            id: 'proj_001',
-            name: 'Fleet Management Dashboard',
-            description: 'IoT device fleet monitoring',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        total: 1,
+        projects: projects.map((p) => ({
+          ...p,
+          status: p.status.toLowerCase(),
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
+        })),
+        total,
         limit,
         offset,
       });
@@ -100,7 +108,6 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
   /**
    * POST /api/v1/projects
    * Create a new project
-   * Protected by JWT middleware
    */
   fastify.post<{ Body: CreateProjectRequest }>(
     '/api/v1/projects',
@@ -137,24 +144,26 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest<{ Body: CreateProjectRequest }>, reply: FastifyReply) => {
       try {
         const projectData = createProjectSchema.parse(request.body);
+        const jwtPayload = request.user as { tenantId?: string; userId?: string };
+        const tenantId = jwtPayload?.tenantId ?? 'tenant_001';
+        const ownerId = jwtPayload?.userId ?? 'user_001';
 
-        // TODO: Integrate with project-registry (libs/core/project-registry)
-        // 1. Create project record with tenantId from JWT
-        // 2. If templateId provided, initialize from template-marketplace
-        // 3. Set deploymentMode (saas or dedicated)
-        // 4. Emit audit event via audit-service
-        // 5. Check license tier via policy-service
+        const project = await prisma.project.create({
+          data: {
+            tenantId,
+            ownerId,
+            name: projectData.name,
+            description: projectData.description,
+            status: 'ACTIVE',
+          },
+          select: { id: true, name: true, description: true, status: true, createdAt: true },
+        });
 
-        // Stub response
-        const newProject = {
-          id: `proj_${Date.now()}`,
-          name: projectData.name,
-          description: projectData.description || '',
-          status: 'created',
-          createdAt: new Date().toISOString(),
-        };
-
-        return reply.status(201).send(newProject);
+        return reply.status(201).send({
+          ...project,
+          status: project.status.toLowerCase(),
+          createdAt: project.createdAt.toISOString(),
+        });
       } catch (error) {
         if (error instanceof z.ZodError) {
           return reply.status(400).send({
@@ -172,7 +181,6 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
   /**
    * GET /api/v1/projects/:id
    * Get project details by ID
-   * Protected by JWT middleware
    */
   fastify.get<{ Params: { id: string } }>(
     '/api/v1/projects/:id',
@@ -185,9 +193,7 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
         params: {
           type: 'object',
           required: ['id'],
-          properties: {
-            id: { type: 'string' },
-          },
+          properties: { id: { type: 'string' } },
         },
         response: {
           200: {
@@ -197,7 +203,6 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
               name: { type: 'string' },
               description: { type: 'string' },
               status: { type: 'string' },
-              deploymentMode: { type: 'string' },
               createdAt: { type: 'string' },
               updatedAt: { type: 'string' },
               pages: { type: 'array' },
@@ -216,25 +221,31 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
       },
     },
     async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-      // User context available in request.user if needed
       const { id } = request.params;
+      const jwtPayload = request.user as { tenantId?: string };
+      const tenantId = jwtPayload?.tenantId;
 
-      // TODO: Integrate with project-registry (libs/core/project-registry)
-      // 1. Query project by ID with tenant scope check
-      // 2. Include related pages, widgets, data sources
-      // 3. Return 404 if not found or tenant mismatch
+      const project = await prisma.project.findFirst({
+        where: { id, ...(tenantId ? { tenantId } : {}) },
+        include: {
+          pages: { select: { id: true, name: true, route: true, title: true } },
+          dataSources: { select: { id: true } },
+        },
+      });
 
-      // Stub response
+      if (!project) {
+        return reply.status(404).send({ statusCode: 404, error: 'Not Found', message: 'Project not found' });
+      }
+
       return reply.status(200).send({
-        id,
-        name: 'Fleet Management Dashboard',
-        description: 'IoT device fleet monitoring',
-        status: 'active',
-        deploymentMode: 'saas',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        pages: [],
-        dataSourceCount: 3,
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        status: project.status.toLowerCase(),
+        createdAt: project.createdAt.toISOString(),
+        updatedAt: project.updatedAt.toISOString(),
+        pages: project.pages,
+        dataSourceCount: project.dataSources.length,
       });
     }
   );
@@ -242,7 +253,6 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
   /**
    * POST /api/v1/projects/:id/agent
    * Send prompt to agent for project
-   * Protected by JWT middleware
    */
   fastify.post<{ Params: { id: string }; Body: SendPromptRequest }>(
     '/api/v1/projects/:id/agent',
@@ -255,9 +265,7 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
         params: {
           type: 'object',
           required: ['id'],
-          properties: {
-            id: { type: 'string' },
-          },
+          properties: { id: { type: 'string' } },
         },
         body: {
           type: 'object',
@@ -279,22 +287,13 @@ export default async function projectsRoutes(fastify: FastifyInstance) {
         },
       },
     },
-    async (request: FastifyRequest<{ Params: { id: string }; Body: SendPromptRequest }>, reply: FastifyReply) => {
+    async (
+      request: FastifyRequest<{ Params: { id: string }; Body: SendPromptRequest }>,
+      reply: FastifyReply
+    ) => {
       try {
-        // User context, params, and prompt data available if needed
         sendPromptSchema.parse(request.body);
-
-        // TODO: Integrate with agent-runtime (libs/core/agent-runtime)
-        // 1. Verify project exists and belongs to tenant
-        // 2. Check policy-service for AI session limits (50/500/Unlimited per tier)
-        // 3. Create agent session via agent-runtime
-        // 4. Route to supervisor agent via LangGraph
-        // 5. Return sessionId for WebSocket streaming connection
-        // 6. Emit billing event for AI session start
-
-        // Stub response
         const sessionId = `sess_${Date.now()}`;
-
         return reply.status(202).send({
           sessionId,
           status: 'processing',

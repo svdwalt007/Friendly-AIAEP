@@ -1,0 +1,168 @@
+<div class="composer-shell">
+  <!-- Toolbar -->
+  <div class="composer-toolbar" role="banner">
+    <div class="toolbar-left">
+      <mat-icon>edit_square</mat-icon>
+      <span class="toolbar-title">Page Composer</span>
+      @if (projectName()) {
+        <span class="toolbar-project" aria-label="Project name">{{ projectName() }}</span>
+      }
+    </div>
+    <div class="toolbar-right">
+      <button
+        mat-stroked-button
+        (click)="openComponentPicker()"
+        aria-label="Add component from library"
+      >
+        <mat-icon>add</mat-icon>
+        Add Component
+      </button>
+      <button
+        mat-flat-button
+        color="primary"
+        [disabled]="saving()"
+        (click)="saveLayout()"
+        aria-label="Save page layout"
+      >
+        @if (saving()) {
+          <mat-progress-spinner diameter="18" mode="indeterminate" aria-hidden="true"></mat-progress-spinner>
+        } @else {
+          <mat-icon>save</mat-icon>
+        }
+        Save Layout
+      </button>
+    </div>
+  </div>
+
+  <div class="composer-body">
+    <!-- Left panel: widget palette -->
+    <aside class="palette-panel" aria-label="Widget palette">
+      <h2 class="panel-title">Widgets</h2>
+      <div
+        cdkDropList
+        #paletteList="cdkDropList"
+        [cdkDropListData]="paletteWidgets"
+        [cdkDropListConnectedTo]="[canvasList]"
+        [cdkDropListSortingDisabled]="true"
+        class="palette-list"
+        aria-label="Drag widgets onto the canvas"
+      >
+        @for (widget of paletteWidgets; track widget.id) {
+          <div
+            cdkDrag
+            [cdkDragData]="widget"
+            class="palette-item"
+            [attr.aria-label]="'Drag ' + widget.type + ' widget onto canvas'"
+            tabindex="0"
+            (keydown.enter)="null"
+          >
+            <mat-icon>{{ widget.icon }}</mat-icon>
+            <div class="palette-item-info">
+              <span class="palette-item-name">{{ widget.type }}</span>
+              <span class="palette-item-desc">{{ widget.description }}</span>
+            </div>
+            <!-- Drag preview -->
+            <div *cdkDragPlaceholder class="drag-placeholder">
+              <mat-icon>{{ widget.icon }}</mat-icon>
+            </div>
+          </div>
+        }
+      </div>
+    </aside>
+
+    <!-- Canvas -->
+    <main class="canvas-panel" aria-label="Page canvas">
+      @if (canvasWidgets().length === 0) {
+        <div class="canvas-empty" aria-live="polite">
+          <mat-icon class="empty-icon">dashboard_customize</mat-icon>
+          <p>Drag widgets from the palette to build your page layout.</p>
+        </div>
+      }
+      <div
+        cdkDropList
+        #canvasList="cdkDropList"
+        [cdkDropListData]="canvasWidgets()"
+        [cdkDropListConnectedTo]="[paletteList]"
+        class="canvas-grid"
+        (cdkDropListDropped)="onDropOnCanvas($any($event))"
+        aria-label="Canvas — drop area for widgets"
+      >
+        @for (widget of canvasWidgets(); track widget.instanceId) {
+          <div
+            class="canvas-widget"
+            [class.selected]="selectedWidget()?.instanceId === widget.instanceId"
+            [style.grid-column]="'span ' + widget.colSpan"
+            [style.grid-row]="'span ' + widget.rowSpan"
+            (click)="selectWidget(widget)"
+            role="button"
+            tabindex="0"
+            [attr.aria-label]="'Widget: ' + widget.name + '. Click to inspect.'"
+            (keydown.enter)="selectWidget(widget)"
+          >
+            <div class="widget-header">
+              <mat-icon>{{ widget.icon }}</mat-icon>
+              <span class="widget-name">{{ widget.name }}</span>
+              <button
+                mat-icon-button
+                class="widget-remove"
+                (click)="$event.stopPropagation(); removeWidget(widget.instanceId)"
+                [attr.aria-label]="'Remove widget ' + widget.name"
+                matTooltip="Remove widget"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            <div class="widget-body" aria-hidden="true">
+              <mat-icon class="widget-type-icon">{{ widget.icon }}</mat-icon>
+              <span class="widget-type-label">{{ widget.type }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    </main>
+
+    <!-- Right panel: inspector -->
+    <aside class="inspector-panel" aria-label="Widget inspector">
+      <h2 class="panel-title">Inspector</h2>
+      @if (!hasSelection()) {
+        <div class="inspector-empty">
+          <mat-icon>touch_app</mat-icon>
+          <p>Select a widget on the canvas to inspect its properties.</p>
+        </div>
+      } @else {
+        <form [formGroup]="inspectorForm" class="inspector-form" (ngSubmit)="applyInspector()">
+          <mat-form-field appearance="outline" class="inspector-field">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" aria-label="Widget name" />
+          </mat-form-field>
+
+          <div class="inspector-row">
+            <mat-form-field appearance="outline" class="inspector-field-half">
+              <mat-label>Column span</mat-label>
+              <input matInput type="number" formControlName="colSpan" min="1" max="12" aria-label="Column span" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="inspector-field-half">
+              <mat-label>Row span</mat-label>
+              <input matInput type="number" formControlName="rowSpan" min="1" max="6" aria-label="Row span" />
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="inspector-field">
+            <mat-label>Data binding</mat-label>
+            <input matInput formControlName="dataBinding" placeholder="e.g. devices.temperature" aria-label="Data binding expression" />
+          </mat-form-field>
+
+          <button
+            mat-flat-button
+            color="primary"
+            type="submit"
+            [disabled]="inspectorForm.invalid"
+            aria-label="Apply inspector changes"
+          >
+            Apply
+          </button>
+        </form>
+      }
+    </aside>
+  </div>
+</div>

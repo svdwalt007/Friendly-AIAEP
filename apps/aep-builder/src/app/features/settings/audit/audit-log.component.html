@@ -1,0 +1,122 @@
+<div class="audit-log" role="main" aria-label="Audit log">
+  <div class="audit-header">
+    <h2 class="section-heading">Audit Log</h2>
+    <div class="audit-controls">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Filter by action</mat-label>
+        <mat-select
+          [ngModel]="filterAction()"
+          (ngModelChange)="filterAction.set($event)"
+          aria-label="Filter audit events by action type"
+        >
+          @for (opt of actionOptions; track opt.value) {
+            <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <mat-card class="table-card">
+    <div class="table-wrap" role="region" aria-label="Audit events table">
+      <table class="audit-table" aria-label="Audit log events">
+        <thead>
+          <tr>
+            <th
+              class="sortable"
+              scope="col"
+              (click)="onSort('timestamp')"
+              (keydown.enter)="onSort('timestamp')"
+              tabindex="0"
+              [attr.aria-sort]="sortField() === 'timestamp' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'"
+            >
+              Timestamp
+              <mat-icon class="sort-icon" aria-hidden="true">{{ sortIcon('timestamp') }}</mat-icon>
+            </th>
+            <th
+              class="sortable"
+              scope="col"
+              (click)="onSort('user')"
+              (keydown.enter)="onSort('user')"
+              tabindex="0"
+              [attr.aria-sort]="sortField() === 'user' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'"
+            >
+              User
+              <mat-icon class="sort-icon" aria-hidden="true">{{ sortIcon('user') }}</mat-icon>
+            </th>
+            <th
+              class="sortable"
+              scope="col"
+              (click)="onSort('action')"
+              (keydown.enter)="onSort('action')"
+              tabindex="0"
+              [attr.aria-sort]="sortField() === 'action' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'"
+            >
+              Action
+              <mat-icon class="sort-icon" aria-hidden="true">{{ sortIcon('action') }}</mat-icon>
+            </th>
+            <th scope="col">Resource</th>
+            <th
+              class="sortable"
+              scope="col"
+              (click)="onSort('status')"
+              (keydown.enter)="onSort('status')"
+              tabindex="0"
+              [attr.aria-sort]="sortField() === 'status' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'"
+            >
+              Status
+              <mat-icon class="sort-icon" aria-hidden="true">{{ sortIcon('status') }}</mat-icon>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (event of filteredEvents(); track event.id) {
+            <tr class="audit-row">
+              <td class="col-timestamp">
+                <time [dateTime]="event.timestamp">{{ formatTimestamp(event.timestamp) }}</time>
+              </td>
+              <td class="col-user">{{ event.user }}</td>
+              <td class="col-action">
+                <span class="action-chip">{{ actionLabel(event.action) }}</span>
+              </td>
+              <td class="col-resource">
+                <code class="resource-path">{{ event.resource }}</code>
+                @if (event.detail) {
+                  <span
+                    class="detail-tooltip"
+                    [matTooltip]="event.detail"
+                    [attr.aria-label]="'Detail: ' + event.detail"
+                  >
+                    <mat-icon aria-hidden="true">info</mat-icon>
+                  </span>
+                }
+              </td>
+              <td class="col-status">
+                <span
+                  class="status-chip"
+                  [class]="statusClass(event.status)"
+                  [attr.aria-label]="event.status"
+                >
+                  <mat-icon aria-hidden="true">{{ statusIcon(event.status) }}</mat-icon>
+                  {{ event.status }}
+                </span>
+              </td>
+            </tr>
+          }
+          @if (filteredEvents().length === 0) {
+            <tr>
+              <td colspan="5" class="no-events" aria-live="polite">
+                No audit events match the current filter.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span class="event-count" aria-live="polite" aria-atomic="true">
+        Showing {{ filteredEvents().length }} of {{ allEvents.length }} events
+      </span>
+    </div>
+  </mat-card>
+</div>

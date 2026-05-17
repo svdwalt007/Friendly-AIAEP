@@ -15,15 +15,15 @@ const meta: Meta<FriendlyStreamChunk> = {
     kind: {
       control: { type: 'select' },
       options: [
-        'text',
-        'thought',
+        'final',
+        'reasoning',
         'tool_call',
         'tool_result',
-        'code',
-        'image',
+        'code_block',
+        'file_write',
         'error',
-        'status',
-        'citation',
+        'progress',
+        'agent_handoff',
       ],
     },
     payload: { control: { type: 'object' } },
@@ -38,16 +38,16 @@ export default meta;
 
 type Story = StoryObj<FriendlyStreamChunk>;
 
-export const Text: Story = {
+export const Final: Story = {
   args: {
-    kind: 'text',
+    kind: 'final',
     payload: { content: 'The agent has finished drafting your project plan.' },
   },
 };
 
-export const Thought: Story = {
+export const Reasoning: Story = {
   args: {
-    kind: 'thought',
+    kind: 'reasoning',
     payload: {
       content: 'Considering whether to invoke the device-discovery tool.',
     },
@@ -76,19 +76,21 @@ export const ToolResult: Story = {
   },
 };
 
-export const Code: Story = {
+export const CodeBlock: Story = {
+  name: 'Code block',
   args: {
-    kind: 'code',
+    kind: 'code_block',
     payload: {
       language: 'typescript',
-      content: `import { FriendlyStreamChunk } from '@friendly-tech/ui/iot-ui';\n\nconst chunk = { kind: 'status', payload: { content: 'ok' } };`,
+      content: `import { FriendlyStreamChunk } from '@friendly-tech/ui/iot-ui';\n\nconst chunk = { kind: 'progress', payload: { content: 'ok' } };`,
     },
   },
 };
 
-export const Image: Story = {
+export const FileWrite: Story = {
+  name: 'File write',
   args: {
-    kind: 'image',
+    kind: 'file_write',
     payload: {
       src: 'https://placehold.co/600x300?text=Diagram',
       alt: 'Architecture diagram showing the AEP runtime',
@@ -103,9 +105,9 @@ export const Error: Story = {
   },
 };
 
-export const Status: Story = {
+export const Progress: Story = {
   args: {
-    kind: 'status',
+    kind: 'progress',
     payload: {
       content: 'Plan generated — awaiting user approval.',
       timestamp: '2026-05-10T01:23:45Z',
@@ -113,13 +115,14 @@ export const Status: Story = {
   },
 };
 
-export const Citation: Story = {
+export const AgentHandoff: Story = {
+  name: 'Agent handoff',
   args: {
-    kind: 'citation',
+    kind: 'agent_handoff',
     payload: {
-      source: 'OMA TS LightweightM2M Core v2.0',
-      href: 'https://www.openmobilealliance.org/release/LightweightM2M/V2_0-20210922-A/',
-      content: 'Section 6.2.1 — Bootstrap-Request operation.',
+      source: 'supervisor → planning-agent',
+      href: 'agent://planning',
+      content: 'Routing task decomposition to the planning agent.',
     },
   },
 };
