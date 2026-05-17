@@ -27,12 +27,12 @@ export interface CoverageThresholdConfig {
 /**
  * The workspace-wide floor for unit-test coverage.
  *
- * Current state (May 2026, with libs/** excluded from app coverage):
+ * Current state (May 2026, after more builder + theme specs):
  *   aep-preview-host  100 / 100 / 100 / 100
  *   aep-admin          93 /  86 /  75 /  92
  *   aep-api-gateway    80 /  69 /  85 /  80
- *   aep-builder        80 /  74 /  66 /  76
- *   --- worst -------- 80 /  69 /  66 /  76
+ *   aep-builder        81 /  75 /  71 /  77
+ *   --- worst -------- 80 /  69 /  71 /  77
  *
  * Counter-intuitive math: adding a spec for a LARGE component can
  * temporarily DROP the project's % overall, because the source file
@@ -53,10 +53,10 @@ export interface CoverageThresholdConfig {
  * by every project that produces a coverage-summary.json.
  */
 export const COVERAGE_FLOOR = {
-  lines: 75,
-  statements: 72,
-  functions: 65,
-  branches: 65,
+  lines: 78,
+  statements: 75,
+  functions: 68,
+  branches: 67,
 } as const;
 
 /** Aspirational target — the bar we ratchet back up to. */
