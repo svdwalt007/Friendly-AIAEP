@@ -27,12 +27,12 @@ export interface CoverageThresholdConfig {
 /**
  * The workspace-wide floor for unit-test coverage.
  *
- * Current state (May 2026, with broader source coverage measured):
+ * Current state (May 2026, with libs/** excluded from app coverage):
  *   aep-preview-host  100 / 100 / 100 / 100
- *   aep-admin          86 /  82 /  73 /  85
+ *   aep-admin          93 /  86 /  75 /  92
  *   aep-api-gateway    80 /  69 /  85 /  80
- *   aep-builder        73 /  65 /  62 /  71
- *   --- worst -------- 73 /  65 /  62 /  71
+ *   aep-builder        80 /  74 /  66 /  76
+ *   --- worst -------- 80 /  69 /  66 /  76
  *
  * Counter-intuitive math: adding a spec for a LARGE component can
  * temporarily DROP the project's % overall, because the source file
@@ -53,10 +53,10 @@ export interface CoverageThresholdConfig {
  * by every project that produces a coverage-summary.json.
  */
 export const COVERAGE_FLOOR = {
-  lines: 70,
-  statements: 68,
-  functions: 60,
-  branches: 60,
+  lines: 75,
+  statements: 72,
+  functions: 65,
+  branches: 65,
 } as const;
 
 /** Aspirational target — the bar we ratchet back up to. */
@@ -103,6 +103,12 @@ export function coverageThresholds(): CoverageThresholdConfig {
       // these import from the lib but aren't part of the lib's API surface.
       'libs/iot/**/*.example.ts',
       'libs/iot/**/ENCRYPTION_EXAMPLES.ts',
+      // Lib sources are measured by their own per-lib coverage runs.
+      // When an app imports them, v8 records them as loaded → drags
+      // the app's project-level % down even though the lib has its own
+      // green specs. Each lib's own vitest.config keeps its include/
+      // exclude scoped to its own src/.
+      '**/libs/**',
     ],
   };
 }

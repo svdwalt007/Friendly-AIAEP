@@ -75,7 +75,18 @@
     "test": {
       "executor": "@nx/angular:unit-test",
       "options": {
-        "setupFiles": ["apps/aep-admin/src/test-setup.ts"]
+        "setupFiles": ["apps/aep-admin/src/test-setup.ts"],
+        "coverageExclude": [
+          "**/*.stories.ts",
+          "**/*.fixture.ts",
+          "**/index.ts",
+          "**/main.ts",
+          "**/*.config.{ts,mts}",
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.angular/**",
+          "**/libs/**"
+        ]
       }
     }
   }

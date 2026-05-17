@@ -133,7 +133,19 @@
       "executor": "@nx/angular:unit-test",
       "options": {
         "setupFiles": ["apps/aep-builder/src/test-setup.ts"],
-        "exclude": ["**/environment.*.ts"]
+        "exclude": ["**/environment.*.ts"],
+        "coverageExclude": [
+          "**/*.stories.ts",
+          "**/*.fixture.ts",
+          "**/index.ts",
+          "**/environment.*.ts",
+          "**/main.ts",
+          "**/*.config.{ts,mts}",
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.angular/**",
+          "**/libs/**"
+        ]
       }
     },
     "e2e": {
