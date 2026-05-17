@@ -26,10 +26,10 @@ env:
   # Transitional floors — must match COVERAGE_FLOOR in
   # tools/vitest/coverage-thresholds.ts. See that file for the ratchet plan
   # back to the 80/75/80/80 target.
-  MIN_LINE_COVERAGE: 70
-  MIN_BRANCH_COVERAGE: 60
+  MIN_LINE_COVERAGE: 75
+  MIN_BRANCH_COVERAGE: 65
   MIN_FUNCTION_COVERAGE: 65
-  MIN_STATEMENT_COVERAGE: 70
+  MIN_STATEMENT_COVERAGE: 72
 
 jobs:
   forbidden-patterns:

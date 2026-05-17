@@ -27,30 +27,31 @@ export interface CoverageThresholdConfig {
 /**
  * The workspace-wide floor for unit-test coverage.
  *
- * Current state (May 2026, post-Phase-B partial):
+ * Current state (May 2026, post-Phase-C-mostly):
  *   aep-preview-host  100 / 100 / 100 / 100
  *   aep-admin          86 /  82 /  73 /  85
- *   aep-api-gateway    73 /  66 /  77 /  73
- *   aep-builder        77 /  73 /  68 /  73
- *   --- worst -------- 73 /  66 /  68 /  73
+ *   aep-api-gateway    80 /  69 /  85 /  80
+ *   aep-builder        79 /  73 /  68 /  76
+ *   --- worst -------- 79 /  69 /  68 /  76
  *
  * The TARGET remains 80/75/80/80. The FLOOR below is a transitional
  * baseline that lets CI go green today while phased spec backfill lands.
  *
  * Ratchet plan (raise on merge of each phase):
- *   Phase A   — 50 / 40 / 50 / 50  → unblock CI [DONE]
- *   Phase B+  — 70 / 60 / 65 / 70  → after first round of service specs [CURRENT]
- *   Phase C   — 75 / 70 / 75 / 75  → after gateway routes + plugins land
- *   Phase D   — 80 / 75 / 80 / 80  → target reached
+ *   Phase A     — 50 / 40 / 50 / 50  → unblock CI [DONE]
+ *   Phase B+    — 70 / 60 / 65 / 70  → first round of service specs [DONE]
+ *   Phase C-ish — 75 / 65 / 65 / 72  → gateway plugins + builder features [CURRENT]
+ *   Phase C+    — 78 / 68 / 67 / 75  → remaining gateway routes + middleware
+ *   Phase D     — 80 / 75 / 80 / 80  → target reached
  *
  * Don't bump the floor without confirming the new value is currently met
  * by every project that produces a coverage-summary.json.
  */
 export const COVERAGE_FLOOR = {
-  lines: 70,
-  statements: 70,
+  lines: 75,
+  statements: 72,
   functions: 65,
-  branches: 60,
+  branches: 65,
 } as const;
 
 /** Aspirational target — the bar we ratchet back up to. */
