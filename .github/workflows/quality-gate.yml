@@ -99,8 +99,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
+        # Version is read from package.json `packageManager` to avoid the
+        # ERR_PNPM_BAD_PM_VERSION conflict that fires when both are pinned.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
