@@ -16,7 +16,9 @@
 # Dependencies
 # ========================================
 node_modules/
-pnpm-lock.yaml
+# pnpm-lock.yaml is committed — matches `packageManager: pnpm@10.33.0`
+# in package.json. The other lockfiles stay ignored so a teammate who
+# accidentally runs `npm install` doesn't pollute the repo.
 package-lock.json
 yarn.lock
 .pnp.*

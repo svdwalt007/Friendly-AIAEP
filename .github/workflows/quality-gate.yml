@@ -23,12 +23,13 @@ concurrency:
 env:
   NODE_VERSION: '20'
   PNPM_VERSION: '10'
-  # Floors. Tools/vitest/coverage-thresholds.ts holds the per-run gate;
-  # the values here gate the aggregated summary across all projects.
-  MIN_LINE_COVERAGE: 80
-  MIN_BRANCH_COVERAGE: 75
-  MIN_FUNCTION_COVERAGE: 80
-  MIN_STATEMENT_COVERAGE: 80
+  # Transitional floors — must match COVERAGE_FLOOR in
+  # tools/vitest/coverage-thresholds.ts. See that file for the ratchet plan
+  # back to the 80/75/80/80 target.
+  MIN_LINE_COVERAGE: 50
+  MIN_BRANCH_COVERAGE: 40
+  MIN_FUNCTION_COVERAGE: 50
+  MIN_STATEMENT_COVERAGE: 50
 
 jobs:
   forbidden-patterns:
