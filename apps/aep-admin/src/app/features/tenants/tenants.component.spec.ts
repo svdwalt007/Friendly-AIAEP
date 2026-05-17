@@ -6,12 +6,13 @@
  */
 import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { Subject } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   TenantsComponent,
+  CreateTenantDialogComponent,
   Tenant,
   TenantPlan,
 } from './tenants.component';
@@ -137,5 +138,51 @@ describe('TenantsComponent', () => {
     component.openCreate();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(component.tenants().length).toBe(before);
+  });
+});
+
+describe('CreateTenantDialogComponent', () => {
+  let dialogClose: ReturnType<typeof vi.fn>;
+  let dialogComp: CreateTenantDialogComponent;
+
+  beforeEach(async () => {
+    dialogClose = vi.fn();
+    await TestBed.configureTestingModule({
+      imports: [CreateTenantDialogComponent, NoopAnimationsModule],
+      providers: [
+        { provide: MatDialogRef, useValue: { close: dialogClose } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CreateTenantDialogComponent);
+    dialogComp = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('starts with empty name + adminEmail and Starter plan', () => {
+    expect(dialogComp.name).toBe('');
+    expect(dialogComp.adminEmail).toBe('');
+    expect(dialogComp.plan).toBe('Starter');
+  });
+
+  it('submit() trims name + adminEmail and closes with the form payload', () => {
+    dialogComp.name = '  Acme Corp  ';
+    dialogComp.plan = 'Pro';
+    dialogComp.adminEmail = '  ops@acme.example  ';
+    dialogComp.submit();
+
+    expect(dialogClose).toHaveBeenCalledWith({
+      name: 'Acme Corp',
+      plan: 'Pro',
+      adminEmail: 'ops@acme.example',
+    });
+  });
+
+  it('submit() preserves the selected plan as Enterprise', () => {
+    dialogComp.name = 'Big Co';
+    dialogComp.plan = 'Enterprise';
+    dialogComp.adminEmail = 'a@b';
+    dialogComp.submit();
+    const [payload] = dialogClose.mock.calls[0];
+    expect(payload.plan).toBe('Enterprise');
   });
 });
