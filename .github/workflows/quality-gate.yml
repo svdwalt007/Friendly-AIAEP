@@ -122,13 +122,17 @@ jobs:
       # need their own backfill workstream — tracked in follow-up issues.
       # Expand this list as each lib comes green.
       - name: Run unit tests with coverage
+        # Note: drop `--reporter=verbose`. `@nx/vite:test` accepts the
+        # singular `--reporter` (passed through to vitest), but
+        # `@nx/angular:unit-test` uses `--reporters` (plural array) and
+        # rejects the singular form with an instant exit-1 — silently,
+        # before any tests run. Default reporter is enough for CI.
         run: |
           pnpm nx run-many \
             -t test \
             --projects=aep-builder,aep-admin,aep-api-gateway,aep-preview-host \
             --parallel=3 \
-            --coverage \
-            --reporter=verbose
+            --coverage
         env:
           CI: true
 
