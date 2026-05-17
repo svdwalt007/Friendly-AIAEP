@@ -203,11 +203,15 @@ class PerformanceMonitor {
     // Remove query parameters
     const baseUrl = url.split('?')[0];
 
-    // Replace UUIDs and IDs with placeholders
+    // Replace UUIDs and IDs with placeholders.
+    // ObjectId must come BEFORE the numeric pattern — otherwise the
+    // leading digits of a 24-char hex ObjectId (e.g. `507f1f77…`) are
+    // greedily consumed by `/\d+/`, leaving the rest of the hex stranded
+    // and producing a malformed endpoint key.
     const normalized = baseUrl
       .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
-      .replace(/\/\d+/g, '/:id')
-      .replace(/\/[a-f0-9]{24}/g, '/:id'); // MongoDB ObjectId
+      .replace(/\/[a-f0-9]{24}/g, '/:id') // MongoDB ObjectId
+      .replace(/\/\d+/g, '/:id');
 
     return `${method} ${normalized}`;
   }

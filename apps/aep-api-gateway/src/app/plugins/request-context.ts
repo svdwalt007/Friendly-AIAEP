@@ -17,8 +17,15 @@ export default fp(async function (fastify: FastifyInstance) {
     });
   });
 
-  fastify.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
+  // Attach the response header in `onSend` (runs BEFORE the body is
+  // dispatched to the client) so callers and tests using app.inject() can
+  // observe it. `onResponse` fires too late to mutate headers.
+  fastify.addHook('onSend', async (request: FastifyRequest, reply: FastifyReply, payload) => {
     reply.header('x-request-id', request.requestId);
+    return payload;
+  });
+
+  fastify.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
     request.log.info(
       {
         statusCode: reply.statusCode,
