@@ -5,62 +5,74 @@
  * Copyright (c) 2026 Friendly Technologies
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { importProvidersFrom } from '@angular/core';
-import { of } from 'rxjs';
-
 import {
-  BuilderWorkspaceComponent,
-  type CanvasWidget,
-  type PaletteItem,
-} from './builder-workspace.component';
-import { ProjectService } from '../../core/services/project.service';
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import { Observable, of } from 'rxjs';
+
+import { BuilderWorkspaceComponent } from './builder-workspace.component';
+import {
+  ProjectService,
+  Project,
+} from '../../core/services/project.service';
 import { AgentStreamService } from '../../core/services/agent-stream.service';
 
-/* Mock services */
-const mockProjectService = {
-  getProject: jasmine.createSpy('getProject').and.returnValue(
-    of({
-      id: 'proj-1',
-      name: 'Test Project',
-      description: 'A test project',
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }),
-  ),
+type GetProjectFn = (id: string) => Observable<Project>;
+
+const baseProject: Project = {
+  id: 'proj-1',
+  name: 'Test Project',
+  description: 'A test project',
+  status: 'active',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-02T00:00:00.000Z',
 };
 
-const mockAgentStream = {
-  messages: jasmine.createSpy('messages').and.returnValue([]),
-  streaming: jasmine.createSpy('streaming').and.returnValue(false),
-  connect: jasmine.createSpy('connect'),
-  disconnect: jasmine.createSpy('disconnect'),
-  sendMessage: jasmine.createSpy('sendMessage'),
-};
+function mockAgentStream(): Partial<AgentStreamService> {
+  return {
+    messages: vi.fn(() => []) as unknown as AgentStreamService['messages'],
+    streaming: vi.fn(
+      () => false,
+    ) as unknown as AgentStreamService['streaming'],
+    connect: vi.fn() as unknown as AgentStreamService['connect'],
+    disconnect: vi.fn() as unknown as AgentStreamService['disconnect'],
+    sendMessage: vi.fn() as unknown as AgentStreamService['sendMessage'],
+  };
+}
 
 describe('BuilderWorkspaceComponent', () => {
   let fixture: ComponentFixture<BuilderWorkspaceComponent>;
-  let component: BuilderWorkspaceComponent;
+  // `protected` template-facing members are reached through this aliased view
+  // so each test still binds against typed signals where possible.
+  let view: Record<string, unknown> & { [key: string]: any };
+  let getProjectSpy: ReturnType<typeof vi.fn<GetProjectFn>>;
 
   beforeEach(async () => {
+    getProjectSpy = vi.fn<GetProjectFn>().mockReturnValue(of(baseProject));
+
     await TestBed.configureTestingModule({
       imports: [
         BuilderWorkspaceComponent,
-        BrowserAnimationsModule,
+        NoopAnimationsModule,
         RouterTestingModule,
         HttpClientTestingModule,
       ],
       providers: [
-        { provide: ProjectService, useValue: mockProjectService },
-        { provide: AgentStreamService, useValue: mockAgentStream },
+        { provide: ProjectService, useValue: { getProject: getProjectSpy } },
+        { provide: AgentStreamService, useValue: mockAgentStream() },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BuilderWorkspaceComponent);
-    component = fixture.componentInstance;
+    view = fixture.componentInstance as unknown as Record<string, any>;
     fixture.componentRef.setInput('id', 'proj-1');
     fixture.detectChanges();
   });
@@ -71,38 +83,54 @@ describe('BuilderWorkspaceComponent', () => {
 
   /* ── Construction ─────────────────────────────────────────────── */
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('creates the component', () => {
+    expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should load project on init', () => {
-    expect(mockProjectService.getProject).toHaveBeenCalledWith('proj-1');
-    expect(component.project()).toBeTruthy();
-    expect(component.project()?.name).toBe('Test Project');
+  it('loads project on init', () => {
+    expect(getProjectSpy).toHaveBeenCalledWith('proj-1');
+    expect(view['project']()).toBeTruthy();
+    expect(view['project']().name).toBe('Test Project');
   });
 
   /* ── Layout variants ──────────────────────────────────────────── */
 
   describe('layout variants', () => {
-    it('defaults to A1 (editorial)', () => {
-      expect(component.layout()).toBe('A1');
-      expect(component.isA1()).toBeTrue();
-      expect(component.isA2()).toBeFalse();
-      expect(component.isA3()).toBeFalse();
+    it("defaults to 'editorial' (A1) mode", () => {
+      expect(view['mode']()).toBe('editorial');
+      expect(view['legacyLabel']()).toBe('A1');
+      expect(view['isA1']()).toBe(true);
+      expect(view['isA2']()).toBe(false);
+      expect(view['isA3']()).toBe(false);
     });
 
-    it('A2 layout sets ide-dense class', () => {
+    it("'ide-dense' (A2) sets ide-dense class and compact density", () => {
+      fixture.componentRef.setInput('layout', 'ide-dense');
+      fixture.detectChanges();
+      expect(view['mode']()).toBe('ide-dense');
+      expect(view['legacyLabel']()).toBe('A2');
+      expect(view['layoutClass']()).toContain('layout-ide-dense');
+      expect(view['density']()).toBe('compact');
+    });
+
+    it("'agent-stage' (A3) sets agent-stage class", () => {
+      fixture.componentRef.setInput('layout', 'agent-stage');
+      fixture.detectChanges();
+      expect(view['mode']()).toBe('agent-stage');
+      expect(view['legacyLabel']()).toBe('A3');
+      expect(view['layoutClass']()).toContain('layout-agent-stage');
+    });
+
+    it('accepts legacy A1/A2/A3 aliases', () => {
       fixture.componentRef.setInput('layout', 'A2');
       fixture.detectChanges();
-      expect(component.layout()).toBe('A2');
-      expect(component.layoutClass()).toContain('layout-ide-dense');
-    });
-
-    it('A3 layout sets agent-stage class', () => {
+      expect(view['mode']()).toBe('ide-dense');
       fixture.componentRef.setInput('layout', 'A3');
       fixture.detectChanges();
-      expect(component.layout()).toBe('A3');
-      expect(component.layoutClass()).toContain('layout-agent-stage');
+      expect(view['mode']()).toBe('agent-stage');
+      fixture.componentRef.setInput('layout', 'A1');
+      fixture.detectChanges();
+      expect(view['mode']()).toBe('editorial');
     });
   });
 
@@ -110,25 +138,25 @@ describe('BuilderWorkspaceComponent', () => {
 
   describe('preview mode', () => {
     it('defaults to edit mode', () => {
-      expect(component.previewMode()).toBeFalse();
+      expect(view['previewMode']()).toBe(false);
     });
 
     it('toggles to preview mode', () => {
-      component.togglePreview();
-      expect(component.previewMode()).toBeTrue();
+      view['togglePreview']();
+      expect(view['previewMode']()).toBe(true);
     });
 
     it('deselects widget when entering preview mode', () => {
-      component.selectedWidget.set(component.widgets()[0]);
-      component.togglePreview();
-      expect(component.selectedWidget()).toBeNull();
+      view['selectedWidget'].set(view['widgets']()[0]);
+      view['togglePreview']();
+      expect(view['selectedWidget']()).toBeNull();
     });
 
     it('prevents widget selection in preview mode', () => {
-      component.previewMode.set(true);
-      const widget = component.widgets()[0];
-      component.selectWidget(widget);
-      expect(component.selectedWidget()).toBeNull();
+      view['previewMode'].set(true);
+      const widget = view['widgets']()[0];
+      view['selectWidget'](widget);
+      expect(view['selectedWidget']()).toBeNull();
     });
   });
 
@@ -136,27 +164,27 @@ describe('BuilderWorkspaceComponent', () => {
 
   describe('widget CRUD', () => {
     it('has default widgets', () => {
-      expect(component.widgets().length).toBeGreaterThan(0);
+      expect(view['widgets']().length).toBeGreaterThan(0);
     });
 
     it('selects a widget', () => {
-      const widget = component.widgets()[0];
-      component.selectWidget(widget);
-      expect(component.selectedWidget()?.id).toBe(widget.id);
+      const widget = view['widgets']()[0];
+      view['selectWidget'](widget);
+      expect(view['selectedWidget']()?.id).toBe(widget.id);
     });
 
     it('updates widget property', () => {
-      const widget = component.widgets()[0];
-      component.selectWidget(widget);
-      component.updateWidgetProp(widget, 'label', 'Updated Label');
+      const widget = view['widgets']()[0];
+      view['selectWidget'](widget);
+      view['updateWidgetProp'](widget, 'label', 'Updated Label');
       expect(widget.props['label']).toBe('Updated Label');
     });
 
     it('deletes a widget', () => {
-      const initialCount = component.widgets().length;
-      const widget = component.widgets()[0];
-      component.deleteWidget(widget);
-      expect(component.widgets().length).toBe(initialCount - 1);
+      const initialCount = view['widgets']().length;
+      const widget = view['widgets']()[0];
+      view['deleteWidget'](widget);
+      expect(view['widgets']().length).toBe(initialCount - 1);
     });
   });
 
@@ -164,27 +192,27 @@ describe('BuilderWorkspaceComponent', () => {
 
   describe('zoom controls', () => {
     it('zooms in', () => {
-      const before = component.cellPx();
-      component.zoomIn();
-      expect(component.cellPx()).toBe(before + 10);
+      const before = view['cellPx']();
+      view['zoomIn']();
+      expect(view['cellPx']()).toBe(before + 10);
     });
 
     it('zooms out', () => {
-      const before = component.cellPx();
-      component.zoomOut();
-      expect(component.cellPx()).toBe(before - 10);
+      const before = view['cellPx']();
+      view['zoomOut']();
+      expect(view['cellPx']()).toBe(before - 10);
     });
 
     it('clamps zoom to minimum', () => {
-      component.cellPx.set(40);
-      component.zoomOut();
-      expect(component.cellPx()).toBe(40);
+      view['cellPx'].set(40);
+      view['zoomOut']();
+      expect(view['cellPx']()).toBe(40);
     });
 
     it('clamps zoom to maximum', () => {
-      component.cellPx.set(160);
-      component.zoomIn();
-      expect(component.cellPx()).toBe(160);
+      view['cellPx'].set(160);
+      view['zoomIn']();
+      expect(view['cellPx']()).toBe(160);
     });
   });
 
@@ -192,15 +220,13 @@ describe('BuilderWorkspaceComponent', () => {
 
   describe('grid layout', () => {
     it('generates grid-template-columns', () => {
-      component.cellPx.set(80);
-      const cols = component.gridTemplateCols();
-      expect(cols).toBe('repeat(12, 80px)');
+      view['cellPx'].set(80);
+      expect(view['gridTemplateCols']()).toBe('repeat(12, 80px)');
     });
 
     it('generates grid-template-rows', () => {
-      component.cellPx.set(80);
-      const rows = component.gridTemplateRows();
-      expect(rows).toBe('repeat(12, 80px)');
+      view['cellPx'].set(80);
+      expect(view['gridTemplateRows']()).toBe('repeat(12, 80px)');
     });
   });
 
@@ -208,24 +234,28 @@ describe('BuilderWorkspaceComponent', () => {
 
   describe('palette', () => {
     it('has 4 palette items', () => {
-      expect(component.paletteItems().length).toBe(4);
+      expect(view['paletteItems']().length).toBe(4);
     });
 
     it('includes stat-card widget', () => {
-      const item = component.paletteItems().find((i) => i.kind === 'stat-card');
+      const item = view['paletteItems']().find(
+        (i: { kind: string }) => i.kind === 'stat-card',
+      );
       expect(item).toBeTruthy();
       expect(item?.defaultSize).toEqual({ w: 3, h: 2 });
     });
 
     it('includes spark widget', () => {
-      const item = component.paletteItems().find((i) => i.kind === 'spark');
+      const item = view['paletteItems']().find(
+        (i: { kind: string }) => i.kind === 'spark',
+      );
       expect(item).toBeTruthy();
     });
 
     it('includes stream-chunk widget', () => {
-      const item = component
-        .paletteItems()
-        .find((i) => i.kind === 'stream-chunk');
+      const item = view['paletteItems']().find(
+        (i: { kind: string }) => i.kind === 'stream-chunk',
+      );
       expect(item).toBeTruthy();
     });
   });
@@ -234,12 +264,12 @@ describe('BuilderWorkspaceComponent', () => {
 
   describe('property inspector', () => {
     it('is open by default', () => {
-      expect(component.inspectorOpen()).toBeTrue();
+      expect(view['inspectorOpen']()).toBe(true);
     });
 
     it('toggles inspector', () => {
-      component.inspectorOpen.set(false);
-      expect(component.inspectorOpen()).toBeFalse();
+      view['inspectorOpen'].set(false);
+      expect(view['inspectorOpen']()).toBe(false);
     });
   });
 });

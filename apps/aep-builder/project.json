@@ -131,13 +131,16 @@
     },
     "test": {
       "executor": "@nx/angular:unit-test",
-      "options": {}
+      "options": {
+        "setupFiles": ["apps/aep-builder/src/test-setup.ts"],
+        "exclude": ["**/environment.*.ts"]
+      }
     },
     "e2e": {
       "executor": "nx:run-commands",
       "options": {
         "commands": [
-          "pnpm exec playwright test --config={workspaceRoot}/playwright.config.ts --project=chromium"
+          "pnpm exec playwright test --config=playwright.config.ts --project=chromium"
         ],
         "cwd": "{workspaceRoot}",
         "parallel": false
@@ -145,7 +148,7 @@
       "configurations": {
         "ci": {
           "commands": [
-            "pnpm exec playwright test --config={workspaceRoot}/playwright.config.ts"
+            "pnpm exec playwright test --config=playwright.config.ts"
           ]
         }
       }
@@ -154,7 +157,7 @@
       "executor": "nx:run-commands",
       "options": {
         "commands": [
-          "pnpm exec playwright test -c {workspaceRoot}/playwright-ct.config.ts"
+          "pnpm exec playwright test -c playwright-ct.config.ts"
         ],
         "cwd": "{workspaceRoot}",
         "parallel": false

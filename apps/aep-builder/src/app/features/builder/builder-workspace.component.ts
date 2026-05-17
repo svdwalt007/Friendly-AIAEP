@@ -94,6 +94,25 @@ export interface PaletteItem {
   defaultSize: GridSize;
 }
 
+/**
+ * Canonical workspace layout modes (A1 / A2 / A3 in design notation).
+ */
+export type LayoutMode = 'editorial' | 'ide-dense' | 'agent-stage';
+
+/** Legacy layout names retained for backward compatibility. */
+export type LegacyLayoutMode = 'A1' | 'A2' | 'A3';
+
+/** Per-agent activity state used by the A3 S / P / I indicators. */
+export type AgentActivity = 'spawning' | 'processing' | 'idle';
+
+/** A snapshot of an agent's current activity, derived from the stream. */
+export interface AgentStatus {
+  /** Unique agent identifier (e.g. "supervisor", "planning"). */
+  readonly agent: string;
+  /** Computed activity bucket. */
+  readonly activity: AgentActivity;
+}
+
 /** Mock IoT device telemetry record. */
 export interface DeviceTelemetry {
   deviceId: string;
@@ -239,8 +258,19 @@ export class BuilderWorkspaceComponent {
   /* ---------------------------------------------------------------- */
   readonly id = input.required<string>();
 
-  /** Layout variant — A1 editorial, A2 IDE-dense, A3 agent-stage. */
-  readonly layout = input<'A1' | 'A2' | 'A3'>('A1');
+  /**
+   * Layout variant.
+   *
+   * - `'editorial'` (A1): default 3-pane editorial layout.
+   * - `'ide-dense'` (A2): compact IDE-style layout, monospace stream panel,
+   *   left canvas pane shrinks to 40% / stream panel expands to 60%.
+   * - `'agent-stage'` (A3): adds the S/P/I per-agent status column on the right.
+   *
+   * Bound from the `?layout=` query parameter via
+   * `withComponentInputBinding()`. Legacy `'A1' | 'A2' | 'A3'` values are
+   * accepted for backward compatibility and normalised internally.
+   */
+  readonly layout = input<LayoutMode | LegacyLayoutMode>('editorial');
 
   /* ---------------------------------------------------------------- */
   /*  UI state                                                        */
@@ -306,7 +336,7 @@ export class BuilderWorkspaceComponent {
       pos: { col: 0, row: 2 },
       size: { w: 6, h: 3 },
       props: {
-        kind: 'status',
+        kind: 'progress',
         payload: {
           content: 'Device SM-001 reported normal telemetry. Battery: 87%.',
         },
@@ -319,19 +349,72 @@ export class BuilderWorkspaceComponent {
   /* ---------------------------------------------------------------- */
   /*  Derived layout                                                  */
   /* ---------------------------------------------------------------- */
-  protected readonly isA1 = computed(() => this.layout() === 'A1');
-  protected readonly isA2 = computed(() => this.layout() === 'A2');
-  protected readonly isA3 = computed(() => this.layout() === 'A3');
+
+  /** Canonical mode normalised from the legacy A1/A2/A3 aliases. */
+  protected readonly mode = computed<LayoutMode>(() => {
+    const raw = this.layout();
+    switch (raw) {
+      case 'A2':
+      case 'ide-dense':
+        return 'ide-dense';
+      case 'A3':
+      case 'agent-stage':
+        return 'agent-stage';
+      case 'A1':
+      case 'editorial':
+      default:
+        return 'editorial';
+    }
+  });
+
+  /** Legacy A1/A2/A3 alias for the toolbar badge and tests. */
+  protected readonly legacyLabel = computed<LegacyLayoutMode>(() => {
+    switch (this.mode()) {
+      case 'ide-dense':
+        return 'A2';
+      case 'agent-stage':
+        return 'A3';
+      default:
+        return 'A1';
+    }
+  });
+
+  protected readonly isA1 = computed(() => this.mode() === 'editorial');
+  protected readonly isA2 = computed(() => this.mode() === 'ide-dense');
+  protected readonly isA3 = computed(() => this.mode() === 'agent-stage');
 
   protected readonly layoutClass = computed(() => {
-    switch (this.layout()) {
-      case 'A2':
+    switch (this.mode()) {
+      case 'ide-dense':
         return 'layout-ide-dense';
-      case 'A3':
+      case 'agent-stage':
         return 'layout-agent-stage';
       default:
         return 'layout-editorial';
     }
+  });
+
+  /** `data-density` attribute value for the workspace host. */
+  protected readonly density = computed<'compact' | 'comfortable'>(() =>
+    this.mode() === 'ide-dense' ? 'compact' : 'comfortable',
+  );
+
+  /**
+   * Derived per-agent status from the current stream messages.
+   *
+   * `spawning`  → most-recent message is `agent_handoff`
+   * `processing`→ most-recent message is `tool_call` / `reasoning`
+   * `idle`      → otherwise
+   */
+  protected readonly agentStatuses = computed<readonly AgentStatus[]>(() => {
+    const msgs = this.agentStream.messages();
+    const seen = new Map<string, AgentActivity>();
+    for (const msg of msgs) {
+      const agent = this.extractAgent(msg);
+      if (!agent) continue;
+      seen.set(agent, this.classifyActivity(msg));
+    }
+    return Array.from(seen, ([agent, activity]) => ({ agent, activity }));
   });
 
   /** Grid-template-columns CSS string. */
@@ -518,6 +601,49 @@ export class BuilderWorkspaceComponent {
   /*  Private helpers                                                 */
   /* ---------------------------------------------------------------- */
 
+  /**
+   * Extract an agent identifier from a stream message. Falls back to the
+   * generic "agent" bucket when none is supplied (the legacy
+   * {@link AgentMessage} contract carries no `agent` field).
+   */
+  private extractAgent(msg: { type: string }): string | null {
+    if (!msg) return null;
+    if (msg.type === 'user') return null;
+    return 'agent';
+  }
+
+  /**
+   * Bucket a stream message into one of the three S/P/I activities.
+   */
+  private classifyActivity(msg: { type: string; done?: boolean }): AgentActivity {
+    switch (msg.type) {
+      case 'agent_thinking':
+      case 'agent_tool_call':
+        return msg.done ? 'idle' : 'processing';
+      case 'build_progress':
+        return 'spawning';
+      case 'complete':
+      case 'error':
+        return 'idle';
+      case 'agent_response':
+        return msg.done ? 'idle' : 'processing';
+      default:
+        return 'idle';
+    }
+  }
+
+  /** Glyph used by the A3 S / P / I indicator strip. */
+  protected activityGlyph(activity: AgentActivity): string {
+    switch (activity) {
+      case 'spawning':
+        return 'S';
+      case 'processing':
+        return 'P';
+      case 'idle':
+        return 'I';
+    }
+  }
+
   private makeDefaultProps(kind: WidgetKind): Record<string, unknown> {
     switch (kind) {
       case 'stat-card':
@@ -532,7 +658,7 @@ export class BuilderWorkspaceComponent {
         return { seed: Math.floor(Math.random() * 1000) };
       case 'stream-chunk':
         return {
-          kind: 'status',
+          kind: 'progress',
           payload: { content: 'New stream chunk' },
         };
       case 'text':

@@ -31,14 +31,16 @@ describe('DeviceCardComponent', () => {
   let fixture: ComponentFixture<DeviceCardComponent>;
 
   beforeEach(async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(FIXED_NOW);
     await TestBed.configureTestingModule({
       imports: [DeviceCardComponent],
     }).compileComponents();
     fixture = TestBed.createComponent(DeviceCardComponent);
     fixture.componentRef.setInput('device', makeDevice());
     await fixture.whenStable();
+    // Pin the clock AFTER Angular has bootstrapped so its zone tasks are
+    // unaffected; only the formatRelative arithmetic below needs a fixed now.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(FIXED_NOW);
   });
 
   afterEach(() => {

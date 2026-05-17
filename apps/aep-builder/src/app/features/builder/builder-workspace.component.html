@@ -8,11 +8,16 @@
     ></mat-progress-bar>
   </div>
 } @else {
-  <div class="builder-workspace" [class]="layoutClass()">
+  <div
+    class="builder-workspace"
+    [class]="layoutClass()"
+    [attr.data-density]="density()"
+    [attr.data-mode]="mode()"
+  >
     <!-- Top toolbar -->
     <header class="workspace-toolbar">
       <div class="toolbar-left">
-        <span class="layout-badge">{{ layout() }}</span>
+        <span class="layout-badge" [matTooltip]="mode()">{{ legacyLabel() }}</span>
         <h2>{{ project()?.name ?? 'Untitled Project' }}</h2>
       </div>
 
@@ -234,7 +239,7 @@
           <h4>Stream</h4>
           @for (msg of agentStream.messages(); track $index) {
             <friendly-stream-chunk
-              kind="status"
+              kind="progress"
               [payload]="{ content: msg.content }"
             ></friendly-stream-chunk>
           }
@@ -244,8 +249,26 @@
           <p class="placeholder">Agent execution plan will appear here</p>
         </div>
         <div class="panel-inspect">
-          <h4>Inspect</h4>
-          <p class="placeholder">Tool call inspection will appear here</p>
+          <h4>Agents (S / P / I)</h4>
+          @if (agentStatuses().length === 0) {
+            <p class="placeholder">No active agents.</p>
+          } @else {
+            <ul class="agent-status-list" role="list">
+              @for (s of agentStatuses(); track s.agent) {
+                <li
+                  class="agent-status-item"
+                  [attr.data-activity]="s.activity"
+                  [attr.aria-label]="s.agent + ' is ' + s.activity"
+                >
+                  <span class="agent-status-glyph" aria-hidden="true">{{
+                    activityGlyph(s.activity)
+                  }}</span>
+                  <span class="agent-status-name">{{ s.agent }}</span>
+                  <span class="agent-status-activity">{{ s.activity }}</span>
+                </li>
+              }
+            </ul>
+          }
         </div>
       </div>
     }

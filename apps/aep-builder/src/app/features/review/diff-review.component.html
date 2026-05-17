@@ -1,0 +1,41 @@
+<div class="review-shell">
+  <!-- Header -->
+  <div class="review-header" role="banner">
+    <div class="header-left">
+      <mat-icon>code</mat-icon>
+      <span class="header-title">Code Review</span>
+      @if (projectName()) {
+        <span class="header-project">{{ projectName() }}</span>
+      }
+    </div>
+    <div class="header-stats" aria-label="Diff statistics">
+      <span class="stat additions" aria-label="{{ additionCount() }} lines added">
+        +{{ additionCount() }} additions
+      </span>
+      <span class="stat deletions" aria-label="{{ deletionCount() }} lines deleted">
+        −{{ deletionCount() }} deletions
+      </span>
+      <span class="stat files" aria-label="{{ diffs().length }} files changed">
+        {{ diffs().length }} files
+      </span>
+    </div>
+    <button
+      mat-stroked-button
+      [routerLink]="['/projects', id()]"
+      aria-label="Back to project detail"
+    >
+      <mat-icon>arrow_back</mat-icon>
+      Back to Project
+    </button>
+  </div>
+
+  <!-- Diff viewer -->
+  <div class="review-body">
+    <app-code-diff-viewer
+      [diffs]="diffs()"
+      [showLineNumbers]="true"
+      [highlightSyntax]="true"
+      [collapsible]="true"
+    ></app-code-diff-viewer>
+  </div>
+</div>

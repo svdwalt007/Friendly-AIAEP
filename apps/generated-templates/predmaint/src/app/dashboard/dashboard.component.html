@@ -1,0 +1,85 @@
+<section class="page">
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">Predictive Maintenance</h1>
+      <p class="page__subtitle">Industrial equipment health</p>
+    </div>
+  </header>
+
+  <div class="kpi-grid">
+    <article class="kpi-card">
+      <div class="kpi-card__label">Equipment Health</div>
+      <div class="kpi-card__amount">87<span class="kpi-card__unit">%</span></div>
+    </article>
+    <article class="kpi-card">
+      <div class="kpi-card__label">Critical Alerts</div>
+      <div class="kpi-card__amount kpi-card__amount--error">3</div>
+    </article>
+    <article class="kpi-card">
+      <div class="kpi-card__label">Scheduled Work Orders</div>
+      <div class="kpi-card__amount">12</div>
+    </article>
+    <article class="kpi-card">
+      <div class="kpi-card__label">MTBF</div>
+      <div class="kpi-card__amount">241<span class="kpi-card__unit">days</span></div>
+    </article>
+  </div>
+
+  <section class="panel">
+    <h2 class="panel__title">Remaining Useful Life</h2>
+    <div class="gauges">
+      @for (g of gauges; track g.id) {
+        <figure class="gauge" [attr.data-state]="g.state">
+          <svg class="gauge__svg" viewBox="0 0 100 100" role="img" [attr.aria-label]="g.label + ' ' + g.percent + ' percent'">
+            <path class="gauge__track" fill="none" [attr.d]="arcTrack()" />
+            <path class="gauge__fill" fill="none" [attr.d]="arcPath(g.percent)" />
+            <text class="gauge__value" x="50" y="56" text-anchor="middle">{{ g.percent }}%</text>
+          </svg>
+          <figcaption class="gauge__label">{{ g.label }}</figcaption>
+        </figure>
+      }
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel__title">Anomaly index — last 12 weeks</h2>
+    <svg class="chart" [attr.viewBox]="'0 0 ' + chartWidth + ' ' + (chartHeight + 20)" role="img" aria-label="Anomaly index over twelve weeks">
+      <g class="chart__grid" stroke="var(--ft-border-color)" stroke-dasharray="2,4">
+        <line x1="0" y1="40" [attr.x2]="chartWidth" y2="40" />
+        <line x1="0" y1="80" [attr.x2]="chartWidth" y2="80" />
+        <line x1="0" y1="120" [attr.x2]="chartWidth" y2="120" />
+      </g>
+      <polyline class="chart__line" fill="none" [attr.points]="anomalyPoints" />
+      <circle class="chart__spike" [attr.cx]="spike.x" [attr.cy]="spike.y" r="6" />
+      <text class="chart__spike-label" [attr.x]="spike.x" [attr.y]="spike.y - 12" text-anchor="middle">Anomaly</text>
+    </svg>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel__title">Work orders</h2>
+    <table class="orders">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Equipment</th>
+          <th scope="col">Type</th>
+          <th scope="col">Status</th>
+          <th scope="col">Due</th>
+          <th scope="col">Assigned</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (w of workOrders; track w.id) {
+          <tr>
+            <td>{{ w.id }}</td>
+            <td>{{ w.equipment }}</td>
+            <td><span class="badge" [attr.data-type]="w.type">{{ w.type }}</span></td>
+            <td>{{ w.status }}</td>
+            <td>{{ w.due }}</td>
+            <td>{{ w.tech }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+</section>

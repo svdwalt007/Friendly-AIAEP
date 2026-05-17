@@ -9,6 +9,7 @@
   background-color: var(--ft-surface-primary, #f5f5f5);
   color: var(--ft-text-primary, #1a1a2e);
 
+  &[data-density='compact'],
   &.layout-ide-dense {
     --ft-density-spacing-xs: 2px;
     --ft-density-spacing-sm: 4px;
@@ -17,11 +18,30 @@
     --ft-font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
   }
 
+  &.layout-ide-dense {
+    /* A2: canvas shrinks to 40%, stream panel expands to 60% */
+    .workspace-body {
+      display: grid;
+      grid-template-columns: 200px minmax(0, 2fr) minmax(0, 3fr);
+      grid-template-rows: 1fr;
+    }
+
+    .canvas-area,
+    .property-inspector,
+    .agent-stage-panels {
+      font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    }
+  }
+
   &.layout-agent-stage {
     .workspace-body {
       display: grid;
       grid-template-columns: 200px 1fr 240px;
       grid-template-rows: 1fr;
+    }
+
+    .agent-stage-panels {
+      grid-template-columns: 2fr 2fr 1fr;
     }
   }
 }
@@ -413,6 +433,61 @@
       font-size: 0.875rem;
       color: var(--ft-text-muted, #999);
       font-style: italic;
+    }
+  }
+
+  /* A3 S / P / I agent activity indicators */
+  .agent-status-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .agent-status-item {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background-color: var(--ft-surface-secondary, #fafafa);
+    font-size: 0.75rem;
+
+    &[data-activity='spawning'] .agent-status-glyph {
+      color: var(--ft-warning, #f59e0b);
+    }
+    &[data-activity='processing'] .agent-status-glyph {
+      color: var(--ft-info, #2563eb);
+    }
+    &[data-activity='idle'] .agent-status-glyph {
+      color: var(--ft-text-muted, #888);
+    }
+
+    .agent-status-glyph {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: var(--ft-surface-primary, #fff);
+      font-weight: 700;
+      font-family: var(--ft-font-family-mono, ui-monospace, monospace);
+    }
+
+    .agent-status-name {
+      font-weight: 500;
+      color: var(--ft-text-primary, #1a1a2e);
+    }
+
+    .agent-status-activity {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ft-text-secondary, #666);
     }
   }
 }

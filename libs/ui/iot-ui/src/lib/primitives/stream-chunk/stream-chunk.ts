@@ -12,69 +12,71 @@ import {
 } from '@angular/core';
 
 /**
- * Discriminator for one of the nine canonical AEP v2 stream chunk kinds.
- *
- * The agentic UX surface emits a typed, replayable stream of these chunks;
- * each `kind` selects a distinct visual treatment and accessibility role.
+ * Discriminator for one of the nine canonical AEP v2 LangGraph stream
+ * chunk kinds. The agentic UX surface emits a typed, replayable stream of
+ * these chunks; each `kind` selects a distinct visual treatment and
+ * accessibility role.
  */
 export type StreamChunkKind =
-  | 'text'
-  | 'thought'
+  | 'final'
+  | 'reasoning'
   | 'tool_call'
   | 'tool_result'
-  | 'code'
-  | 'image'
+  | 'code_block'
+  | 'file_write'
   | 'error'
-  | 'status'
-  | 'citation';
+  | 'progress'
+  | 'agent_handoff';
 
 /**
  * Render-time payload accompanying a chunk. Optional fields are surfaced
  * only when the corresponding data is present, keeping the DOM minimal.
  */
 export interface StreamChunkPayload {
-  /** Free-form body text — used by every kind except `image`. */
+  /** Free-form body text — used by every kind except `file_write`. */
   readonly content?: string | null;
   /** Tool/function name for `tool_call` and `tool_result` chunks. */
   readonly tool?: string | null;
-  /** Programming language hint for `code` chunks (e.g. "typescript"). */
+  /** Programming language hint for `code_block` chunks (e.g. "typescript"). */
   readonly language?: string | null;
-  /** Image source URL for `image` chunks. */
+  /** File path or image URL for `file_write` chunks. */
   readonly src?: string | null;
-  /** Image alt text for `image` chunks. */
+  /** Alt text or file description for `file_write` chunks. */
   readonly alt?: string | null;
-  /** Citation source label (publication, file, URL). */
+  /** Source label for `agent_handoff` (originating agent / publication). */
   readonly source?: string | null;
-  /** Citation URL/anchor for `citation` chunks. */
+  /** Anchor / URL for `agent_handoff` chunks. */
   readonly href?: string | null;
   /** Optional ISO-8601 timestamp displayed as a tooltip. */
   readonly timestamp?: string | null;
+  /** Originating agent identifier (used by A3 agent-stage indicators). */
+  readonly agent?: string | null;
 }
 
 /** Lookup-table glyphs keyed by chunk kind; used purely as visual cues. */
 const GLYPH_BY_KIND: Readonly<Record<StreamChunkKind, string>> = {
-  text: '✎',
-  thought: '✦',
+  final: '✎',
+  reasoning: '✦',
   tool_call: '⚙',
   tool_result: '↩',
-  code: '⌨',
-  image: '🖼',
+  code_block: '⌨',
+  file_write: '🖼',
   error: '⚠',
-  status: '●',
-  citation: '❝',
+  progress: '●',
+  agent_handoff: '❝',
 };
 
 /** Accessible role per chunk kind — used for AT semantics. */
 const ROLE_BY_KIND: Readonly<Record<StreamChunkKind, string>> = {
-  text: 'article',
-  thought: 'note',
+  final: 'article',
+  reasoning: 'note',
   tool_call: 'note',
   tool_result: 'note',
-  code: 'group',
-  image: 'figure',
+  code_block: 'group',
+  file_write: 'figure',
   error: 'alert',
-  status: 'status',
-  citation: 'note',
+  progress: 'status',
+  agent_handoff: 'note',
 };
 
 /**
@@ -91,15 +93,15 @@ const ROLE_BY_KIND: Readonly<Record<StreamChunkKind, string>> = {
   template: `
     <section
       class="friendly-stream-chunk"
-      [class.friendly-stream-chunk--text]="kind() === 'text'"
-      [class.friendly-stream-chunk--thought]="kind() === 'thought'"
+      [class.friendly-stream-chunk--final]="kind() === 'final'"
+      [class.friendly-stream-chunk--reasoning]="kind() === 'reasoning'"
       [class.friendly-stream-chunk--tool-call]="kind() === 'tool_call'"
       [class.friendly-stream-chunk--tool-result]="kind() === 'tool_result'"
-      [class.friendly-stream-chunk--code]="kind() === 'code'"
-      [class.friendly-stream-chunk--image]="kind() === 'image'"
+      [class.friendly-stream-chunk--code-block]="kind() === 'code_block'"
+      [class.friendly-stream-chunk--file-write]="kind() === 'file_write'"
       [class.friendly-stream-chunk--error]="kind() === 'error'"
-      [class.friendly-stream-chunk--status]="kind() === 'status'"
-      [class.friendly-stream-chunk--citation]="kind() === 'citation'"
+      [class.friendly-stream-chunk--progress]="kind() === 'progress'"
+      [class.friendly-stream-chunk--agent-handoff]="kind() === 'agent_handoff'"
       [attr.data-kind]="kind()"
       [attr.role]="role()"
       [attr.aria-live]="ariaLive()"
@@ -123,14 +125,14 @@ const ROLE_BY_KIND: Readonly<Record<StreamChunkKind, string>> = {
       </header>
 
       @switch (kind()) {
-        @case ('code') {
+        @case ('code_block') {
           <pre
             class="friendly-stream-chunk__code"
           ><code [attr.data-language]="payload()?.language">{{
             payload()?.content
           }}</code></pre>
         }
-        @case ('image') {
+        @case ('file_write') {
           <figure class="friendly-stream-chunk__figure">
             <img
               class="friendly-stream-chunk__image"
@@ -145,7 +147,7 @@ const ROLE_BY_KIND: Readonly<Record<StreamChunkKind, string>> = {
             }
           </figure>
         }
-        @case ('citation') {
+        @case ('agent_handoff') {
           <p class="friendly-stream-chunk__body">
             @if (payload()?.href) {
               <a
@@ -266,10 +268,10 @@ const ROLE_BY_KIND: Readonly<Record<StreamChunkKind, string>> = {
 
       /* Per-kind accent overrides — leave the surface neutral, change only
        * the accent rail and glyph so layouts stay visually quiet. */
-      .friendly-stream-chunk--thought {
+      .friendly-stream-chunk--reasoning {
         border-left-color: var(--ft-secondary);
       }
-      .friendly-stream-chunk--thought .friendly-stream-chunk__glyph {
+      .friendly-stream-chunk--reasoning .friendly-stream-chunk__glyph {
         color: var(--ft-secondary);
       }
       .friendly-stream-chunk--tool-call,
@@ -291,11 +293,17 @@ const ROLE_BY_KIND: Readonly<Record<StreamChunkKind, string>> = {
       .friendly-stream-chunk--error .friendly-stream-chunk__glyph {
         color: var(--ft-error);
       }
-      .friendly-stream-chunk--status {
+      .friendly-stream-chunk--progress {
         border-left-color: var(--ft-success);
       }
-      .friendly-stream-chunk--status .friendly-stream-chunk__glyph {
+      .friendly-stream-chunk--progress .friendly-stream-chunk__glyph {
         color: var(--ft-success);
+      }
+      .friendly-stream-chunk--agent-handoff {
+        border-left-color: var(--ft-secondary);
+      }
+      .friendly-stream-chunk--agent-handoff .friendly-stream-chunk__glyph {
+        color: var(--ft-secondary);
       }
     `,
   ],
@@ -309,8 +317,8 @@ export class FriendlyStreamChunk {
 
   /**
    * Override the implicit ARIA live behaviour. Defaults to `polite` for
-   * `status` chunks and `assertive` for `error` chunks; everything else is
-   * `off`.
+   * `progress` chunks and `assertive` for `error` chunks; everything else
+   * is `off`.
    */
   readonly ariaLiveOverride = input<'off' | 'polite' | 'assertive' | null>(
     null,
@@ -327,6 +335,12 @@ export class FriendlyStreamChunk {
         return 'Tool call';
       case 'tool_result':
         return 'Tool result';
+      case 'code_block':
+        return 'Code block';
+      case 'file_write':
+        return 'File write';
+      case 'agent_handoff':
+        return 'Agent handoff';
       default:
         return k.charAt(0).toUpperCase() + k.slice(1);
     }
@@ -340,7 +354,7 @@ export class FriendlyStreamChunk {
     switch (this.kind()) {
       case 'error':
         return 'assertive';
-      case 'status':
+      case 'progress':
         return 'polite';
       default:
         return 'off';

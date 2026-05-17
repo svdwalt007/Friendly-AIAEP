@@ -1,0 +1,185 @@
+:host { display: block; }
+
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--ft-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-spacing-lg);
+}
+
+.page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-spacing-md);
+}
+
+.page__title {
+  margin: 0;
+  font-size: var(--ft-font-size-2xl);
+  color: var(--ft-primary);
+  font-weight: var(--ft-font-weight-bold);
+}
+
+.page__subtitle {
+  margin: 4px 0 0;
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-font-size-sm);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ft-spacing-sm);
+  padding: var(--ft-spacing-xs) var(--ft-spacing-md);
+  background: var(--ft-success-bg);
+  color: var(--ft-success);
+  border-radius: var(--ft-radius-pill);
+  font-size: var(--ft-font-size-sm);
+  font-weight: var(--ft-font-weight-medium);
+
+  &--off {
+    background: var(--ft-error-bg);
+    color: var(--ft-error);
+  }
+}
+
+.status__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 0 currentColor;
+  animation: pulse 1.6s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.55); }
+  70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+.kpi-grid {
+  display: grid;
+  gap: var(--ft-spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.kpi-card {
+  background: var(--ft-surface-1);
+  border: 1px solid var(--ft-border-color);
+  border-radius: var(--ft-radius-lg);
+  padding: var(--ft-spacing-md);
+  box-shadow: var(--ft-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-spacing-sm);
+  color: var(--ft-accent);
+}
+
+.kpi-card__label {
+  font-size: var(--ft-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ft-text-secondary);
+  font-weight: var(--ft-font-weight-medium);
+}
+
+.kpi-card__value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ft-spacing-xs);
+}
+
+.kpi-card__amount {
+  font-size: var(--ft-font-size-2xl);
+  font-weight: var(--ft-font-weight-bold);
+  color: var(--ft-primary);
+}
+
+.kpi-card__unit {
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-font-size-sm);
+}
+
+.kpi-card__delta {
+  font-size: var(--ft-font-size-sm);
+  color: var(--ft-text-secondary);
+
+  &--up { color: var(--ft-success); }
+  &--down { color: var(--ft-error); }
+}
+
+.kpi-card__spark {
+  width: 100%;
+  height: 40px;
+  color: var(--ft-accent);
+}
+
+.panel {
+  background: var(--ft-surface-1);
+  border: 1px solid var(--ft-border-color);
+  border-radius: var(--ft-radius-lg);
+  padding: var(--ft-spacing-lg);
+  box-shadow: var(--ft-shadow-sm);
+}
+
+.panel__title {
+  margin: 0 0 var(--ft-spacing-md);
+  font-size: var(--ft-font-size-lg);
+  color: var(--ft-text-primary);
+  font-weight: var(--ft-font-weight-semibold);
+}
+
+.chart {
+  width: 100%;
+  height: 160px;
+  display: block;
+}
+
+.chart__line {
+  stroke: var(--ft-primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart__area {
+  fill: var(--ft-primary-100);
+  opacity: 0.45;
+}
+
+.alerts {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ft-font-size-sm);
+}
+
+.alerts th,
+.alerts td {
+  text-align: left;
+  padding: var(--ft-spacing-sm) var(--ft-spacing-md);
+  border-bottom: 1px solid var(--ft-border-color);
+}
+
+.alerts th {
+  font-weight: var(--ft-font-weight-semibold);
+  color: var(--ft-text-secondary);
+  background: var(--ft-surface-2);
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--ft-radius-pill);
+  font-size: var(--ft-font-size-xs);
+  font-weight: var(--ft-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  &[data-severity='info'] { background: var(--ft-info-bg); color: var(--ft-info); }
+  &[data-severity='warning'] { background: var(--ft-warning-bg); color: var(--ft-warning); }
+  &[data-severity='critical'] { background: var(--ft-error-bg); color: var(--ft-error); }
+}

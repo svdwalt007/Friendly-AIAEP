@@ -1,0 +1,93 @@
+<section class="page">
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">Fleet Dashboard</h1>
+      <p class="page__subtitle">IoT device fleet monitoring</p>
+    </div>
+  </header>
+
+  <div class="kpi-grid">
+    <article class="kpi-card">
+      <div class="kpi-card__label">Total Devices</div>
+      <div class="kpi-card__amount">{{ kpis().total }}</div>
+    </article>
+    <article class="kpi-card">
+      <div class="kpi-card__label">Online</div>
+      <div class="kpi-card__amount kpi-card__amount--success">{{ kpis().online }}</div>
+    </article>
+    <article class="kpi-card">
+      <div class="kpi-card__label">Alerts</div>
+      <div class="kpi-card__amount kpi-card__amount--error">{{ kpis().alerts }}</div>
+    </article>
+    <article class="kpi-card">
+      <div class="kpi-card__label">Firmware Pending</div>
+      <div class="kpi-card__amount kpi-card__amount--warning">{{ kpis().pending }}</div>
+    </article>
+  </div>
+
+  <div class="layout">
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Devices</h2>
+        <label class="filter">
+          <span class="filter__label">Status</span>
+          <select
+            class="filter__select"
+            [ngModel]="filter()"
+            (ngModelChange)="filter.set($event)"
+            aria-label="Filter devices by status"
+          >
+            <option value="all">All</option>
+            <option value="online">Online</option>
+            <option value="offline">Offline</option>
+            <option value="alert">Alert</option>
+          </select>
+        </label>
+      </div>
+      <table class="devices">
+        <thead>
+          <tr>
+            <th scope="col">Device ID</th>
+            <th scope="col">Name</th>
+            <th scope="col">Status</th>
+            <th scope="col">Last Seen</th>
+            <th scope="col">Firmware</th>
+            <th scope="col">Signal</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of visibleDevices(); track d.id) {
+            <tr>
+              <td>{{ d.id }}</td>
+              <td>{{ d.name }}</td>
+              <td>
+                <span class="badge" [attr.data-status]="d.status">{{ d.status }}</span>
+              </td>
+              <td>{{ d.lastSeen }}</td>
+              <td>{{ d.firmware }}</td>
+              <td>
+                <span class="signal" [attr.aria-label]="'Signal ' + d.signal + ' of 5'">
+                  @for (b of bars; track b) {
+                    <span class="signal__bar" [class.signal__bar--on]="b <= d.signal"></span>
+                  }
+                </span>
+              </td>
+            </tr>
+          }
+          @if (visibleDevices().length === 0) {
+            <tr>
+              <td colspan="6" class="devices__empty">No devices match the current filter.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel map-panel">
+      <h2 class="panel__title">Geographic distribution</h2>
+      <div class="map-placeholder" role="img" aria-label="Map placeholder">
+        <span>Map view (requires API key)</span>
+      </div>
+    </section>
+  </div>
+</section>

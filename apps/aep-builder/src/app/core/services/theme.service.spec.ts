@@ -2,6 +2,17 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeService } from './theme.service';
 
+/**
+ * Flush pending Angular signal effects so persistence side effects fire.
+ * Service-level `effect()`s don't auto-flush when the test has no attached
+ * view, so the deprecated-but-functional `flushEffects()` is the reliable
+ * lever here.
+ */
+function flush(): void {
+  TestBed.tick();
+  (TestBed as unknown as { flushEffects: () => void }).flushEffects();
+}
+
 function makeMatchMedia(matches = false): typeof window.matchMedia {
   return ((_query: string) => ({
     matches,
@@ -37,23 +48,30 @@ describe('ThemeService', () => {
     expect(svc.isDark()).toBe(false);
   });
 
-  it('toggle flips light <-> dark and persists', async () => {
+  it('toggle flips light <-> dark and persists', () => {
     svc.toggle();
     expect(svc.theme()).toBe('dark');
     expect(svc.isDark()).toBe(true);
     svc.toggle();
+    flush();
     expect(svc.theme()).toBe('light');
     expect(localStorage.getItem('aep_theme')).toBe('light');
   });
 
-  it('setTheme persists and sets data-theme on <html>', () => {
+  it('setTheme persists and sets data-theme on <html>', async () => {
+    // Drain the initial constructor effect first (writes 'light').
+    flush();
     svc.setTheme('dark');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flush();
+    expect(svc.theme()).toBe('dark');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     expect(localStorage.getItem('aep_theme')).toBe('dark');
   });
 
   it('updatePreferences merges + persists preferences', () => {
     svc.updatePreferences({ fontSize: 'large' });
+    flush();
     expect(svc.preferences().fontSize).toBe('large');
     const stored = JSON.parse(localStorage.getItem('aep_theme_preferences') ?? '{}');
     expect(stored.fontSize).toBe('large');
@@ -61,10 +79,12 @@ describe('ThemeService', () => {
 
   it('setHighContrast toggles the high-contrast class on <html>', () => {
     svc.setHighContrast(true);
+    flush();
     expect(document.documentElement.classList.contains('high-contrast')).toBe(
       true,
     );
     svc.setHighContrast(false);
+    flush();
     expect(document.documentElement.classList.contains('high-contrast')).toBe(
       false,
     );
@@ -72,6 +92,7 @@ describe('ThemeService', () => {
 
   it('setReducedMotion toggles the reduced-motion class on <html>', () => {
     svc.setReducedMotion(true);
+    flush();
     expect(document.documentElement.classList.contains('reduced-motion')).toBe(
       true,
     );
@@ -79,6 +100,7 @@ describe('ThemeService', () => {
 
   it('setFontSize updates the data-font-size attribute', () => {
     svc.setFontSize('small');
+    flush();
     expect(document.documentElement.getAttribute('data-font-size')).toBe('small');
   });
 

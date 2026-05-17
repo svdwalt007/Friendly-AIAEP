@@ -7,6 +7,7 @@
  * Copyright (c) 2026 Friendly Technologies
  */
 import { Component, signal, computed } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -88,13 +89,19 @@ export class LlmSettingsComponent {
     maxTokens:    [4096, [Validators.required, Validators.min(1), Validators.max(128000)]],
   });
 
+  // Bridge reactive-form values into the signal graph so downstream
+  // `computed()`s react to patchValue / user edits without manual ticks.
+  private readonly formValues = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue(),
+  });
+
   readonly availableModels = computed(() => {
-    const provider = this.form.get('provider')?.value as LLMProvider;
+    const provider = this.formValues().provider as LLMProvider | undefined;
     return PROVIDERS.find((p) => p.value === provider)?.models ?? [];
   });
 
   readonly selectedProvider = computed(() =>
-    PROVIDERS.find((p) => p.value === this.form.get('provider')?.value),
+    PROVIDERS.find((p) => p.value === this.formValues().provider),
   );
 
   readonly isTesting = computed(() => this.connectionStatus() === 'testing');
@@ -115,7 +122,7 @@ export class LlmSettingsComponent {
   });
 
   readonly temperatureDisplay = computed(() =>
-    (this.form.get('temperature')?.value ?? 0.7).toFixed(2),
+    (this.formValues().temperature ?? 0.7).toFixed(2),
   );
 
   onProviderChange(): void {
