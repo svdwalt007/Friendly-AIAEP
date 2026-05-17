@@ -12,6 +12,14 @@ export default defineConfig(() => ({
     watch: false,
     globals: true,
     environment: 'node',
+    // Bumped from the 5s default — Fastify plugin specs pay a 10–15s
+    // cold-import penalty (the first @fastify/sensible / @fastify/cors
+    // require resolves a long dep chain), which trips testTimeout on the
+    // first `it()` of every file. Subsequent tests in the same file run
+    // in milliseconds, so 30s is comfortable headroom without slowing
+    // the happy path.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
